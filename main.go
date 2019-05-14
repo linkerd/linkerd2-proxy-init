@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/linkerd/proxy-init/cmd"
+	"github.com/linkerd/linkerd2-proxy-init/cmd"
 )
 
 func main() {
