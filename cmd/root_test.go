@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/linkerd/linkerd2/proxy-init/iptables"
+	"github.com/linkerd/proxy-init/iptables"
 )
 
 func TestBuildFirewallConfiguration(t *testing.T) {
