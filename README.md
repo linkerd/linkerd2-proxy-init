@@ -14,7 +14,7 @@ eval $(minikube docker-env)
 docker build -t gcr.io/linkerd-io/proxy-init:latest .
 ```
 
-The run the tests with:
+Then run the tests with:
 
 ```bash
 cd integration_test
