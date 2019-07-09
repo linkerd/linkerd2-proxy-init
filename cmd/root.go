@@ -30,7 +30,7 @@ func newRootOptions() *RootOptions {
 		OutboundPortsToIgnore: make([]int, 0),
 		SimulateOnly:          false,
 		NetNs:                 "",
-		UseWaitFlag:           true,
+		UseWaitFlag:           false,
 	}
 }
 
