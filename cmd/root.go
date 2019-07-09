@@ -17,6 +17,7 @@ type RootOptions struct {
 	OutboundPortsToIgnore []int
 	SimulateOnly          bool
 	NetNs                 string
+	UseWaitFlag           bool
 }
 
 func newRootOptions() *RootOptions {
@@ -29,6 +30,7 @@ func newRootOptions() *RootOptions {
 		OutboundPortsToIgnore: make([]int, 0),
 		SimulateOnly:          false,
 		NetNs:                 "",
+		UseWaitFlag:           true,
 	}
 }
 
@@ -58,6 +60,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().IntSliceVar(&options.OutboundPortsToIgnore, "outbound-ports-to-ignore", options.OutboundPortsToIgnore, "Outbound ports to ignore and not redirect to proxy. This has higher precedence than any other parameters.")
 	cmd.PersistentFlags().BoolVar(&options.SimulateOnly, "simulate", options.SimulateOnly, "Don't execute any command, just print what would be executed")
 	cmd.PersistentFlags().StringVar(&options.NetNs, "netns", options.NetNs, "Optional network namespace in which to run the iptables commands")
+	cmd.PersistentFlags().BoolVarP(&options.UseWaitFlag, "use-wait-flag", "w", options.UseWaitFlag, "Appends the \"-w\" flag to the iptables commands")
 
 	return cmd
 }
@@ -81,6 +84,7 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		OutboundPortsToIgnore:  options.OutboundPortsToIgnore,
 		SimulateOnly:           options.SimulateOnly,
 		NetNs:                  options.NetNs,
+		UseWaitFlag:            options.UseWaitFlag,
 	}
 
 	if len(options.PortsToRedirect) > 0 {

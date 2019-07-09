@@ -21,6 +21,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 			ProxyOutgoingPort:      expectedOutgoingProxyPort,
 			ProxyUID:               expectedProxyUserID,
 			SimulateOnly:           false,
+			UseWaitFlag:            true,
 		}
 
 		options := newRootOptions()
@@ -34,7 +35,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(config, expectedConfig) {
-			t.Fatalf("Expected config [%v] but got [%v]", expectedConfig, config)
+			t.Fatalf("Expected config \n[%+v]\n but got \n[%+v]", expectedConfig, config)
 		}
 	})
 
