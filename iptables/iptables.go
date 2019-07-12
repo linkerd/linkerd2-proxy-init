@@ -40,6 +40,7 @@ type FirewallConfiguration struct {
 	ProxyUID               int
 	SimulateOnly           bool
 	NetNs                  string
+	UseWaitFlag            bool
 }
 
 //ConfigureFirewall configures a pod's internal iptables to redirect all desired traffic through the proxy, allowing for
@@ -161,6 +162,13 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) 
 	originalCmd := strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]")
 	log.Printf("> %s", originalCmd)
 
+	if firewallConfiguration.UseWaitFlag {
+		log.Print("Setting UseWaitFlag: iptables will wait for xtables to become available")
+		cmd.Args = append(cmd.Args, "-w")
+	}
+
+
+
 	if !firewallConfiguration.SimulateOnly {
 		// wrap up the cmd with nsenter if we were givin a netns
 		if len(firewallConfiguration.NetNs) > 0 {
@@ -174,6 +182,7 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) 
 			log.Printf(">> nsenter %v", finalArgs)
 			cmd = exec.Command("nsenter", finalArgs...)
 		}
+
 		out, err := cmd.CombinedOutput()
 		log.Printf("< %s\n", string(out))
 		if err != nil {
