@@ -83,23 +83,4 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 			}
 		}
 	})
-
-	t.Run("It properly handles port ranges options", func(t *testing.T) {
-		testOptions := &RootOptions{
-			rawInboundPortsToIgnore:  []string{"22", "25-27"},
-			rawOutboundPortsToIgnore: []string{"3306", "5432-5435"},
-		}
-		checkConfig, err := BuildFirewallConfiguration(testOptions)
-		if err != nil {
-			t.Fatalf("Unexpected error: %s", err)
-		}
-		assertEqual(t, []int{22, 25, 26, 27}, checkConfig.InboundPortsToIgnore)
-		assertEqual(t, []int{3306, 5432, 5433, 5434, 5435}, checkConfig.OutboundPortsToIgnore)
-	})
-}
-
-func assertEqual(t *testing.T, expected []int, actual []int) {
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("mismatch: got \"%d\" expected \"%d\"", actual, expected)
-	}
 }

@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/linkerd/linkerd2-proxy-init/ports"
 )
 
 const (
@@ -33,8 +35,8 @@ var (
 type FirewallConfiguration struct {
 	Mode                   string
 	PortsToRedirectInbound []int
-	InboundPortsToIgnore   []int
-	OutboundPortsToIgnore  []int
+	InboundPortsToIgnore   []string
+	OutboundPortsToIgnore  []string
 	ProxyInboundPort       int
 	ProxyOutgoingPort      int
 	ProxyUID               int
@@ -149,13 +151,46 @@ func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration,
 	return commands
 }
 
-func addRulesForIgnoredPorts(portsToIgnore []int, chainName string, commands []*exec.Cmd) []*exec.Cmd {
-	for _, ignoredPort := range portsToIgnore {
-		log.Printf("Will ignore port %d on chain %s", ignoredPort, chainName)
-
-		commands = append(commands, makeIgnorePort(chainName, ignoredPort, fmt.Sprintf("ignore-port-%d", ignoredPort)))
+func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
+	for _, destinations := range makeMultiportDestinations(portsToIgnore) {
+		log.Printf("Will ignore port(s) %s on chain %s", destinations, chainName)
+		commands = append(commands, makeIgnorePorts(chainName, destinations, fmt.Sprintf("ignore-port-%s", destinations)))
 	}
 	return commands
+}
+
+func makeMultiportDestinations(portsToIgnore []string) [][]string {
+	destinationSlices := make([][]string, 0)
+	destinationPortCount := 0
+	destinations := make([]string, 0)
+	for _, portOrRange := range portsToIgnore {
+		if strings.Contains(portOrRange, "-") {
+			if portRange, err := ports.ParsePortRange(portOrRange); err == nil {
+				if destinationPortCount+2 > 15 {
+					destinationSlices = append(destinationSlices, destinations)
+					destinationPortCount = 0
+					destinations = make([]string, 0)
+				}
+				destinations = append(destinations, asDestination(portRange))
+				destinationPortCount += 2
+			} else {
+				log.Printf("Invalid port configuration of \"%s\": %s", portOrRange, err.Error())
+			}
+		} else {
+			if _, err := ports.ParsePort(portOrRange); err == nil {
+				if destinationPortCount+1 > 15 {
+					destinationSlices = append(destinationSlices, destinations)
+					destinationPortCount = 0
+					destinations = make([]string, 0)
+				}
+				destinations = append(destinations, portOrRange)
+				destinationPortCount++
+			} else {
+				log.Printf("Invalid port configuration of \"%s\": %s", portOrRange, err.Error())
+			}
+		}
+	}
+	return append(destinationSlices, destinations)
 }
 
 func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) error {
@@ -166,8 +201,6 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) 
 		log.Print("Setting UseWaitFlag: iptables will wait for xtables to become available")
 		cmd.Args = append(cmd.Args, "-w")
 	}
-
-
 
 	if !firewallConfiguration.SimulateOnly {
 		// wrap up the cmd with nsenter if we were givin a netns
@@ -234,12 +267,13 @@ func makeRedirectChainToPort(chainName string, portToRedirect int, comment strin
 		"--comment", formatComment(comment))
 }
 
-func makeIgnorePort(chainName string, portToIgnore int, comment string) *exec.Cmd {
+func makeIgnorePorts(chainName string, destinations []string, comment string) *exec.Cmd {
 	return exec.Command("iptables",
 		"-t", "nat",
 		"-A", chainName,
 		"-p", "tcp",
-		"--destination-port", strconv.Itoa(portToIgnore),
+		"--match", "multiport",
+		"--dports", strings.Join(destinations, ","),
 		"-j", "RETURN",
 		"-m", "comment",
 		"--comment", formatComment(comment))
@@ -291,4 +325,8 @@ func makeRedirectChainForOutgoingTraffic(chainName string, redirectChainName str
 
 func makeShowAllRules() *exec.Cmd {
 	return exec.Command("iptables", "-t", "nat", "-vnL")
+}
+
+func asDestination(portRange ports.PortRange) string {
+	return fmt.Sprintf("%d:%d", portRange.LowerBound, portRange.UpperBound)
 }
