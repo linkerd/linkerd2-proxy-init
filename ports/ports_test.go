@@ -5,6 +5,35 @@ import (
 	"testing"
 )
 
+func TestParsePort(t *testing.T) {
+	tests := []struct {
+		input  string
+		expect int
+	}{
+		{"0", 0},
+		{"8080", 8080},
+		{"65535", 65535},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			if check, _ := ParsePort(tt.input); check != tt.expect {
+				t.Fatalf("expected %d but received %d", tt.expect, check)
+			}
+		})
+	}
+}
+
+func TestParsePort_Errors(t *testing.T) {
+	tests := []string{"-1", "65536"}
+	for _, tt := range tests {
+		t.Run(tt, func(t *testing.T) {
+			if r, err := ParsePort(tt); err == nil {
+				t.Fatalf("expected error but received %d", r)
+			}
+		})
+	}
+}
+
 func TestValidateRange(t *testing.T) {
 	tests := []struct {
 		input string
@@ -34,6 +63,7 @@ func TestValidateRange_Errors(t *testing.T) {
 		{"-23", "not a valid lower-bound"},
 		{"25-23", "upper-bound must be greater than or equal to"},
 		{"65536-65539", "not a valid lower-bound"},
+		{"23-notanumber", "not a valid upper-bound"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {

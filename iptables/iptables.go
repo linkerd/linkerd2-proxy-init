@@ -162,6 +162,9 @@ func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands 
 func makeMultiportDestinations(portsToIgnore []string) [][]string {
 	destinationSlices := make([][]string, 0)
 	destinationPortCount := 0
+	if portsToIgnore == nil || len(portsToIgnore) < 1 {
+		return destinationSlices
+	}
 	destinations := make([]string, 0)
 	for _, portOrRange := range portsToIgnore {
 		if strings.Contains(portOrRange, "-") {
