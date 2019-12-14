@@ -19,7 +19,7 @@ func IsValid(port int) bool {
 }
 
 // ParsePort parses and verifies the validity of the port candidate.
-func ParsePort(port string) (parsed int, err error) {
+func ParsePort(port string) (int, error) {
 	i, err := strconv.Atoi(port)
 	if err != nil || !IsValid(i) {
 		return -1, fmt.Errorf("\"%s\" is not a valid TCP port", port)
@@ -28,7 +28,7 @@ func ParsePort(port string) (parsed int, err error) {
 }
 
 // ParsePortRange parses and checks the provided range candidate to ensure it is a valid TCP port range.
-func ParsePortRange(portRange string) (parsed PortRange, err error) {
+func ParsePortRange(portRange string) (PortRange, error) {
 	bounds := strings.Split(portRange, "-")
 	if len(bounds) != 2 {
 		return PortRange{}, fmt.Errorf("ranges expected as <lower>-<upper>")

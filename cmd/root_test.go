@@ -15,8 +15,8 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 		expectedConfig := &iptables.FirewallConfiguration{
 			Mode:                   iptables.RedirectAllMode,
 			PortsToRedirectInbound: make([]int, 0),
-			InboundPortsToIgnore:   make([]int, 0),
-			OutboundPortsToIgnore:  make([]int, 0),
+			InboundPortsToIgnore:   make([]string, 0),
+			OutboundPortsToIgnore:  make([]string, 0),
 			ProxyInboundPort:       expectedIncomingProxyPort,
 			ProxyOutgoingPort:      expectedOutgoingProxyPort,
 			ProxyUID:               expectedProxyUserID,
