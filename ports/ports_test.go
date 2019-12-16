@@ -1,6 +1,7 @@
 package ports
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -34,30 +35,31 @@ func TestParsePort_Errors(t *testing.T) {
 	}
 }
 
-func TestValidateRange(t *testing.T) {
+func TestParsePortRange(t *testing.T) {
 	tests := []struct {
-		input string
+		input    string
+		expected PortRange
 	}{
-		{"23-23"},
-		{"25-27"},
-		{"0-65535"},
+		{"23-23", PortRange{LowerBound: 23, UpperBound: 23}},
+		{"25-27", PortRange{LowerBound: 25, UpperBound: 27}},
+		{"0-65535", PortRange{LowerBound: 0, UpperBound: 65535}},
+		{"33", PortRange{LowerBound: 33, UpperBound: 33}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			_, err := ParsePortRange(tt.input)
-			assertNoError(t, err)
+			check, _ := ParsePortRange(tt.input)
+			reflect.DeepEqual(tt.expected, check)
 		})
 	}
 }
 
-func TestValidateRange_Errors(t *testing.T) {
+func TestParsePortRange_Errors(t *testing.T) {
 	tests := []struct {
 		input string
 		check string
 	}{
-		{"", "ranges expected as"},
-		{"23", "ranges expected as"},
-		{"notanumber", "ranges expected as"},
+		{"", "not a valid lower-bound"},
+		{"notanumber", "not a valid lower-bound"},
 		{"not-number", "not a valid lower-bound"},
 		{"-23-25", "ranges expected as"},
 		{"-23", "not a valid lower-bound"},
@@ -70,12 +72,6 @@ func TestValidateRange_Errors(t *testing.T) {
 			_, err := ParsePortRange(tt.input)
 			assertError(t, err, tt.check)
 		})
-	}
-}
-
-func assertNoError(t *testing.T, err error) {
-	if err != nil {
-		t.Fatal("expected no error; got", err)
 	}
 }
 

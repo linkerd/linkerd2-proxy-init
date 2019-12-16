@@ -24,6 +24,9 @@ const (
 
 	// IptablesOutputChainName specifies an iptables `OUTPUT` chain.
 	IptablesOutputChainName = "OUTPUT"
+
+	// IptablesMultiportLimit specifies the maximum number of port references per single iptables command.
+	IptablesMultiportLimit = 15
 )
 
 var (
@@ -167,30 +170,23 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 	}
 	destinations := make([]string, 0)
 	for _, portOrRange := range portsToIgnore {
-		if strings.Contains(portOrRange, "-") {
-			if portRange, err := ports.ParsePortRange(portOrRange); err == nil {
-				if destinationPortCount+2 > 15 {
-					destinationSlices = append(destinationSlices, destinations)
-					destinationPortCount = 0
-					destinations = make([]string, 0)
-				}
-				destinations = append(destinations, asDestination(portRange))
-				destinationPortCount += 2
-			} else {
-				log.Printf("Invalid port configuration of \"%s\": %s", portOrRange, err.Error())
+		if portRange, err := ports.ParsePortRange(portOrRange); err == nil {
+			// The number of ports referenced for the range
+			portCount := 2
+			if portRange.LowerBound == portRange.UpperBound {
+				// We'll condense for single port ranges
+				portCount = 1
 			}
+			// Check port capacity for the current command
+			if destinationPortCount+portCount > IptablesMultiportLimit {
+				destinationSlices = append(destinationSlices, destinations)
+				destinationPortCount = 0
+				destinations = make([]string, 0)
+			}
+			destinations = append(destinations, asDestination(portRange))
+			destinationPortCount += portCount
 		} else {
-			if _, err := ports.ParsePort(portOrRange); err == nil {
-				if destinationPortCount+1 > 15 {
-					destinationSlices = append(destinationSlices, destinations)
-					destinationPortCount = 0
-					destinations = make([]string, 0)
-				}
-				destinations = append(destinations, portOrRange)
-				destinationPortCount++
-			} else {
-				log.Printf("Invalid port configuration of \"%s\": %s", portOrRange, err.Error())
-			}
+			log.Printf("Invalid port configuration of \"%s\": %s", portOrRange, err.Error())
 		}
 	}
 	return append(destinationSlices, destinations)
@@ -330,6 +326,11 @@ func makeShowAllRules() *exec.Cmd {
 	return exec.Command("iptables", "-t", "nat", "-vnL")
 }
 
+// asDestination formats the provided `PortRange` for output in commands.
 func asDestination(portRange ports.PortRange) string {
-	return fmt.Sprintf("%d:%d", portRange.LowerBound, portRange.UpperBound)
+	if portRange.LowerBound == portRange.UpperBound {
+		return fmt.Sprintf("%d", portRange.LowerBound)
+	} else {
+		return fmt.Sprintf("%d:%d", portRange.LowerBound, portRange.UpperBound)
+	}
 }

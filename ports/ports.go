@@ -30,8 +30,12 @@ func ParsePort(port string) (int, error) {
 // ParsePortRange parses and checks the provided range candidate to ensure it is a valid TCP port range.
 func ParsePortRange(portRange string) (PortRange, error) {
 	bounds := strings.Split(portRange, "-")
-	if len(bounds) != 2 {
+	if len(bounds) > 2 {
 		return PortRange{}, fmt.Errorf("ranges expected as <lower>-<upper>")
+	}
+	if len(bounds) == 1 {
+		// If only provided a single value, treat as both lower- and upper-bounds
+		bounds = append(bounds, bounds[0])
 	}
 	lower, err := strconv.Atoi(bounds[0])
 	if err != nil || !IsValid(lower) {
