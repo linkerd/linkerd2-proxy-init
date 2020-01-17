@@ -157,7 +157,7 @@ func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration,
 func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	for _, destinations := range makeMultiportDestinations(portsToIgnore) {
 		log.Printf("Will ignore port(s) %s on chain %s", destinations, chainName)
-		commands = append(commands, makeIgnorePorts(chainName, destinations, fmt.Sprintf("ignore-port-%s", destinations)))
+		commands = append(commands, makeIgnorePorts(chainName, destinations, fmt.Sprintf("ignore-port-%s", strings.Join(destinations,","))))
 	}
 	return commands
 }
