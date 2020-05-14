@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os/exec"
 
 	"github.com/spf13/cobra"
 
@@ -20,6 +21,7 @@ type RootOptions struct {
 	SimulateOnly          bool
 	NetNs                 string
 	UseWaitFlag           bool
+	TimeoutCloseWaitSecs  int
 }
 
 func newRootOptions() *RootOptions {
@@ -33,6 +35,7 @@ func newRootOptions() *RootOptions {
 		SimulateOnly:          false,
 		NetNs:                 "",
 		UseWaitFlag:           false,
+		TimeoutCloseWaitSecs:  0,
 	}
 }
 
@@ -46,6 +49,18 @@ func NewRootCmd() *cobra.Command {
 		Short: "proxy-init adds a Kubernetes pod to the Linkerd service mesh",
 		Long:  "proxy-init adds a Kubernetes pod to the Linkerd service mesh.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if options.TimeoutCloseWaitSecs != 0 {
+				sysctl := exec.Command("sysctl", "-w",
+					fmt.Sprintf("net.netfilter.nf_conntrack_tcp_timeout_close_wait=%d", options.TimeoutCloseWaitSecs),
+				)
+				out, err := sysctl.CombinedOutput()
+				fmt.Println(string(out))
+				if err != nil {
+					return err
+				}
+			}
+
 			config, err := BuildFirewallConfiguration(options)
 			if err != nil {
 				return err
@@ -63,6 +78,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&options.SimulateOnly, "simulate", options.SimulateOnly, "Don't execute any command, just print what would be executed")
 	cmd.PersistentFlags().StringVar(&options.NetNs, "netns", options.NetNs, "Optional network namespace in which to run the iptables commands")
 	cmd.PersistentFlags().BoolVarP(&options.UseWaitFlag, "use-wait-flag", "w", options.UseWaitFlag, "Appends the \"-w\" flag to the iptables commands")
+	cmd.PersistentFlags().IntVar(&options.TimeoutCloseWaitSecs, "timeout-close-wait-secs", options.TimeoutCloseWaitSecs, "Sets nf_conntrack_tcp_timeout_close_wait")
 
 	return cmd
 }

@@ -9,6 +9,7 @@ FROM debian:stretch-20190812-slim
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         iptables \
+        procps \
     && rm -rf /var/lib/apt/lists/*
 COPY LICENSE /linkerd/LICENSE
 COPY --from=golang /out/linkerd2-proxy-init /usr/local/bin/proxy-init
