@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
 
 	"github.com/spf13/cobra"
@@ -55,7 +56,7 @@ func NewRootCmd() *cobra.Command {
 					fmt.Sprintf("net.netfilter.nf_conntrack_tcp_timeout_close_wait=%d", options.TimeoutCloseWaitSecs),
 				)
 				out, err := sysctl.CombinedOutput()
-				fmt.Println(string(out))
+				log.Println(string(out))
 				if err != nil {
 					return err
 				}
