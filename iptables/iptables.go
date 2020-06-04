@@ -330,7 +330,7 @@ func makeShowAllRules() *exec.Cmd {
 func asDestination(portRange ports.PortRange) string {
 	if portRange.LowerBound == portRange.UpperBound {
 		return fmt.Sprintf("%d", portRange.LowerBound)
-	} else {
-		return fmt.Sprintf("%d:%d", portRange.LowerBound, portRange.UpperBound)
 	}
+
+	return fmt.Sprintf("%d:%d", portRange.LowerBound, portRange.UpperBound)
 }
