@@ -1,0 +1,26 @@
+name: Release
+on:
+  push:
+    tags:
+    - "*"
+jobs:
+  buildx:
+    name: Build & Push Multi Arch Images
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Configure gcloud
+      uses: linkerd/linkerd2-action-gcloud@v1.0.2
+      with:
+        cloud_sdk_service_account_key: ${{ secrets.CLOUD_SDK_SERVICE_ACCOUNT_KEY }}
+        gcp_project: ${{ secrets.GCP_PROJECT }}
+        gcp_zone: ${{ secrets.GCP_ZONE }}
+    - name: Set up Docker Buildx
+      uses: crazy-max/ghaction-docker-buildx@v3
+    - name: Docker Buildx (build)
+      run: make images
+    - name: Docker Buildx (push)
+      run: make push
+    - name: Docker Check Manifest
+      run: make inspect-manifest

@@ -1,6 +1,8 @@
 DOCKER_REGISTRY ?= gcr.io/linkerd-io
 REPO = $(DOCKER_REGISTRY)/proxy-init
 TESTER_REPO = buoyantio/iptables-tester
+VERSION ?= $(shell git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)
+SUPPORTED_ARCHS = linux/amd64,linux/arm64,linux/arm/v7
 
 .DEFAULT_GOAL := help
 
@@ -39,7 +41,7 @@ integration-test: image ## Perform integration test
 ###############
 .PHONY: image
 image: ## Build docker image for the project
-	docker build -t $(REPO):latest .
+	DOCKER_BUILDKIT=1 docker build -t $(REPO):latest .
 
 .PHONY: tester-image
 tester-image: ## Build docker image for the tester component
@@ -49,3 +51,26 @@ tester-image: ## Build docker image for the tester component
 kind-load: image tester-image ## Load the required image to KinD cluster
 	kind load docker-image $(REPO):latest
 	kind load docker-image $(TESTER_REPO):v1
+
+.PHONY: images
+images: ## Build multi arch docker images for the project
+	docker buildx build \
+		--platform $(SUPPORTED_ARCHS) \
+		--output "type=image,push=false" \
+		--tag $(REPO):$(VERSION) \
+		--tag $(REPO):latest \
+		.
+
+.PHONY: push
+push: images ## Push multi arch docker images to the registry
+	docker buildx build \
+		--platform $(SUPPORTED_ARCHS) \
+		--output "type=image,push=true" \
+		--tag $(REPO):$(VERSION) \
+		--tag $(REPO):latest \
+		.
+
+.PHONY: inspect-manifest
+inspect-manifest: ## Check the resulting images supported architecture
+	docker run --rm mplatform/mquery $(REPO):$(VERSION)
+	docker run --rm mplatform/mquery $(REPO):latest
