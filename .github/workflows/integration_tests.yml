@@ -31,4 +31,4 @@ jobs:
     - name: Run integration tests
       run: |
         cd integration_test
-        ./run_tests.sh
+        SKIP_BUILD_TESTER_IMAGE=1 ./run_tests.sh
