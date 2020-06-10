@@ -18,9 +18,10 @@ jobs:
       # actions/checkout@v2
       uses: actions/checkout@722adc6
     - name: Lint
-      run: |
-        go install golang.org/x/lint/golint
-        golint -set_exit_status ./...
+      # golangci/golangci-lint-action@v1.2.1
+      uses: golangci/golangci-lint-action@04eca20
+      with:
+        version: v1.27
   go_format:
     name: Go format
     runs-on: ubuntu-18.04
