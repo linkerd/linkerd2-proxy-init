@@ -13,9 +13,11 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      # actions/checkout@v2
+      uses: actions/checkout@722adc6
     - name: Setup KinD
-      uses: engineerd/setup-kind@v0.4.0
+      # engineerd/setup-kind@v0.4.0
+      uses: engineerd/setup-kind@4e17476
       with:
         version: v0.8.1
     - name: Docker build
