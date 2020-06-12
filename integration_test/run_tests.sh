@@ -48,9 +48,12 @@ header "Deleting any existing objects from previous test runs..."
 kubectl delete -f ${LAB_YAML_FILE}
 kubectl delete  jobs/${TESTER_JOB_NAME}
 
-header "Building the image used in tests..."
-docker build . -f iptables/Dockerfile-tester --tag buoyantio/iptables-tester:v1
-sleep 10
+# if env var not set then build the image
+if [[ -z "${SKIP_BUILD_TESTER_IMAGE}" ]]; then
+  header "Building the image used in tests..."
+  docker build . -f iptables/Dockerfile-tester --tag buoyantio/iptables-tester:v1
+  sleep 10
+fi
 
 header "Creating the test lab..."
 kubectl create -f ${LAB_YAML_FILE}

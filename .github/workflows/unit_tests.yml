@@ -1,0 +1,21 @@
+name: Unit tests
+on:
+  pull_request: {}
+  push:
+    paths-ignore:
+    - '*.md'
+    - '**/*.md'
+    branches:
+    - master
+jobs:
+  go_unit_tests:
+    name: Go unit tests
+    runs-on: ubuntu-18.04
+    container:
+      image: golang:1.13.4
+    steps:
+    - name: Checkout code
+      # actions/checkout@v2
+      uses: actions/checkout@722adc6
+    - name: Run unit tests
+      run: go test -v ./...

@@ -1,0 +1,34 @@
+name: Integration tests
+on:
+  pull_request: {}
+  push:
+    paths-ignore:
+    - '*.md'
+    - '**/*.md'
+    branches:
+    - master
+jobs:
+  kind_integration_tests:
+    name: KinD integration tests
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Checkout code
+      # actions/checkout@v2
+      uses: actions/checkout@722adc6
+    - name: Setup KinD
+      # engineerd/setup-kind@v0.4.0
+      uses: engineerd/setup-kind@4e17476
+      with:
+        version: v0.8.1
+    - name: Docker build
+      run: |
+        docker build -t gcr.io/linkerd-io/proxy-init:latest .
+        docker build -t buoyantio/iptables-tester:v1 -f integration_test/iptables/Dockerfile-tester ./integration_test
+    - name: Load image into the local KinD cluster
+      run: |
+        kind load docker-image gcr.io/linkerd-io/proxy-init:latest
+        kind load docker-image buoyantio/iptables-tester:v1
+    - name: Run integration tests
+      run: |
+        cd integration_test
+        SKIP_BUILD_TESTER_IMAGE=1 ./run_tests.sh
