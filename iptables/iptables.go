@@ -91,8 +91,8 @@ func formatComment(text string) string {
 func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
 	outputChainName := "PROXY_INIT_OUTPUT"
 	redirectChainName := "PROXY_INIT_REDIRECT"
-	executeCommand(firewallConfiguration, makeFlushChain(outputChainName))
-	executeCommand(firewallConfiguration, makeDeleteChain(outputChainName))
+	_ = executeCommand(firewallConfiguration, makeFlushChain(outputChainName))
+	_ = executeCommand(firewallConfiguration, makeDeleteChain(outputChainName))
 
 	commands = append(commands, makeCreateNewChain(outputChainName, "redirect-common-chain"))
 
@@ -121,8 +121,8 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 
 func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
 	redirectChainName := "PROXY_INIT_REDIRECT"
-	executeCommand(firewallConfiguration, makeFlushChain(redirectChainName))
-	executeCommand(firewallConfiguration, makeDeleteChain(redirectChainName))
+	_ = executeCommand(firewallConfiguration, makeFlushChain(redirectChainName))
+	_ = executeCommand(firewallConfiguration, makeDeleteChain(redirectChainName))
 
 	commands = append(commands, makeCreateNewChain(redirectChainName, "redirect-common-chain"))
 	commands = addRulesForIgnoredPorts(firewallConfiguration.InboundPortsToIgnore, redirectChainName, commands)
