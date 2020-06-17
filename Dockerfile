@@ -13,7 +13,7 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-init -mod=readonly -ldflags "-s -w" -v
 
 ## package runtime
-FROM --platform=$TARGETPLATFORM debian:buster-20190910-slim
+FROM --platform=$TARGETPLATFORM debian:buster-20200514-slim
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         iptables \
