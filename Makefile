@@ -6,8 +6,8 @@ TESTER_REPO = buoyantio/iptables-tester
 
 .PHONY: help
 help: ## Show this help
-	@echo 'Info: For integration test using KinD, run: make kind-load && make integration-test'
-	@echo 'Info: For integration test using minikube, run: make integration-test'
+	@echo 'Info: For integration test using KinD, run make kind-load integration-test'
+	@echo 'Info: For other environments, run make integration-test after having uploaded the images'
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 ###############
