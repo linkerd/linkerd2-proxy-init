@@ -1,5 +1,6 @@
 DOCKER_REGISTRY ?= gcr.io/linkerd-io
 REPO = $(DOCKER_REGISTRY)/proxy-init
+TESTER_REPO = buoyantio/iptables-tester
 
 .DEFAULT_GOAL := help
 
@@ -42,9 +43,9 @@ image: ## Build docker image for the project
 
 .PHONY: tester-image
 tester-image: ## Build docker image for the tester component
-	docker build -t buoyantio/iptables-tester:v1 -f ./integration_test/iptables/Dockerfile-tester ./integration_test
+	docker build -t $(TESTER_REPO):v1 -f ./integration_test/iptables/Dockerfile-tester ./integration_test
 
 .PHONY: kind-load
 kind-load: image tester-image ## Load the required image to KinD cluster
 	kind load docker-image $(REPO):latest
-	kind load docker-image buoyantio/iptables-tester:v1
+	kind load docker-image $(TESTER_REPO):v1
