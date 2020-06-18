@@ -18,7 +18,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         iptables \
         procps \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --set iptables /usr/sbin/iptables-legacy \
+    && update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 COPY LICENSE /linkerd/LICENSE
 COPY --from=golang /out/linkerd2-proxy-init /usr/local/bin/proxy-init
 ENTRYPOINT ["/usr/local/bin/proxy-init"]
