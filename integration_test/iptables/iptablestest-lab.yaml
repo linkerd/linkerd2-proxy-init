@@ -74,10 +74,13 @@ spec:
         imagePullPolicy: Never
         args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
             - NET_ADMIN
+            - NET_RAW
           privileged: false
+          readOnlyRootFilesystem: true
           runAsNonRoot: false
           runAsUser: 0
 ---
@@ -120,10 +123,13 @@ spec:
         imagePullPolicy: Never
         args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-r", "9090", "-r", "9099"]
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
             - NET_ADMIN
+            - NET_RAW
           privileged: false
+          readOnlyRootFilesystem: true
           runAsNonRoot: false
           runAsUser: 0
 ---
@@ -173,9 +179,12 @@ spec:
         imagePullPolicy: Never
         args: ["-p", "8080",  "-o", "8080", "-u", "2102", "--inbound-ports-to-ignore", "6000-8000"]
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
             - NET_ADMIN
+            - NET_RAW
           privileged: false
+          readOnlyRootFilesystem: true
           runAsNonRoot: false
           runAsUser: 0
