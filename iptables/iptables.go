@@ -92,7 +92,6 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	outputChainName := "PROXY_INIT_OUTPUT"
 	redirectChainName := "PROXY_INIT_REDIRECT"
 	err := executeCommand(firewallConfiguration, makeFlushChain(outputChainName))
-	executeCommand(firewallConfiguration, makeDeleteChain(outputChainName))
 	if err != nil {
 		log.Printf("An error occurred while FLUSHING the chain in addOutgoingTrafficRules. Startup will continue, but there may be additional errors\n [error]: %v", err)
 	}
@@ -130,7 +129,6 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
 	redirectChainName := "PROXY_INIT_REDIRECT"
 	err := executeCommand(firewallConfiguration, makeFlushChain(redirectChainName))
-	executeCommand(firewallConfiguration, makeDeleteChain(redirectChainName))
 	if err != nil {
 		log.Printf("An error occurred while FLUSHING the chain in addIncomingTrafficRules. Startup will continue, but there may be additional errors\n [error]: %v", err)
 	}
