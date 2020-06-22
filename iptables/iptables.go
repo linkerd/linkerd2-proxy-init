@@ -91,8 +91,15 @@ func formatComment(text string) string {
 func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
 	outputChainName := "PROXY_INIT_OUTPUT"
 	redirectChainName := "PROXY_INIT_REDIRECT"
-	executeCommand(firewallConfiguration, makeFlushChain(outputChainName))
-	executeCommand(firewallConfiguration, makeDeleteChain(outputChainName))
+	err := executeCommand(firewallConfiguration, makeFlushChain(outputChainName))
+	executeCommand(firewallConfiguration, makeDeleteChain(outputChainName))		if err != nil {
+		log.Printf("An error occurred while FLUSHING the chain in addOutgoingTrafficRules. Startup will continue, but there may be additional errors\n [error]: %v", err)
+	}
+
+	err = executeCommand(firewallConfiguration, makeDeleteChain(outputChainName))
+	if err != nil {
+		log.Printf("An error occurred while DELETING the chain in addOutgoingTrafficRules. Startup will continue, but there may be additional errors\n [error]: %v", err)
+	}
 
 	commands = append(commands, makeCreateNewChain(outputChainName, "redirect-common-chain"))
 
@@ -121,8 +128,15 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 
 func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
 	redirectChainName := "PROXY_INIT_REDIRECT"
-	executeCommand(firewallConfiguration, makeFlushChain(redirectChainName))
-	executeCommand(firewallConfiguration, makeDeleteChain(redirectChainName))
+	err := executeCommand(firewallConfiguration, makeFlushChain(redirectChainName))
+	executeCommand(firewallConfiguration, makeDeleteChain(redirectChainName))		if err != nil {
+		log.Printf("An error occurred while FLUSHING the chain in addIncomingTrafficRules. Startup will continue, but there may be additional errors\n [error]: %v", err)
+	}
+
+	err = executeCommand(firewallConfiguration, makeDeleteChain(redirectChainName))
+	if err != nil {
+		log.Printf("An error occurred while DELETING the chain in addIncomingTrafficRules. Startup will continue, but there may be additional errors\n [error]: %v", err)
+	}
 
 	commands = append(commands, makeCreateNewChain(redirectChainName, "redirect-common-chain"))
 	commands = addRulesForIgnoredPorts(firewallConfiguration.InboundPortsToIgnore, redirectChainName, commands)
