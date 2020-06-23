@@ -22,13 +22,9 @@ jobs:
         version: v0.8.1
     - name: Docker build
       run: |
-        docker build -t gcr.io/linkerd-io/proxy-init:latest .
-        docker build -t buoyantio/iptables-tester:v1 -f integration_test/iptables/Dockerfile-tester ./integration_test
+        make image
+        make tester-image
     - name: Load image into the local KinD cluster
-      run: |
-        kind load docker-image gcr.io/linkerd-io/proxy-init:latest
-        kind load docker-image buoyantio/iptables-tester:v1
+      run: make kind-load
     - name: Run integration tests
-      run: |
-        cd integration_test
-        SKIP_BUILD_TESTER_IMAGE=1 ./run_tests.sh
+      run: SKIP_BUILD_TESTER_IMAGE=1 make integration-test

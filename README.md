@@ -11,12 +11,11 @@ Start by building and tagging the `proxy-init` image required for the test:
 
 ```bash
 eval $(minikube docker-env)
-docker build -t gcr.io/linkerd-io/proxy-init:latest .
+make image
 ```
 
 Then run the tests with:
 
 ```bash
-cd integration_test
-./run_tests.sh
+make integration-test
 ```

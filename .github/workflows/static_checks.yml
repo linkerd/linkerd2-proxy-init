@@ -32,6 +32,4 @@ jobs:
       # actions/checkout@v2
       uses: actions/checkout@722adc6
     - name: Format
-      run: |
-        gofmt -d .
-        test -z "$(gofmt -d .)"
+      run: make fmt
