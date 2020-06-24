@@ -19,3 +19,11 @@ Then run the tests with:
 ```bash
 make integration-test
 ```
+
+# Build Multi-Architecture Docker Images with Buildx
+
+Please refer to https://docs.docker.com/buildx/working-with-buildx/ to enable Buildx.
+
+Run `make builder` to create Buildx instance before starting to build the images.
+
+Run `make images` to start build the images.

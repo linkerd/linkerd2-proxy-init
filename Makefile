@@ -70,3 +70,8 @@ push: ## Push multi arch docker images to the registry
 inspect-manifest: ## Check the resulting images supported architecture
 	docker run --rm mplatform/mquery $(REPO):$(VERSION)
 	docker run --rm mplatform/mquery $(REPO):latest
+
+.PHONY: builder
+builder: ## Create the Buildx builder instance
+	docker buildx create --name=multiarch-builder --driver=docker-container --platform="$(SUPPORTED_ARCHS)" --use
+	docker buildx inspect multiarch-builder --bootstrap
