@@ -22,8 +22,15 @@ make integration-test
 
 # Build Multi-Architecture Docker Images with Buildx
 
-Please refer to https://docs.docker.com/buildx/working-with-buildx/ to enable Buildx.
+Please refer to [Docker Docs](https://docs.docker.com/buildx/working-with-buildx) to enable Buildx.
 
 Run `make builder` to create Buildx instance before starting to build the images.
 
 Run `make images` to start build the images.
+
+Run `make push` to push the images into registry.
+Registry repo can be configured with environment variable:
+
+```bash
+DOCKER_REGISTRY=<your registry> make push
+```
