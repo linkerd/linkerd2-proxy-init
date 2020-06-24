@@ -73,5 +73,6 @@ inspect-manifest: ## Check the resulting images supported architecture
 
 .PHONY: builder
 builder: ## Create the Buildx builder instance
+	docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 	docker buildx create --name=multiarch-builder --driver=docker-container --platform="$(SUPPORTED_ARCHS)" --use
 	docker buildx inspect multiarch-builder --bootstrap
