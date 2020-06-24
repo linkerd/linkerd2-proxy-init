@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - name: Checkout code
-      # actions/checkout@v2
+      # actions/checkout@v2.0.0
       uses: actions/checkout@722adc6
     - name: Setup KinD
       # engineerd/setup-kind@v0.4.0
