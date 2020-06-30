@@ -1,11 +1,19 @@
 ## compile proxy-init utility
-FROM golang:1.12.9 as golang
+FROM --platform=$BUILDPLATFORM golang:1.12.9 as golang
 WORKDIR /build
+
+# cache dependencies
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
+# build
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/linkerd2-proxy-init -mod=readonly -ldflags "-s -w" -v
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-init -mod=readonly -ldflags "-s -w" -v
 
 ## package runtime
-FROM debian:stretch-20190812-slim
+FROM --platform=$TARGETPLATFORM debian:stretch-20190812-slim
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         iptables \
