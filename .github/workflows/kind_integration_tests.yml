@@ -1,4 +1,4 @@
-name: Integration tests
+name: KinD integration tests
 on:
   pull_request: {}
   push:
