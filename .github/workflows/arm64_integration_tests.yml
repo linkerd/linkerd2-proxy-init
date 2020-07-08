@@ -1,0 +1,56 @@
+name: ARM64 integration tests
+on:
+  push:
+    paths-ignore:
+    - '*.md'
+    - '**/*.md'
+    branches:
+    - master
+jobs:
+  arm64_integration_tests:
+    name: ARM64 integration tests
+    runs-on: ubuntu-18.04
+    steps:
+    - name: Checkout code
+      # actions/checkout@v2.0.0
+      uses: actions/checkout@722adc6
+    - name: Setup SSH config for Packet
+      run: |
+        mkdir -p ~/.ssh/
+        touch ~/.ssh/id && chmod 600 ~/.ssh/id
+        echo "${{ secrets.ARM64_SSH_CONFIG }}"  > ~/.ssh/config
+        echo "${{ secrets.ARM64_PRIVATE_KEY }}" > ~/.ssh/id
+        echo "${{ secrets.ARM64_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+        ssh arm64-linkerd docker version
+    - name: Install k3d
+      run: |
+        curl -s https://raw.githubusercontent.com/rancher/k3d/master/install.sh | TAG=v3.0.0-rc.5 bash
+        k3d version
+    - name: Forward Docker socket over SSH
+      # Currently k3d does not support remote docker connection using env DOCKER_HOST=ssh://
+      # Ref: https://github.com/rancher/k3d/issues/74
+      run: |
+        ssh -nNTf -L $HOME/docker.sock:/var/run/docker.sock arm64-linkerd
+        echo ::set-env name=DOCKER_HOST::unix://$(echo $HOME)/docker.sock
+        DOCKER_HOST=unix://$HOME/docker.sock docker version
+    - name: Setup cluster (remote)
+      run: |
+        export CLUSTER_NAME=${GITHUB_SHA::7}-${{ github.run_id }}
+        echo ::set-env name=CLUSTER_NAME::$CLUSTER_NAME
+        k3d create cluster $CLUSTER_NAME --switch
+        # Forward local port to connect to remote server for accessing kubectl
+        export PORT=$(kubectl config view --minify | grep server | cut -f 4 -d ":")
+        ssh -nNTf -L $PORT:127.0.0.1:$PORT arm64-linkerd
+        kubectl cluster-info
+    - name: Docker build
+      run: |
+        make image
+        make tester-image
+    - name: Load image into the k3d cluster
+      run: |
+        k3d load image gcr.io/linkerd-io/proxy-init:latest buoyantio/iptables-tester:v1 -c $CLUSTER_NAME
+    - name: Run integration tests
+      run: SKIP_BUILD_TESTER_IMAGE=1 make integration-test
+    - name: Cleanup
+      if: always()
+      run: k3d delete cluster $CLUSTER_NAME
