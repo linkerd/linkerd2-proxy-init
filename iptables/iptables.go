@@ -204,11 +204,11 @@ func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration,
 	return commands
 }
 
-func addRulesForIgnoredPorts(portsToIgnore []int, chainName string, commands []*exec.Cmd) []*exec.Cmd {
-	for _, ignoredPort := range portsToIgnore {
-		fmt.Printf("Will ignore port %d on chain %s\n", ignoredPort, chainName)
+func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
+	for _, destinations := range makeMultiportDestinations(portsToIgnore) {
+		fmt.Printf("Will ignore port %d on chain %s\n", destinations, chainName)
 
-		commands = append(commands, makeIgnorePort(chainName, ignoredPort, fmt.Sprintf("ignore-port-%d", ignoredPort)))
+		commands = append(commands, makeIgnorePorts(chainName, destinations, fmt.Sprintf("ignore-port-%d", strings.Join(destinations, ","))))
 	}
 	return commands
 }
