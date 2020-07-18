@@ -1,0 +1,26 @@
+language: minimal
+arch: arm64
+
+jobs:
+  include:
+    - stage: build
+      name: Docker build
+      script:
+        - make image
+        - make tester-image
+
+    - stage: test
+      name: Integration tests
+      install:
+        - curl -s https://raw.githubusercontent.com/rancher/k3d/main/install.sh | TAG=v3.0.0 bash
+        - k3d version
+      before_script:
+        - |
+          # Create cluster
+          k3d cluster create
+          kubectl cluster-info
+
+          # Load docker image into the k3d cluster
+          k3d image import gcr.io/linkerd-io/proxy-init:latest buoyantio/iptables-tester:v1
+      script:
+        - SKIP_BUILD_TESTER_IMAGE=1 make integration-test
