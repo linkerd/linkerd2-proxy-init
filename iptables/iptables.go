@@ -272,18 +272,6 @@ func makeCreateNewChain(name string, comment string) *exec.Cmd {
 		"--comment", formatComment(comment))
 }
 
-func makeFlushChain(name string) *exec.Cmd {
-	return exec.Command("iptables",
-		"-t", "nat",
-		"-F", name)
-}
-
-func makeDeleteChain(name string) *exec.Cmd {
-	return exec.Command("iptables",
-		"-t", "nat",
-		"-X", name)
-}
-
 func makeRedirectChainToPort(chainName string, portToRedirect int, comment string) *exec.Cmd {
 	return exec.Command("iptables",
 		"-t", "nat",
