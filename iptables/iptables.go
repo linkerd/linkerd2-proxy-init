@@ -66,29 +66,6 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	}
 	endSection()
 
-	startSection("cleanup")
-	// cleanup rules before adding new ones in
-	_ = executeCommand(
-		firewallConfiguration,
-		makeJumpFromChainToAnotherForAllProtocols(
-			IptablesOutputChainName,
-			outputChainName,
-			"install-proxy-init-prerouting",
-			true))
-	_ = executeCommand(
-		firewallConfiguration,
-		makeJumpFromChainToAnotherForAllProtocols(
-			IptablesPreroutingChainName,
-			redirectChainName,
-			"install-proxy-init-prerouting",
-			true))
-
-	for _, chain := range []string{outputChainName, redirectChainName} {
-		_ = executeCommand(firewallConfiguration, makeFlushChain(chain))
-		_ = executeCommand(firewallConfiguration, makeDeleteChain(chain))
-	}
-	endSection()
-
 	commands := make([]*exec.Cmd, 0)
 
 	startSection("configuration")
