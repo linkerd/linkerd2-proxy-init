@@ -234,7 +234,7 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) 
 	if len(firewallConfiguration.NetNs) > 0 {
 		cmd.Args = append([]string{
 			"nsenter",
-			"--net", firewallConfiguration.NetNs,
+			fmt.Sprintf("--net=%s", firewallConfiguration.NetNs),
 		}, cmd.Args...)
 	}
 
