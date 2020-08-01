@@ -346,7 +346,7 @@ func makeRedirectChainForOutgoingTraffic(chainName string, redirectChainName str
 }
 
 func makeShowAllRules() *exec.Cmd {
-	return exec.Command("iptables", "-S")
+	return exec.Command("iptables-save")
 }
 
 // asDestination formats the provided `PortRange` for output in commands.
