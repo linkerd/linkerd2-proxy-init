@@ -57,11 +57,11 @@ type FirewallConfiguration struct {
 // https://github.com/istio/istio/blob/e83411e/pilot/docker/prepare_proxy.sh
 func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
-	fmt.Printf("Tracing this script execution as [%s]\n", ExecutionTraceID)
+	log.Printf("Tracing this script execution as [%s]\n", ExecutionTraceID)
 
 	startSection("current state")
 	if err := executeCommand(firewallConfiguration, makeShowAllRules()); err != nil {
-		fmt.Println("Aborting firewall configuration")
+		log.Println("Aborting firewall configuration")
 		return err
 	}
 	endSection()
@@ -80,7 +80,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	for _, cmd := range commands {
 		if err := executeCommand(firewallConfiguration, cmd); err != nil {
-			fmt.Println("Aborting firewall configuration")
+			log.Println("Aborting firewall configuration")
 			return err
 		}
 	}
@@ -101,11 +101,11 @@ func formatComment(text string) string {
 }
 
 func startSection(text string) {
-	fmt.Printf("%s\n%s\n", text, sectionDelimiter)
+	log.Printf("%s\n%s\n", text, sectionDelimiter)
 }
 
 func endSection() {
-	fmt.Printf("\n\n")
+	log.Printf("\n\n")
 }
 
 func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
@@ -113,12 +113,12 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 
 	// Ignore traffic from the proxy
 	if firewallConfiguration.ProxyUID > 0 {
-		fmt.Printf("Ignoring uid %d\n", firewallConfiguration.ProxyUID)
+		log.Printf("Ignoring uid %d\n", firewallConfiguration.ProxyUID)
 		// Redirect calls originating from the proxy destined for an app container e.g. app -> proxy(outbound) -> proxy(inbound) -> app
 		commands = append(commands, makeRedirectChainForOutgoingTraffic(outputChainName, redirectChainName, firewallConfiguration.ProxyUID, "redirect-non-loopback-local-traffic"))
 		commands = append(commands, makeIgnoreUserID(outputChainName, firewallConfiguration.ProxyUID, "ignore-proxy-user-id"))
 	} else {
-		fmt.Println("Not ignoring any uid")
+		log.Println("Not ignoring any uid")
 	}
 
 	// Ignore loopback
@@ -126,7 +126,7 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	// Ignore ports
 	commands = addRulesForIgnoredPorts(firewallConfiguration.OutboundPortsToIgnore, outputChainName, commands)
 
-	fmt.Printf("Redirecting all OUTPUT to %d\n", firewallConfiguration.ProxyOutgoingPort)
+	log.Printf("Redirecting all OUTPUT to %d\n", firewallConfiguration.ProxyOutgoingPort)
 	commands = append(commands, makeRedirectChainToPort(outputChainName, firewallConfiguration.ProxyOutgoingPort, "redirect-all-outgoing-to-proxy-port"))
 
 	//Redirect all remaining outbound traffic to the proxy.
@@ -160,14 +160,14 @@ func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 
 func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	if firewallConfiguration.Mode == RedirectAllMode {
-		fmt.Println("Will redirect all INPUT ports to proxy")
+		log.Println("Will redirect all INPUT ports to proxy")
 		//Create a new chain for redirecting inbound and outbound traffic to the proxy port.
 		commands = append(commands, makeRedirectChainToPort(chainName,
 			firewallConfiguration.ProxyInboundPort,
 			"redirect-all-incoming-to-proxy-port"))
 
 	} else if firewallConfiguration.Mode == RedirectListedMode {
-		fmt.Printf("Will redirect some INPUT ports to proxy: %v\n", firewallConfiguration.PortsToRedirectInbound)
+		log.Printf("Will redirect some INPUT ports to proxy: %v\n", firewallConfiguration.PortsToRedirectInbound)
 		for _, port := range firewallConfiguration.PortsToRedirectInbound {
 			commands = append(
 				commands,
@@ -183,7 +183,7 @@ func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration,
 
 func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	for _, destinations := range makeMultiportDestinations(portsToIgnore) {
-		fmt.Printf("Will ignore port %s on chain %s\n", destinations, chainName)
+		log.Printf("Will ignore port %s on chain %s\n", destinations, chainName)
 
 		commands = append(commands, makeIgnorePorts(chainName, destinations, fmt.Sprintf("ignore-port-%s", strings.Join(destinations, ","))))
 	}
@@ -222,7 +222,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 
 func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) error {
 	if firewallConfiguration.UseWaitFlag {
-		fmt.Println("Setting UseWaitFlag: iptables will wait for xtables to become available")
+		log.Println("Setting UseWaitFlag: iptables will wait for xtables to become available")
 		cmd.Args = append(cmd.Args, "-w")
 	}
 
@@ -234,16 +234,16 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) 
 	if len(firewallConfiguration.NetNs) > 0 {
 		cmd.Args = append([]string{
 			"nsenter",
-			"--net", firewallConfiguration.NetNs,
+			fmt.Sprintf("--net=%s", firewallConfiguration.NetNs),
 		}, cmd.Args...)
 	}
 
-	fmt.Printf(":; %s\n", strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]"))
+	log.Printf(":; %s\n", strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]"))
 
 	out, err := cmd.CombinedOutput()
 
 	if len(out) > 0 {
-		fmt.Printf("%s\n", out)
+		log.Printf("%s\n", out)
 	}
 
 	if err != nil {
