@@ -221,7 +221,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 }
 
 func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) error {
-	if firewallConfiguration.UseWaitFlag {
+	if strings.HasSuffix(cmd.Path, "iptables") && firewallConfiguration.UseWaitFlag {
 		log.Println("Setting UseWaitFlag: iptables will wait for xtables to become available")
 		cmd.Args = append(cmd.Args, "-w")
 	}
