@@ -221,7 +221,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 }
 
 func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) error {
-	if firewallConfiguration.UseWaitFlag {
+	if strings.HasSuffix(cmd.Path, "iptables") && firewallConfiguration.UseWaitFlag {
 		log.Println("Setting UseWaitFlag: iptables will wait for xtables to become available")
 		cmd.Args = append(cmd.Args, "-w")
 	}
@@ -232,10 +232,11 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) 
 
 	// wrap up the cmd with nsenter if we were givin a netns
 	if len(firewallConfiguration.NetNs) > 0 {
-		cmd.Args = append([]string{
-			"nsenter",
-			fmt.Sprintf("--net=%s", firewallConfiguration.NetNs),
-		}, cmd.Args...)
+		nsenterArgs := []string{fmt.Sprintf("--net=%s", firewallConfiguration.NetNs)}
+		originalCmd := strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]")
+		originalCmdAsArgs := strings.Split(originalCmd, " ")
+		finalArgs := append(nsenterArgs, originalCmdAsArgs...)
+		cmd = exec.Command("nsenter", finalArgs...)
 	}
 
 	log.Printf(":; %s\n", strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]"))
