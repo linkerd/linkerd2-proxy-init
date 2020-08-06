@@ -59,7 +59,6 @@ images: ## Build multi arch docker images for the project
 		--platform $(SUPPORTED_ARCHS) \
 		--output "type=image,push=$(PUSH_IMAGE)" \
 		--tag $(REPO):$(VERSION) \
-		--tag $(REPO):latest \
 		.
 
 .PHONY: push
@@ -69,7 +68,6 @@ push: ## Push multi arch docker images to the registry
 .PHONY: inspect-manifest
 inspect-manifest: ## Check the resulting images supported architecture
 	docker run --rm mplatform/mquery $(REPO):$(VERSION)
-	docker run --rm mplatform/mquery $(REPO):latest
 
 .PHONY: builder
 builder: ## Create the Buildx builder instance
