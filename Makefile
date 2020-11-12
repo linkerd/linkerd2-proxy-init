@@ -1,4 +1,4 @@
-DOCKER_REGISTRY ?= gcr.io/linkerd-io
+DOCKER_REGISTRY ?= ghcr.io/linkerd
 REPO = $(DOCKER_REGISTRY)/proxy-init
 TESTER_REPO = buoyantio/iptables-tester
 VERSION ?= $(shell git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)

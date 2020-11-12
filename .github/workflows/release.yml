@@ -11,19 +11,14 @@ jobs:
     - name: Checkout code
       # actions/checkout@v2.0.0
       uses: actions/checkout@722adc6
-    - name: Configure gcloud
-      # linkerd/linkerd2-action-gcloud@v1.0.1
-      uses: linkerd/linkerd2-action-gcloud@308c4df
-      with:
-        cloud_sdk_service_account_key: ${{ secrets.CLOUD_SDK_SERVICE_ACCOUNT_KEY }}
-        gcp_project: ${{ secrets.GCP_PROJECT }}
-        gcp_zone: ${{ secrets.GCP_ZONE }}
     - name: Set up Docker Buildx
       # crazy-max/ghaction-docker-buildx@v3.1.0
       uses: crazy-max/ghaction-docker-buildx@373dafb
     - name: Docker Buildx (build)
       run: make images
     - name: Docker Buildx (push)
-      run: make push
+      run: |
+        echo "${{ secrets.DOCKER_GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.DOCKER_GHCR_USERNAME }}" --password-stdin
+        make push
     - name: Docker Check Manifest
       run: make inspect-manifest

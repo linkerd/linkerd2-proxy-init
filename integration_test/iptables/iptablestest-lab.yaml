@@ -70,7 +70,7 @@ spec:
           containerPort: 8080
       initContainers:
       - name: linkerd-init
-        image: gcr.io/linkerd-io/proxy-init:latest
+        image: ghcr.io/linkerd/proxy-init:latest
         imagePullPolicy: Never
         args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
         securityContext:
@@ -125,7 +125,7 @@ spec:
           runAsUser: 2102
       initContainers:
       - name: linkerd-init
-        image: gcr.io/linkerd-io/proxy-init:latest
+        image: ghcr.io/linkerd/proxy-init:latest
         imagePullPolicy: Never
         args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-r", "9090", "-r", "9099"]
         securityContext:
@@ -187,7 +187,7 @@ spec:
           containerPort: 7070
       initContainers:
       - name: linkerd-init
-        image: gcr.io/linkerd-io/proxy-init:latest
+        image: ghcr.io/linkerd/proxy-init:latest
         imagePullPolicy: Never
         args: ["-p", "8080",  "-o", "8080", "-u", "2102", "--inbound-ports-to-ignore", "6000-8000"]
         securityContext:
