@@ -18,10 +18,10 @@ jobs:
       # actions/checkout@v2.0.0
       uses: actions/checkout@722adc6
     - name: Lint
-      # golangci/golangci-lint-action@v1.2.1
-      uses: golangci/golangci-lint-action@04eca20
+      # golangci/golangci-lint-action@v2.3.0
+      uses: golangci/golangci-lint-action@e868220
       with:
-        version: v1.27
+        version: v1.29
   go_format:
     name: Go format
     runs-on: ubuntu-18.04
