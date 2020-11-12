@@ -230,11 +230,15 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) 
 		return nil
 	}
 
-	// wrap up the cmd with nsenter if we were givin a netns
+	// wrap up the cmd with nsenter if we were given a netns
 	if len(firewallConfiguration.NetNs) > 0 {
 		nsenterArgs := []string{fmt.Sprintf("--net=%s", firewallConfiguration.NetNs)}
 		originalCmd := strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]")
 		originalCmdAsArgs := strings.Split(originalCmd, " ")
+		// separate nsenter args from the rest with `--`,
+		// only needed for hosts using BusyBox binaries, like k3s
+		// see https://github.com/rancher/k3s/issues/1434#issuecomment-629315909
+		originalCmdAsArgs = append([]string{"--"}, originalCmdAsArgs...)
 		finalArgs := append(nsenterArgs, originalCmdAsArgs...)
 		cmd = exec.Command("nsenter", finalArgs...)
 	}
