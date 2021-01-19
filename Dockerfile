@@ -25,10 +25,9 @@ RUN apt-get update \
 COPY LICENSE /linkerd/LICENSE
 COPY --from=golang /out/linkerd2-proxy-init /usr/local/bin/proxy-init
 
-RUN setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/proxy-init
 RUN setcap cap_net_raw,cap_net_admin+eip /usr/sbin/xtables-legacy-multi
 RUN touch /run/xtables.lock && chmod 0666 /run/xtables.lock
-RUN groupadd -r linkerd && useradd -r -g linkerd linkerd
+RUN groupadd -r linkerd && useradd --uid 76543 -r -g linkerd linkerd
 USER linkerd
 
 ENTRYPOINT ["/usr/local/bin/proxy-init"]
