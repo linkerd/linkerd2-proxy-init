@@ -1,10 +1,10 @@
 DOCKER_REGISTRY ?= ghcr.io/linkerd
 REPO = $(DOCKER_REGISTRY)/proxy-init
 TESTER_REPO = buoyantio/iptables-tester
+TAG ?= latest
 VERSION ?= $(shell git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)
 SUPPORTED_ARCHS = linux/amd64,linux/arm64,linux/arm/v7
 PUSH_IMAGE ?= false
-
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -42,7 +42,13 @@ integration-test: image ## Perform integration test
 ###############
 .PHONY: image
 image: ## Build docker image for the project
-	DOCKER_BUILDKIT=1 docker build -t $(REPO):latest .
+	DOCKER_BUILDKIT=1 docker build -t $(REPO):$(TAG) .
+
+.PHONY: docker-push
+docker-push: ## push to any docker registry
+	make image
+	docker push $(REPO):$(TAG)
+
 
 .PHONY: tester-image
 tester-image: ## Build docker image for the tester component

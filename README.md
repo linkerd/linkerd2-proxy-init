@@ -13,11 +13,27 @@ Start by building and tagging the `proxy-init` image required for the test:
 eval $(minikube docker-env)
 make image
 ```
-
 Then run the tests with:
 
 ```bash
 make integration-test
+```
+# Build and push to custom repo
+Start by building and tagging the `proxy-init` image   
+For custom tagging set the TAG parameter. (default is latest)     
+To build an image 
+```bash
+make TAG=git-1234 image
+```
+For building and pushing to a private registry set the DOCKER_REGISTRY parameter
+```bash
+make DOCKER_REGISTRY=ghcr.io/my-private-registry  TAG=git-1234 docker-push
+```
+
+To make use of the custom init-proxy you can tell linkerd during install which image to use  
+Example: 
+```bash
+linkerd install --init-image=$DOCKER_REGISTRY:proxy-init  --init-image-version=$TAG |  kubectl apply -f - 
 ```
 
 # Build Multi-Architecture Docker Images with Buildx
