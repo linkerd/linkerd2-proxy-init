@@ -18,9 +18,16 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         iptables \
         procps \
+        libcap2-bin \
     && rm -rf /var/lib/apt/lists/* \
     && update-alternatives --set iptables /usr/sbin/iptables-legacy \
     && update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 COPY LICENSE /linkerd/LICENSE
 COPY --from=golang /out/linkerd2-proxy-init /usr/local/bin/proxy-init
+
+RUN setcap cap_net_raw,cap_net_admin+eip /usr/sbin/xtables-legacy-multi
+RUN touch /run/xtables.lock && chmod 0666 /run/xtables.lock
+RUN groupadd -r linkerd && useradd --uid 76543 -r -g linkerd linkerd
+USER linkerd
+
 ENTRYPOINT ["/usr/local/bin/proxy-init"]
