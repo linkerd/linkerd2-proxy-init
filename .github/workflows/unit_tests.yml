@@ -10,9 +10,9 @@ on:
 jobs:
   go_unit_tests:
     name: Go unit tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     container:
-      image: golang:1.13.4
+      image: golang:1.14.15
     steps:
     - name: Checkout code
       # actions/checkout@v2.0.0

@@ -10,7 +10,7 @@ on:
 jobs:
   kind_integration_tests:
     name: KinD integration tests
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Checkout code
       # actions/checkout@v2.0.0
