@@ -1,5 +1,5 @@
 ## compile proxy-init utility
-FROM --platform=$BUILDPLATFORM golang:1.12.9 as golang
+FROM --platform=$BUILDPLATFORM golang:1.14.15 as golang
 WORKDIR /build
 
 # cache dependencies
@@ -13,11 +13,11 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-init -mod=readonly -ldflags "-s -w" -v
 
 ## package runtime
-FROM --platform=$TARGETPLATFORM debian:buster-20201117-slim
+FROM --platform=$TARGETPLATFORM debian:buster-20210208-slim
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        iptables \
-        procps \
+    iptables \
+    procps \
     && rm -rf /var/lib/apt/lists/* \
     && update-alternatives --set iptables /usr/sbin/iptables-legacy \
     && update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy

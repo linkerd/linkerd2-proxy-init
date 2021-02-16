@@ -6,7 +6,7 @@ on:
 jobs:
   buildx:
     name: Build & Push Multi Arch Images
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - name: Checkout code
       # actions/checkout@v2.0.0
