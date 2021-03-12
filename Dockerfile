@@ -1,5 +1,5 @@
 ## compile proxy-init utility
-FROM --platform=$BUILDPLATFORM golang:1.14.15 as golang
+FROM --platform=$BUILDPLATFORM golang:1.16.2 as golang
 WORKDIR /build
 
 # cache dependencies
