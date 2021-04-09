@@ -1,4 +1,5 @@
 DOCKER_REGISTRY ?= ghcr.io/linkerd
+CLUSTER_NAME ?= kind
 REPO = $(DOCKER_REGISTRY)/proxy-init
 TESTER_REPO = buoyantio/iptables-tester
 VERSION ?= $(shell git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)
@@ -50,8 +51,8 @@ tester-image: ## Build docker image for the tester component
 
 .PHONY: kind-load
 kind-load: image tester-image ## Load the required image to KinD cluster
-	kind load docker-image $(REPO):latest
-	kind load docker-image $(TESTER_REPO):v1
+	kind load docker-image $(REPO):latest --name $(CLUSTER_NAME)
+	kind load docker-image $(TESTER_REPO):v1 --name $(CLUSTER_NAME)
 
 .PHONY: images
 images: ## Build multi arch docker images for the project
