@@ -8,7 +8,7 @@ metadata:
 spec:
       containers:
       - name: webserver
-        image: buoyantio/iptables-tester:v1
+        image: ghcr.io/linkerd/iptables-tester:v1
         env:
          - name: PORT
            value: "8080"
@@ -17,7 +17,7 @@ spec:
         - name: http
           containerPort: 8080
       - name: other-container
-        image: buoyantio/iptables-tester:v1
+        image: ghcr.io/linkerd/iptables-tester:v1
         env:
          - name: PORT
            value: "9090"
@@ -46,7 +46,7 @@ metadata:
 spec:
       containers:
       - name: other-container
-        image: buoyantio/iptables-tester:v1
+        image: ghcr.io/linkerd/iptables-tester:v1
         env:
          - name: PORT
            value: "9090"
@@ -55,7 +55,7 @@ spec:
         - name: http
           containerPort: 9090
       - name: proxy-stub
-        image: buoyantio/iptables-tester:v1
+        image: ghcr.io/linkerd/iptables-tester:v1
         env:
          - name: PORT
            value: "8080"
@@ -110,7 +110,7 @@ metadata:
 spec:
       containers:
       - name: proxy-stub
-        image: buoyantio/iptables-tester:v1
+        image: ghcr.io/linkerd/iptables-tester:v1
         env:
          - name: PORT
            value: "8080"
@@ -154,7 +154,7 @@ metadata:
 spec:
       containers:
       - name: proxy-stub
-        image: buoyantio/iptables-tester:v1
+        image: ghcr.io/linkerd/iptables-tester:v1
         env:
          - name: PORT
            value: "8080"
@@ -168,7 +168,7 @@ spec:
           privileged: false
           runAsUser: 2102
       - name: other-container
-        image: buoyantio/iptables-tester:v1
+        image: ghcr.io/linkerd/iptables-tester:v1
         env:
          - name: PORT
            value: "9090"
@@ -177,7 +177,7 @@ spec:
         - name: http
           containerPort: 9090
       - name: blacklisted-container
-        image: buoyantio/iptables-tester:v1
+        image: ghcr.io/linkerd/iptables-tester:v1
         env:
          - name: PORT
            value: "7070"

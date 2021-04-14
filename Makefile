@@ -1,7 +1,7 @@
 DOCKER_REGISTRY ?= ghcr.io/linkerd
 CLUSTER_NAME ?= kind
 REPO = $(DOCKER_REGISTRY)/proxy-init
-TESTER_REPO = buoyantio/iptables-tester
+TESTER_REPO = $(DOCKER_REGISTRY)/iptables-tester
 VERSION ?= $(shell git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)
 SUPPORTED_ARCHS = linux/amd64,linux/arm64,linux/arm/v7
 PUSH_IMAGE ?= false
