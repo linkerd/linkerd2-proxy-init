@@ -1,9 +1,12 @@
 package iptables
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -35,6 +38,7 @@ var (
 	// ExecutionTraceID provides a unique identifier for this script's execution.
 	ExecutionTraceID = strconv.Itoa(int(time.Now().Unix()))
 
+	chainRegex       = regexp.MustCompile(`-A (PROXY_INIT_OUTPUT|PROXY_INIT_REDIRECT) -m.*`)
 	sectionDelimiter = strings.Repeat("-", 60)
 )
 
@@ -60,7 +64,8 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	log.Printf("Tracing this script execution as [%s]\n", ExecutionTraceID)
 
 	startSection("current state")
-	if err := executeCommand(firewallConfiguration, makeShowAllRules()); err != nil {
+	b := bytes.Buffer{}
+	if err := executeCommand(firewallConfiguration, makeShowAllRules(), &b); err != nil {
 		log.Println("Aborting firewall configuration")
 		return err
 	}
@@ -69,6 +74,12 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	commands := make([]*exec.Cmd, 0)
 
 	startSection("configuration")
+
+	matches := chainRegex.FindAllString(b.String(), -1)
+	if len(matches) > 0 {
+		log.Println("Found existing firewall configuration; Skipping")
+		return nil
+	}
 
 	commands = addIncomingTrafficRules(commands, firewallConfiguration)
 
@@ -79,7 +90,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	startSection("adding rules")
 
 	for _, cmd := range commands {
-		if err := executeCommand(firewallConfiguration, cmd); err != nil {
+		if err := executeCommand(firewallConfiguration, cmd, nil); err != nil {
 			log.Println("Aborting firewall configuration")
 			return err
 		}
@@ -88,7 +99,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	endSection()
 
 	startSection("end state")
-	_ = executeCommand(firewallConfiguration, makeShowAllRules())
+	_ = executeCommand(firewallConfiguration, makeShowAllRules(), nil)
 	endSection()
 
 	return nil
@@ -220,7 +231,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 	return append(destinationSlices, destinations)
 }
 
-func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) error {
+func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, cmdOut io.Writer) error {
 	if strings.HasSuffix(cmd.Path, "iptables") && firewallConfiguration.UseWaitFlag {
 		log.Println("Setting UseWaitFlag: iptables will wait for xtables to become available")
 		cmd.Args = append(cmd.Args, "-w")
@@ -251,6 +262,15 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) 
 		log.Printf("%s\n", out)
 	}
 
+	if err != nil {
+		return err
+	}
+
+	if cmdOut == nil {
+		return nil
+	}
+
+	_, err = io.WriteString(cmdOut, string(out))
 	if err != nil {
 		return err
 	}

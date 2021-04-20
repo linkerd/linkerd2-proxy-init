@@ -40,6 +40,71 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
+  name: pod-with-existing-rules
+  labels:
+    app: pod-with-existing-rules
+spec:
+      containers:
+      - name: webserver
+        image: buoyantio/iptables-tester:v1
+        env:
+         - name: PORT
+           value: "8080"
+        command: ["go", "run", "/go/test_service/test_service.go"]
+        ports:
+        - name: http
+          containerPort: 8080
+      - name: other-container
+        image: buoyantio/iptables-tester:v1
+        env:
+         - name: PORT
+           value: "9090"
+        command: ["go", "run", "/go/test_service/test_service.go"]
+        ports:
+        - name: http
+          containerPort: 9090
+      initContainers:
+      - name: iptables-test
+        image: ghcr.io/linkerd/proxy-init:latest
+        imagePullPolicy: Never
+        args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /run
+          name: linkerd-proxy-init-xtables-lock
+      - name: linkerd-init
+        image: ghcr.io/linkerd/proxy-init:latest
+        imagePullPolicy: Never
+        args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /run
+          name: linkerd-proxy-init-xtables-lock
+      volumes:
+      - emptyDir: {}
+        name: linkerd-proxy-init-xtables-lock
+---
+apiVersion: v1
+kind: Pod
+metadata:
   name: pod-redirects-all-ports
   labels:
     app: pod-redirects-all-ports
