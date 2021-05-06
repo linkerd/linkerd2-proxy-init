@@ -38,7 +38,7 @@ kubectl delete  "jobs/$TESTER_JOB_NAME"
 # if env var not set then build the image
 if [[ -z "${SKIP_BUILD_TESTER_IMAGE}" ]]; then
   header 'Building the image used in tests...'
-  docker build . -f iptables/Dockerfile-tester --tag buoyantio/iptables-tester:v1
+  docker build . -f iptables/Dockerfile-tester --tag ghcr.io/linkerd/iptables-tester:v1
   sleep 10
 fi
 
@@ -70,7 +70,7 @@ spec:
     spec:
       containers:
       - name: tester
-        image: buoyantio/iptables-tester:v1
+        image: ghcr.io/linkerd/iptables-tester:v1
         env:
           - name: POD_REDIRECTS_ALL_PORTS_IP
             value: ${POD_REDIRECTS_ALL_PORTS_IP}
