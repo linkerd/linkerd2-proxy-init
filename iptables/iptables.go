@@ -38,7 +38,7 @@ var (
 	// ExecutionTraceID provides a unique identifier for this script's execution.
 	ExecutionTraceID = strconv.Itoa(int(time.Now().Unix()))
 
-	chainRegex       = regexp.MustCompile(`-A (PROXY_INIT_OUTPUT|PROXY_INIT_REDIRECT) -m.*`)
+	chainRegex       = regexp.MustCompile(`-A (PROXY_INIT_OUTPUT|PROXY_INIT_REDIRECT).*`)
 	sectionDelimiter = strings.Repeat("-", 60)
 )
 
@@ -75,7 +75,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	startSection("configuration")
 
-	matches := chainRegex.FindAllString(b.String(), -1)
+	matches := chainRegex.FindAllString(b.String(), 1)
 	if len(matches) > 0 {
 		log.Println("Found existing firewall configuration; Skipping")
 		return nil
