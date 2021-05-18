@@ -48,6 +48,9 @@ kubectl create -f "$LAB_YAML_FILE"
 POD_WITH_NO_RULES_IP=$(get_ip_for_pod 'pod-with-no-rules')
 log "POD_WITH_NO_RULES_IP=${POD_WITH_NO_RULES_IP}"
 
+POD_WITH_EXISTING_RULES_IP=$(get_ip_for_pod 'pod-with-existing-rules')
+log "POD_WITH_EXISTING_RULES_IP=${POD_WITH_EXISTING_RULES_IP}"
+
 POD_REDIRECTS_ALL_PORTS_IP=$(get_ip_for_pod 'pod-redirects-all-ports')
 log "POD_REDIRECTS_ALL_PORTS_IP=${POD_REDIRECTS_ALL_PORTS_IP}"
 
@@ -74,6 +77,8 @@ spec:
         env:
           - name: POD_REDIRECTS_ALL_PORTS_IP
             value: ${POD_REDIRECTS_ALL_PORTS_IP}
+          - name: POD_WITH_EXISTING_RULES_IP
+            value: ${POD_WITH_EXISTING_RULES_IP}
           - name: POD_WITH_NO_RULES_IP
             value: ${POD_WITH_NO_RULES_IP}
           - name: POD_REDIRECTS_WHITELISTED_IP
