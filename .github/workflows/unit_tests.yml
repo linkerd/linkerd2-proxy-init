@@ -15,6 +15,6 @@ jobs:
       image: golang:1.14.15
     steps:
     - name: Checkout code
-      uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598
+      uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
     - name: Run unit tests
       run: make test
