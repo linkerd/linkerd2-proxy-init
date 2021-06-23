@@ -237,11 +237,6 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, 
 		cmd.Args = append(cmd.Args, "-w")
 	}
 
-	if firewallConfiguration.SimulateOnly {
-		return nil
-	}
-
-	// wrap up the cmd with nsenter if we were given a netns
 	if len(firewallConfiguration.NetNs) > 0 {
 		nsenterArgs := []string{fmt.Sprintf("--net=%s", firewallConfiguration.NetNs)}
 		originalCmd := strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]")
@@ -255,6 +250,10 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, 
 	}
 
 	log.Printf(":; %s\n", strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]"))
+
+	if firewallConfiguration.SimulateOnly {
+		return nil
+	}
 
 	out, err := cmd.CombinedOutput()
 
