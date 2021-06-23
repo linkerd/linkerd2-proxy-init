@@ -16,7 +16,7 @@ jobs:
     steps:
     - name: Checkout code
       # actions/checkout@v2.0.0
-      uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598
+      uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
     - name: Lint
       # golangci/golangci-lint-action@v2.3.0
       uses: golangci/golangci-lint-action@e868220d9fd3b523f1a8fcfb69749e8c7521ba14
@@ -30,6 +30,6 @@ jobs:
     steps:
     - name: Checkout code
       # actions/checkout@v2.0.0
-      uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598
+      uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
     - name: Format
       run: make fmt
