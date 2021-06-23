@@ -13,10 +13,8 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout code
-      # actions/checkout@v2.0.0
       uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598
     - name: Setup KinD
-      # engineerd/setup-kind@v0.5.0
       uses: engineerd/setup-kind@aa272fe2a7309878ffc2a81c56cfe3ef108ae7d0
       with:
         version: v0.8.1
