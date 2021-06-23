@@ -13,7 +13,7 @@ jobs:
       uses: actions/checkout@722adc63f1aa60a57ec37892e133b1d319cae598
     - name: Set up Docker Buildx
       # crazy-max/ghaction-docker-buildx@v3.1.0
-      uses: crazy-max/ghaction-docker-buildx@373dafb963e27afd52567f12584adb676f5fd647
+      uses: crazy-max/ghaction-docker-buildx@126d331dc69f4a1aa02452e374835e6a5d565613
     - name: Docker Buildx (build)
       run: make images
     - name: Docker Buildx (push)
