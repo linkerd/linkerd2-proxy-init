@@ -125,7 +125,6 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	// Ignore traffic from the proxy
 	if firewallConfiguration.ProxyUID > 0 {
 		log.Printf("Ignoring uid %d\n", firewallConfiguration.ProxyUID)
-		// Redirect calls originating from the proxy destined for an app container e.g. app -> proxy(outbound) -> proxy(inbound) -> app
 		commands = append(commands, makeIgnoreUserID(outputChainName, firewallConfiguration.ProxyUID, "ignore-proxy-user-id"))
 	} else {
 		log.Println("Not ignoring any uid")
