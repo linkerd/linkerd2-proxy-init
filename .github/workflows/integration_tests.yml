@@ -17,7 +17,7 @@ jobs:
     - name: Setup KinD
       uses: engineerd/setup-kind@aa272fe2a7309878ffc2a81c56cfe3ef108ae7d0
       with:
-        version: v0.8.1
+        version: v0.11.1
     - name: Docker build
       run: |
         make image
