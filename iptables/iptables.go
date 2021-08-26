@@ -354,19 +354,6 @@ func makeJumpFromChainToAnotherForAllProtocols(
 		"--comment", formatComment(comment))
 }
 
-func makeRedirectChainForOutgoingTraffic(chainName string, redirectChainName string, uid int, comment string) *exec.Cmd {
-	return exec.Command("iptables",
-		"-t", "nat",
-		"-A", chainName,
-		"-m", "owner",
-		"--uid-owner", strconv.Itoa(uid),
-		"-o", "lo",
-		"!", "-d 127.0.0.1/32",
-		"-j", redirectChainName,
-		"-m", "comment",
-		"--comment", formatComment(comment))
-}
-
 func makeShowAllRules() *exec.Cmd {
 	return exec.Command("iptables-save")
 }
