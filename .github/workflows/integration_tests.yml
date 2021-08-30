@@ -15,7 +15,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
     - name: Setup KinD
-      uses: engineerd/setup-kind@c60b1f94dbba563e5fba9686a1b29ee6b7219958
+      uses: engineerd/setup-kind@aa272fe2a7309878ffc2a81c56cfe3ef108ae7d0
       with:
         version: v0.11.1
     - name: Docker build
