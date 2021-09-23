@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os/exec"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
 
@@ -23,6 +24,7 @@ type RootOptions struct {
 	NetNs                 string
 	UseWaitFlag           bool
 	TimeoutCloseWaitSecs  int
+	LogFormat             string
 }
 
 func newRootOptions() *RootOptions {
@@ -37,6 +39,7 @@ func newRootOptions() *RootOptions {
 		NetNs:                 "",
 		UseWaitFlag:           false,
 		TimeoutCloseWaitSecs:  0,
+		LogFormat:             "plain",
 	}
 }
 
@@ -66,6 +69,7 @@ func NewRootCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			log.SetFormatter(getFormatter(options.LogFormat))
 			return iptables.ConfigureFirewall(*config)
 		},
 	}
@@ -80,7 +84,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&options.NetNs, "netns", options.NetNs, "Optional network namespace in which to run the iptables commands")
 	cmd.PersistentFlags().BoolVarP(&options.UseWaitFlag, "use-wait-flag", "w", options.UseWaitFlag, "Appends the \"-w\" flag to the iptables commands")
 	cmd.PersistentFlags().IntVar(&options.TimeoutCloseWaitSecs, "timeout-close-wait-secs", options.TimeoutCloseWaitSecs, "Sets nf_conntrack_tcp_timeout_close_wait")
-
+	cmd.PersistentFlags().StringVar(&options.LogFormat, "log-format", options.LogFormat, "Configure log format ('plain' or 'json')")
 	return cmd
 }
 
@@ -113,4 +117,13 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 	}
 
 	return firewallConfiguration, nil
+}
+
+func getFormatter(format string) log.Formatter {
+	switch format {
+	case "json":
+		return &log.JSONFormatter{}
+	default:
+		return &log.TextFormatter{FullTimestamp: true}
+	}
 }

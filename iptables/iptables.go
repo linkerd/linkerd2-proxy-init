@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/linkerd/linkerd2-proxy-init/ports"
 )
@@ -66,7 +67,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	startSection("current state")
 	b := bytes.Buffer{}
 	if err := executeCommand(firewallConfiguration, makeShowAllRules(), &b); err != nil {
-		log.Println("Aborting firewall configuration")
+		log.Error("Aborting firewall configuration")
 		return err
 	}
 	endSection()
@@ -91,7 +92,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	for _, cmd := range commands {
 		if err := executeCommand(firewallConfiguration, cmd, nil); err != nil {
-			log.Println("Aborting firewall configuration")
+			log.Error("Aborting firewall configuration")
 			return err
 		}
 	}
