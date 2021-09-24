@@ -62,7 +62,7 @@ type FirewallConfiguration struct {
 // https://github.com/istio/istio/blob/e83411e/pilot/docker/prepare_proxy.sh
 func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
-	log.Printf("Tracing this script execution as [%s]\n", ExecutionTraceID)
+	log.Debugf("Tracing this script execution as [%s]", ExecutionTraceID)
 
 	startSection("current state")
 	b := bytes.Buffer{}
@@ -70,7 +70,6 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 		log.Error("Aborting firewall configuration")
 		return err
 	}
-	endSection()
 
 	commands := make([]*exec.Cmd, 0)
 
@@ -86,8 +85,6 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	commands = addOutgoingTrafficRules(commands, firewallConfiguration)
 
-	endSection()
-
 	startSection("adding rules")
 
 	for _, cmd := range commands {
@@ -97,11 +94,8 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 		}
 	}
 
-	endSection()
-
 	startSection("end state")
 	_ = executeCommand(firewallConfiguration, makeShowAllRules(), nil)
-	endSection()
 
 	return nil
 }
@@ -113,11 +107,10 @@ func formatComment(text string) string {
 }
 
 func startSection(text string) {
-	log.Printf("%s\n%s\n", text, sectionDelimiter)
+	log.Debugf("%s", text)
 }
 
 func endSection() {
-	log.Printf("\n\n")
 }
 
 func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
@@ -125,7 +118,7 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 
 	// Ignore traffic from the proxy
 	if firewallConfiguration.ProxyUID > 0 {
-		log.Printf("Ignoring uid %d\n", firewallConfiguration.ProxyUID)
+		log.Printf("Ignoring uid %d", firewallConfiguration.ProxyUID)
 		commands = append(commands, makeIgnoreUserID(outputChainName, firewallConfiguration.ProxyUID, "ignore-proxy-user-id"))
 	} else {
 		log.Println("Not ignoring any uid")
@@ -136,7 +129,7 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	// Ignore ports
 	commands = addRulesForIgnoredPorts(firewallConfiguration.OutboundPortsToIgnore, outputChainName, commands)
 
-	log.Printf("Redirecting all OUTPUT to %d\n", firewallConfiguration.ProxyOutgoingPort)
+	log.Printf("Redirecting all OUTPUT to %d", firewallConfiguration.ProxyOutgoingPort)
 	commands = append(commands, makeRedirectChainToPort(outputChainName, firewallConfiguration.ProxyOutgoingPort, "redirect-all-outgoing-to-proxy-port"))
 
 	//Redirect all remaining outbound traffic to the proxy.
@@ -177,7 +170,7 @@ func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration,
 			"redirect-all-incoming-to-proxy-port"))
 
 	} else if firewallConfiguration.Mode == RedirectListedMode {
-		log.Printf("Will redirect some INPUT ports to proxy: %v\n", firewallConfiguration.PortsToRedirectInbound)
+		log.Printf("Will redirect some INPUT ports to proxy: %v", firewallConfiguration.PortsToRedirectInbound)
 		for _, port := range firewallConfiguration.PortsToRedirectInbound {
 			commands = append(
 				commands,
@@ -193,7 +186,7 @@ func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration,
 
 func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	for _, destinations := range makeMultiportDestinations(portsToIgnore) {
-		log.Printf("Will ignore port %s on chain %s\n", destinations, chainName)
+		log.Printf("Will ignore port %s on chain %s", destinations, chainName)
 
 		commands = append(commands, makeIgnorePorts(chainName, destinations, fmt.Sprintf("ignore-port-%s", strings.Join(destinations, ","))))
 	}
@@ -224,7 +217,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 			destinations = append(destinations, asDestination(portRange))
 			destinationPortCount += portCount
 		} else {
-			log.Printf("Invalid port configuration of \"%s\": %s", portOrRange, err.Error())
+			log.Errorf("Invalid port configuration of \"%s\": %s", portOrRange, err.Error())
 		}
 	}
 	return append(destinationSlices, destinations)
@@ -248,7 +241,7 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, 
 		cmd = exec.Command("nsenter", finalArgs...)
 	}
 
-	log.Printf(":; %s\n", strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]"))
+	log.Debugf("%s", strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]"))
 
 	if firewallConfiguration.SimulateOnly {
 		return nil
@@ -257,7 +250,11 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, 
 	out, err := cmd.CombinedOutput()
 
 	if len(out) > 0 {
-		log.Printf("%s\n", out)
+		if err != nil {
+			log.Errorf("%s", out)
+		} else {
+			log.Debugf("%s", out)
+		}
 	}
 
 	if err != nil {

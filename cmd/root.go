@@ -25,6 +25,7 @@ type RootOptions struct {
 	UseWaitFlag           bool
 	TimeoutCloseWaitSecs  int
 	LogFormat             string
+	LogLevel              string
 }
 
 func newRootOptions() *RootOptions {
@@ -40,6 +41,7 @@ func newRootOptions() *RootOptions {
 		UseWaitFlag:           false,
 		TimeoutCloseWaitSecs:  0,
 		LogFormat:             "plain",
+		LogLevel:              "info",
 	}
 }
 
@@ -59,9 +61,11 @@ func NewRootCmd() *cobra.Command {
 					fmt.Sprintf("net.netfilter.nf_conntrack_tcp_timeout_close_wait=%d", options.TimeoutCloseWaitSecs),
 				)
 				out, err := sysctl.CombinedOutput()
-				log.Println(string(out))
 				if err != nil {
+					log.Errorln(string(out))
 					return err
+				} else {
+					log.Println(string(out))
 				}
 			}
 
@@ -70,6 +74,10 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 			log.SetFormatter(getFormatter(options.LogFormat))
+			err = setLogLevel(options.LogLevel)
+			if err != nil {
+				return err
+			}
 			return iptables.ConfigureFirewall(*config)
 		},
 	}
@@ -85,6 +93,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&options.UseWaitFlag, "use-wait-flag", "w", options.UseWaitFlag, "Appends the \"-w\" flag to the iptables commands")
 	cmd.PersistentFlags().IntVar(&options.TimeoutCloseWaitSecs, "timeout-close-wait-secs", options.TimeoutCloseWaitSecs, "Sets nf_conntrack_tcp_timeout_close_wait")
 	cmd.PersistentFlags().StringVar(&options.LogFormat, "log-format", options.LogFormat, "Configure log format ('plain' or 'json')")
+	cmd.PersistentFlags().StringVar(&options.LogLevel, "log-level", options.LogLevel, "Configure log level")
 	return cmd
 }
 
@@ -126,4 +135,13 @@ func getFormatter(format string) log.Formatter {
 	default:
 		return &log.TextFormatter{FullTimestamp: true}
 	}
+}
+
+func setLogLevel(logLevel string) error {
+	level, err := log.ParseLevel(logLevel)
+	if err != nil {
+		return err
+	}
+	log.SetLevel(level)
+	return nil
 }
