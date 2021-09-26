@@ -39,8 +39,7 @@ var (
 	// ExecutionTraceID provides a unique identifier for this script's execution.
 	ExecutionTraceID = strconv.Itoa(int(time.Now().Unix()))
 
-	chainRegex       = regexp.MustCompile(`-A (PROXY_INIT_OUTPUT|PROXY_INIT_REDIRECT).*`)
-	sectionDelimiter = strings.Repeat("-", 60)
+	chainRegex = regexp.MustCompile(`-A (PROXY_INIT_OUTPUT|PROXY_INIT_REDIRECT).*`)
 )
 
 // FirewallConfiguration specifies how to configure a pod's iptables.
