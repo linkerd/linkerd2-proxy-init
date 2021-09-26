@@ -64,7 +64,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	log.Debugf("Tracing this script execution as [%s]", ExecutionTraceID)
 
-	startSection("current state")
+	log.Debugln("current state")
 	b := bytes.Buffer{}
 	if err := executeCommand(firewallConfiguration, makeShowAllRules(), &b); err != nil {
 		log.Error("Aborting firewall configuration")
@@ -73,7 +73,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	commands := make([]*exec.Cmd, 0)
 
-	startSection("configuration")
+	log.Debugln("configuration")
 
 	matches := chainRegex.FindAllString(b.String(), 1)
 	if len(matches) > 0 {
@@ -85,7 +85,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	commands = addOutgoingTrafficRules(commands, firewallConfiguration)
 
-	startSection("adding rules")
+	log.Debugln("adding rules")
 
 	for _, cmd := range commands {
 		if err := executeCommand(firewallConfiguration, cmd, nil); err != nil {
@@ -94,7 +94,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 		}
 	}
 
-	startSection("end state")
+	log.Debugln("end state")
 	_ = executeCommand(firewallConfiguration, makeShowAllRules(), nil)
 
 	return nil
@@ -104,13 +104,6 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 // This helps debug when iptables has some stale rules from previous runs, something that can happen frequently on minikube.
 func formatComment(text string) string {
 	return fmt.Sprintf("proxy-init/%s/%s", text, ExecutionTraceID)
-}
-
-func startSection(text string) {
-	log.Debugf("%s", text)
-}
-
-func endSection() {
 }
 
 func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
