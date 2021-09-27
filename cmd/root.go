@@ -6,10 +6,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/spf13/cobra"
-
 	"github.com/linkerd/linkerd2-proxy-init/iptables"
 	"github.com/linkerd/linkerd2-proxy-init/ports"
+	"github.com/spf13/cobra"
 )
 
 // RootOptions provides the information that will be used to build a firewall configuration.
@@ -62,10 +61,10 @@ func NewRootCmd() *cobra.Command {
 				)
 				out, err := sysctl.CombinedOutput()
 				if err != nil {
-					log.Errorln(string(out))
+					log.Error(string(out))
 					return err
 				} else {
-					log.Println(string(out))
+					log.Info(string(out))
 				}
 			}
 
