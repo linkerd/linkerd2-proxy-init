@@ -116,7 +116,7 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	// Ignore ports
 	commands = addRulesForIgnoredPorts(firewallConfiguration.OutboundPortsToIgnore, outputChainName, commands)
 
-	log.Printf("Redirecting all OUTPUT to %d", firewallConfiguration.ProxyOutgoingPort)
+	log.Infof("Redirecting all OUTPUT to %d", firewallConfiguration.ProxyOutgoingPort)
 	commands = append(commands, makeRedirectChainToPort(outputChainName, firewallConfiguration.ProxyOutgoingPort, "redirect-all-outgoing-to-proxy-port"))
 
 	//Redirect all remaining outbound traffic to the proxy.
