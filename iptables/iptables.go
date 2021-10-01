@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/linkerd/linkerd2-proxy-init/ports"
 )
@@ -38,8 +39,7 @@ var (
 	// ExecutionTraceID provides a unique identifier for this script's execution.
 	ExecutionTraceID = strconv.Itoa(int(time.Now().Unix()))
 
-	chainRegex       = regexp.MustCompile(`-A (PROXY_INIT_OUTPUT|PROXY_INIT_REDIRECT).*`)
-	sectionDelimiter = strings.Repeat("-", 60)
+	chainRegex = regexp.MustCompile(`-A (PROXY_INIT_OUTPUT|PROXY_INIT_REDIRECT).*`)
 )
 
 // FirewallConfiguration specifies how to configure a pod's iptables.
@@ -61,23 +61,20 @@ type FirewallConfiguration struct {
 // https://github.com/istio/istio/blob/e83411e/pilot/docker/prepare_proxy.sh
 func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
-	log.Printf("Tracing this script execution as [%s]\n", ExecutionTraceID)
+	log.Debugf("Tracing this script execution as [%s]", ExecutionTraceID)
 
-	startSection("current state")
 	b := bytes.Buffer{}
 	if err := executeCommand(firewallConfiguration, makeShowAllRules(), &b); err != nil {
-		log.Println("Aborting firewall configuration")
+		log.Error("Aborting firewall configuration")
 		return err
 	}
-	endSection()
 
 	commands := make([]*exec.Cmd, 0)
 
-	startSection("configuration")
-
 	matches := chainRegex.FindAllString(b.String(), 1)
 	if len(matches) > 0 {
-		log.Println("Found existing firewall configuration; Skipping")
+		log.Infof("Found %d existing chains. Skipping iptables setup.", len(matches))
+		log.Debugf("Chains: %v", matches)
 		return nil
 	}
 
@@ -85,22 +82,14 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	commands = addOutgoingTrafficRules(commands, firewallConfiguration)
 
-	endSection()
-
-	startSection("adding rules")
-
 	for _, cmd := range commands {
 		if err := executeCommand(firewallConfiguration, cmd, nil); err != nil {
-			log.Println("Aborting firewall configuration")
+			log.Error("Aborting firewall configuration")
 			return err
 		}
 	}
 
-	endSection()
-
-	startSection("end state")
 	_ = executeCommand(firewallConfiguration, makeShowAllRules(), nil)
-	endSection()
 
 	return nil
 }
@@ -111,23 +100,15 @@ func formatComment(text string) string {
 	return fmt.Sprintf("proxy-init/%s/%s", text, ExecutionTraceID)
 }
 
-func startSection(text string) {
-	log.Printf("%s\n%s\n", text, sectionDelimiter)
-}
-
-func endSection() {
-	log.Printf("\n\n")
-}
-
 func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
 	commands = append(commands, makeCreateNewChain(outputChainName, "redirect-common-chain"))
 
 	// Ignore traffic from the proxy
 	if firewallConfiguration.ProxyUID > 0 {
-		log.Printf("Ignoring uid %d\n", firewallConfiguration.ProxyUID)
+		log.Infof("Ignoring uid %d", firewallConfiguration.ProxyUID)
 		commands = append(commands, makeIgnoreUserID(outputChainName, firewallConfiguration.ProxyUID, "ignore-proxy-user-id"))
 	} else {
-		log.Println("Not ignoring any uid")
+		log.Info("Not ignoring any uid")
 	}
 
 	// Ignore loopback
@@ -135,7 +116,7 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	// Ignore ports
 	commands = addRulesForIgnoredPorts(firewallConfiguration.OutboundPortsToIgnore, outputChainName, commands)
 
-	log.Printf("Redirecting all OUTPUT to %d\n", firewallConfiguration.ProxyOutgoingPort)
+	log.Infof("Redirecting all OUTPUT to %d", firewallConfiguration.ProxyOutgoingPort)
 	commands = append(commands, makeRedirectChainToPort(outputChainName, firewallConfiguration.ProxyOutgoingPort, "redirect-all-outgoing-to-proxy-port"))
 
 	//Redirect all remaining outbound traffic to the proxy.
@@ -169,14 +150,14 @@ func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 
 func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	if firewallConfiguration.Mode == RedirectAllMode {
-		log.Println("Will redirect all INPUT ports to proxy")
+		log.Info("Will redirect all INPUT ports to proxy")
 		//Create a new chain for redirecting inbound and outbound traffic to the proxy port.
 		commands = append(commands, makeRedirectChainToPort(chainName,
 			firewallConfiguration.ProxyInboundPort,
 			"redirect-all-incoming-to-proxy-port"))
 
 	} else if firewallConfiguration.Mode == RedirectListedMode {
-		log.Printf("Will redirect some INPUT ports to proxy: %v\n", firewallConfiguration.PortsToRedirectInbound)
+		log.Infof("Will redirect some INPUT ports to proxy: %v", firewallConfiguration.PortsToRedirectInbound)
 		for _, port := range firewallConfiguration.PortsToRedirectInbound {
 			commands = append(
 				commands,
@@ -192,7 +173,7 @@ func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration,
 
 func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	for _, destinations := range makeMultiportDestinations(portsToIgnore) {
-		log.Printf("Will ignore port %s on chain %s\n", destinations, chainName)
+		log.Infof("Will ignore port %s on chain %s", destinations, chainName)
 
 		commands = append(commands, makeIgnorePorts(chainName, destinations, fmt.Sprintf("ignore-port-%s", strings.Join(destinations, ","))))
 	}
@@ -223,7 +204,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 			destinations = append(destinations, asDestination(portRange))
 			destinationPortCount += portCount
 		} else {
-			log.Printf("Invalid port configuration of \"%s\": %s", portOrRange, err.Error())
+			log.Errorf("Invalid port configuration of \"%s\": %s", portOrRange, err.Error())
 		}
 	}
 	return append(destinationSlices, destinations)
@@ -231,7 +212,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 
 func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, cmdOut io.Writer) error {
 	if strings.HasSuffix(cmd.Path, "iptables") && firewallConfiguration.UseWaitFlag {
-		log.Println("Setting UseWaitFlag: iptables will wait for xtables to become available")
+		log.Info("Setting UseWaitFlag: iptables will wait for xtables to become available")
 		cmd.Args = append(cmd.Args, "-w")
 	}
 
@@ -247,7 +228,7 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, 
 		cmd = exec.Command("nsenter", finalArgs...)
 	}
 
-	log.Printf(":; %s\n", strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]"))
+	log.Infof("%s", strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]"))
 
 	if firewallConfiguration.SimulateOnly {
 		return nil
@@ -256,7 +237,7 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, 
 	out, err := cmd.CombinedOutput()
 
 	if len(out) > 0 {
-		log.Printf("%s\n", out)
+		log.Infof("%s", out)
 	}
 
 	if err != nil {
