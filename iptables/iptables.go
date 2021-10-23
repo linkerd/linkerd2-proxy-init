@@ -336,7 +336,7 @@ func makeJumpFromChainToAnotherForAllProtocols(
 }
 
 func makeShowAllRules() *exec.Cmd {
-	return exec.Command("iptables-save")
+	return exec.Command("iptables-save", "-t", "nat")
 }
 
 // asDestination formats the provided `PortRange` for output in commands.
