@@ -56,11 +56,10 @@ type FirewallConfiguration struct {
 	UseWaitFlag            bool
 }
 
-//ConfigureFirewall configures a pod's internal iptables to redirect all desired traffic through the proxy, allowing for
+// ConfigureFirewall configures a pod's internal iptables to redirect all desired traffic through the proxy, allowing for
 // the pod to join the service mesh. A lot of this logic was based on
 // https://github.com/istio/istio/blob/e83411e/pilot/docker/prepare_proxy.sh
 func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
-
 	log.Debugf("Tracing this script execution as [%s]", ExecutionTraceID)
 
 	b := bytes.Buffer{}
@@ -94,7 +93,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	return nil
 }
 
-//formatComment is used to format iptables comments in such way that it is possible to identify when the rules were added.
+// formatComment is used to format iptables comments in such way that it is possible to identify when the rules were added.
 // This helps debug when iptables has some stale rules from previous runs, something that can happen frequently on minikube.
 func formatComment(text string) string {
 	return fmt.Sprintf("proxy-init/%s/%s", text, ExecutionTraceID)
@@ -119,7 +118,7 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	log.Infof("Redirecting all OUTPUT to %d", firewallConfiguration.ProxyOutgoingPort)
 	commands = append(commands, makeRedirectChainToPort(outputChainName, firewallConfiguration.ProxyOutgoingPort, "redirect-all-outgoing-to-proxy-port"))
 
-	//Redirect all remaining outbound traffic to the proxy.
+	// Redirect all remaining outbound traffic to the proxy.
 	commands = append(
 		commands,
 		makeJumpFromChainToAnotherForAllProtocols(
@@ -136,7 +135,7 @@ func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	commands = addRulesForIgnoredPorts(firewallConfiguration.InboundPortsToIgnore, redirectChainName, commands)
 	commands = addRulesForInboundPortRedirect(firewallConfiguration, redirectChainName, commands)
 
-	//Redirect all remaining inbound traffic to the proxy.
+	// Redirect all remaining inbound traffic to the proxy.
 	commands = append(
 		commands,
 		makeJumpFromChainToAnotherForAllProtocols(
@@ -151,7 +150,7 @@ func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	if firewallConfiguration.Mode == RedirectAllMode {
 		log.Info("Will redirect all INPUT ports to proxy")
-		//Create a new chain for redirecting inbound and outbound traffic to the proxy port.
+		// Create a new chain for redirecting inbound and outbound traffic to the proxy port.
 		commands = append(commands, makeRedirectChainToPort(chainName,
 			firewallConfiguration.ProxyInboundPort,
 			"redirect-all-incoming-to-proxy-port"))
