@@ -14,7 +14,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-
 
 ## package runtime
 FROM --platform=$TARGETPLATFORM alpine:20210212
-RUN apk add iptables
+RUN apk add iptables libcap
+RUN touch /run/xtables.lock && chmod 0666 /run/xtables.lock
+RUN setcap cap_net_raw,cap_net_admin+eip /sbin/xtables-legacy-multi
 COPY LICENSE /linkerd/LICENSE
 COPY --from=golang /out/linkerd2-proxy-init /usr/local/bin/proxy-init
+RUN setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/proxy-init
 ENTRYPOINT ["/usr/local/bin/proxy-init"]
+
+USER 65534
