@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout code
-      uses: actions/checkout@1e204e9a9253d643386038d443f96446fa156a97
+      uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
     - name: Set up Docker Buildx
       uses: crazy-max/ghaction-docker-buildx@126d331dc69f4a1aa02452e374835e6a5d565613
     - name: Docker Buildx (build)
