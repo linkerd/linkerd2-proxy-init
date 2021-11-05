@@ -48,6 +48,7 @@ type FirewallConfiguration struct {
 	PortsToRedirectInbound []int
 	InboundPortsToIgnore   []string
 	OutboundPortsToIgnore  []string
+	SubnetsToIgnore        []string
 	ProxyInboundPort       int
 	ProxyOutgoingPort      int
 	ProxyUID               int
@@ -133,6 +134,7 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
 	commands = append(commands, makeCreateNewChain(redirectChainName, "redirect-common-chain"))
 	commands = addRulesForIgnoredPorts(firewallConfiguration.InboundPortsToIgnore, redirectChainName, commands)
+	commands = addRulesForIgnoredSubnets(firewallConfiguration.SubnetsToIgnore, redirectChainName, commands)
 	commands = addRulesForInboundPortRedirect(firewallConfiguration, redirectChainName, commands)
 
 	// Redirect all remaining inbound traffic to the proxy.
@@ -175,6 +177,15 @@ func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands 
 		log.Infof("Will ignore port %s on chain %s", destinations, chainName)
 
 		commands = append(commands, makeIgnorePorts(chainName, destinations, fmt.Sprintf("ignore-port-%s", strings.Join(destinations, ","))))
+	}
+	return commands
+}
+
+func addRulesForIgnoredSubnets(subnetsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
+	for _, subnet := range subnetsToIgnore {
+		log.Infof("Will ignore subnet %s on chain %s", subnet, chainName)
+
+		commands = append(commands, makeIgnoreSubnet(chainName, subnet, fmt.Sprintf("ignore-subnet-%s", subnet)))
 	}
 	return commands
 }
@@ -293,6 +304,17 @@ func makeIgnorePorts(chainName string, destinations []string, comment string) *e
 		"--match", "multiport",
 		"--dports", strings.Join(destinations, ","),
 		"-j", "RETURN",
+		"-m", "comment",
+		"--comment", formatComment(comment))
+}
+
+func makeIgnoreSubnet(chainName string, subnet string, comment string) *exec.Cmd {
+	return exec.Command("iptables",
+		"-t", "nat",
+		"-A", chainName,
+		"-p", "all",
+		"-j", "RETURN",
+		"-s", subnet,
 		"-m", "comment",
 		"--comment", formatComment(comment))
 }

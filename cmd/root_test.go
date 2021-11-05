@@ -17,6 +17,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 			PortsToRedirectInbound: make([]int, 0),
 			InboundPortsToIgnore:   make([]string, 0),
 			OutboundPortsToIgnore:  make([]string, 0),
+			SubnetsToIgnore:        make([]string, 0),
 			ProxyInboundPort:       expectedIncomingProxyPort,
 			ProxyOutgoingPort:      expectedOutgoingProxyPort,
 			ProxyUID:               expectedProxyUserID,
@@ -71,6 +72,12 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 					OutgoingProxyPort: 100000,
 				},
 				errorMessage: "--outgoing-proxy-port must be a valid TCP port number",
+			},
+			{
+				options: &RootOptions{
+					SubnetsToIgnore: []string{"1.1.1.1/24", "0.0.0.0"},
+				},
+				errorMessage: "0.0.0.0 is not a valid CIDR address",
 			},
 		} {
 			_, err := BuildFirewallConfiguration(tt.options)
