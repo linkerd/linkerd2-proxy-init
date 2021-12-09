@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 	"os/exec"
 
 	log "github.com/sirupsen/logrus"
@@ -19,6 +20,7 @@ type RootOptions struct {
 	PortsToRedirect       []int
 	InboundPortsToIgnore  []string
 	OutboundPortsToIgnore []string
+	SubnetsToIgnore       []string
 	SimulateOnly          bool
 	NetNs                 string
 	UseWaitFlag           bool
@@ -35,6 +37,7 @@ func newRootOptions() *RootOptions {
 		PortsToRedirect:       make([]int, 0),
 		InboundPortsToIgnore:  make([]string, 0),
 		OutboundPortsToIgnore: make([]string, 0),
+		SubnetsToIgnore:       make([]string, 0),
 		SimulateOnly:          false,
 		NetNs:                 "",
 		UseWaitFlag:           false,
@@ -87,6 +90,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().IntSliceVarP(&options.PortsToRedirect, "ports-to-redirect", "r", options.PortsToRedirect, "Port to redirect to proxy, if no port is specified then ALL ports are redirected")
 	cmd.PersistentFlags().StringSliceVar(&options.InboundPortsToIgnore, "inbound-ports-to-ignore", options.InboundPortsToIgnore, "Inbound ports and/or port ranges (inclusive) to ignore and not redirect to proxy. This has higher precedence than any other parameters.")
 	cmd.PersistentFlags().StringSliceVar(&options.OutboundPortsToIgnore, "outbound-ports-to-ignore", options.OutboundPortsToIgnore, "Outbound ports and/or port ranges (inclusive) to ignore and not redirect to proxy. This has higher precedence than any other parameters.")
+	cmd.PersistentFlags().StringSliceVar(&options.SubnetsToIgnore, "subnets-to-ignore", options.SubnetsToIgnore, "Subnets to ignore and not redirect to proxy. This has higher precedence than any other parameters.")
 	cmd.PersistentFlags().BoolVar(&options.SimulateOnly, "simulate", options.SimulateOnly, "Don't execute any command, just print what would be executed")
 	cmd.PersistentFlags().StringVar(&options.NetNs, "netns", options.NetNs, "Optional network namespace in which to run the iptables commands")
 	cmd.PersistentFlags().BoolVarP(&options.UseWaitFlag, "use-wait-flag", "w", options.UseWaitFlag, "Appends the \"-w\" flag to the iptables commands")
@@ -106,6 +110,13 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		return nil, fmt.Errorf("--outgoing-proxy-port must be a valid TCP port number")
 	}
 
+	for _, subnet := range options.SubnetsToIgnore {
+		_, _, err := net.ParseCIDR(subnet)
+		if err != nil {
+			return nil, fmt.Errorf("%s is not a valid CIDR address", subnet)
+		}
+	}
+
 	firewallConfiguration := &iptables.FirewallConfiguration{
 		ProxyInboundPort:       options.IncomingProxyPort,
 		ProxyOutgoingPort:      options.OutgoingProxyPort,
@@ -113,6 +124,7 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		PortsToRedirectInbound: options.PortsToRedirect,
 		InboundPortsToIgnore:   options.InboundPortsToIgnore,
 		OutboundPortsToIgnore:  options.OutboundPortsToIgnore,
+		SubnetsToIgnore:        options.SubnetsToIgnore,
 		SimulateOnly:           options.SimulateOnly,
 		NetNs:                  options.NetNs,
 		UseWaitFlag:            options.UseWaitFlag,

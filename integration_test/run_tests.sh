@@ -60,6 +60,9 @@ log "POD_REDIRECTS_WHITELISTED_IP=${POD_REDIRECTS_WHITELISTED_IP}"
 POD_DOEST_REDIRECT_BLACKLISTED_IP=$(get_ip_for_pod 'pod-doesnt-redirect-blacklisted')
 log "POD_DOEST_REDIRECT_BLACKLISTED_IP=${POD_DOEST_REDIRECT_BLACKLISTED_IP}"
 
+POD_IGNORES_SUBNETS_IP=$(get_ip_for_pod 'pod-ignores-subnets')
+log "POD_IGNORES_SUBNETS_IP=${POD_IGNORES_SUBNETS_IP}"
+
 header 'Running tester...'
 cat <<EOF | kubectl create -f -
 apiVersion: batch/v1
@@ -85,6 +88,8 @@ spec:
             value: ${POD_REDIRECTS_WHITELISTED_IP}
           - name: POD_DOEST_REDIRECT_BLACKLISTED_IP
             value: ${POD_DOEST_REDIRECT_BLACKLISTED_IP}
+          - name: POD_IGNORES_SUBNETS_IP
+            value: ${POD_IGNORES_SUBNETS_IP}
       restartPolicy: Never
 EOF
 
