@@ -61,11 +61,11 @@ type FirewallConfiguration struct {
 // the pod to join the service mesh. A lot of this logic was based on
 // https://github.com/istio/istio/blob/e83411e/pilot/docker/prepare_proxy.sh
 func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
-	log.Debugf("Tracing this script execution as [%s]", ExecutionTraceID)
+	log.Debugf("tracing script execution as [%s]", ExecutionTraceID)
 
 	b := bytes.Buffer{}
 	if err := executeCommand(firewallConfiguration, makeShowAllRules(), &b); err != nil {
-		log.Error("Aborting firewall configuration")
+		log.Error("aborting firewall configuration")
 		return err
 	}
 
@@ -73,8 +73,8 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	matches := chainRegex.FindAllString(b.String(), 1)
 	if len(matches) > 0 {
-		log.Infof("Found %d existing chains. Skipping iptables setup.", len(matches))
-		log.Debugf("Chains: %v", matches)
+		log.Infof("skipping iptables setup: found %d existing chains", len(matches))
+		log.Debugf("matching chains: %v", matches)
 		return nil
 	}
 
@@ -84,7 +84,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	for _, cmd := range commands {
 		if err := executeCommand(firewallConfiguration, cmd, nil); err != nil {
-			log.Error("Aborting firewall configuration")
+			log.Error("aborting firewall configuration: %v", err)
 			return err
 		}
 	}
@@ -105,10 +105,7 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 
 	// Ignore traffic from the proxy
 	if firewallConfiguration.ProxyUID > 0 {
-		log.Infof("Ignoring uid %d", firewallConfiguration.ProxyUID)
 		commands = append(commands, makeIgnoreUserID(outputChainName, firewallConfiguration.ProxyUID, "ignore-proxy-user-id"))
-	} else {
-		log.Info("Not ignoring any uid")
 	}
 
 	// Ignore loopback
@@ -116,7 +113,6 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	// Ignore ports
 	commands = addRulesForIgnoredPorts(firewallConfiguration.OutboundPortsToIgnore, outputChainName, commands)
 
-	log.Infof("Redirecting all OUTPUT to %d", firewallConfiguration.ProxyOutgoingPort)
 	commands = append(commands, makeRedirectChainToPort(outputChainName, firewallConfiguration.ProxyOutgoingPort, "redirect-all-outgoing-to-proxy-port"))
 
 	// Redirect all remaining outbound traffic to the proxy.
@@ -151,14 +147,12 @@ func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 
 func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	if firewallConfiguration.Mode == RedirectAllMode {
-		log.Info("Will redirect all INPUT ports to proxy")
 		// Create a new chain for redirecting inbound and outbound traffic to the proxy port.
 		commands = append(commands, makeRedirectChainToPort(chainName,
 			firewallConfiguration.ProxyInboundPort,
 			"redirect-all-incoming-to-proxy-port"))
 
 	} else if firewallConfiguration.Mode == RedirectListedMode {
-		log.Infof("Will redirect some INPUT ports to proxy: %v", firewallConfiguration.PortsToRedirectInbound)
 		for _, port := range firewallConfiguration.PortsToRedirectInbound {
 			commands = append(
 				commands,
@@ -174,8 +168,6 @@ func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration,
 
 func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	for _, destinations := range makeMultiportDestinations(portsToIgnore) {
-		log.Infof("Will ignore port %s on chain %s", destinations, chainName)
-
 		commands = append(commands, makeIgnorePorts(chainName, destinations, fmt.Sprintf("ignore-port-%s", strings.Join(destinations, ","))))
 	}
 	return commands
@@ -183,8 +175,6 @@ func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands 
 
 func addRulesForIgnoredSubnets(subnetsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	for _, subnet := range subnetsToIgnore {
-		log.Infof("Will ignore subnet %s on chain %s", subnet, chainName)
-
 		commands = append(commands, makeIgnoreSubnet(chainName, subnet, fmt.Sprintf("ignore-subnet-%s", subnet)))
 	}
 	return commands
@@ -214,7 +204,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 			destinations = append(destinations, asDestination(portRange))
 			destinationPortCount += portCount
 		} else {
-			log.Errorf("Invalid port configuration of \"%s\": %s", portOrRange, err.Error())
+			log.Errorf("invalid port configuration of \"%s\": %s", portOrRange, err.Error())
 		}
 	}
 	return append(destinationSlices, destinations)
@@ -222,7 +212,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 
 func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, cmdOut io.Writer) error {
 	if strings.HasSuffix(cmd.Path, "iptables") && firewallConfiguration.UseWaitFlag {
-		log.Info("Setting UseWaitFlag: iptables will wait for xtables to become available")
+		log.Info("'useWaitFlag' set: iptables will wait for xtables to become available")
 		cmd.Args = append(cmd.Args, "-w")
 	}
 
