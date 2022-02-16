@@ -84,7 +84,6 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	for _, cmd := range commands {
 		if err := executeCommand(firewallConfiguration, cmd, nil); err != nil {
-			log.Error("aborting firewall configuration: %v", err)
 			return err
 		}
 	}
