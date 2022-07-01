@@ -55,6 +55,7 @@ type FirewallConfiguration struct {
 	SimulateOnly           bool
 	NetNs                  string
 	UseWaitFlag            bool
+	UseNFTBackend          bool
 }
 
 // ConfigureFirewall configures a pod's internal iptables to redirect all desired traffic through the proxy, allowing for
@@ -63,8 +64,11 @@ type FirewallConfiguration struct {
 func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	log.Debugf("tracing script execution as [%s]", ExecutionTraceID)
 
+	iptablesBin := getBinaryName(firewallConfiguration.UseNFTBackend)
+	log.Debugf("setting up iptables routing by calling into '%s'", iptablesBin)
+
 	b := bytes.Buffer{}
-	if err := executeCommand(firewallConfiguration, makeShowAllRules(), &b); err != nil {
+	if err := executeCommand(iptablesBin, firewallConfiguration, makeShowAllRules(iptablesBin), &b); err != nil {
 		log.Error("aborting firewall configuration")
 		return err
 	}
@@ -78,17 +82,17 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 		return nil
 	}
 
-	commands = addIncomingTrafficRules(commands, firewallConfiguration)
+	commands = addIncomingTrafficRules(commands, iptablesBin, firewallConfiguration)
 
-	commands = addOutgoingTrafficRules(commands, firewallConfiguration)
+	commands = addOutgoingTrafficRules(commands, iptablesBin, firewallConfiguration)
 
 	for _, cmd := range commands {
-		if err := executeCommand(firewallConfiguration, cmd, nil); err != nil {
+		if err := executeCommand(iptablesBin, firewallConfiguration, cmd, nil); err != nil {
 			return err
 		}
 	}
 
-	_ = executeCommand(firewallConfiguration, makeShowAllRules(), nil)
+	_ = executeCommand(iptablesBin, firewallConfiguration, makeShowAllRules(iptablesBin), nil)
 
 	return nil
 }
@@ -99,25 +103,27 @@ func formatComment(text string) string {
 	return fmt.Sprintf("proxy-init/%s/%s", text, ExecutionTraceID)
 }
 
-func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
-	commands = append(commands, makeCreateNewChain(outputChainName, "redirect-common-chain"))
+func addOutgoingTrafficRules(commands []*exec.Cmd, bin string, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
+
+	commands = append(commands, makeCreateNewChain(bin, outputChainName, "redirect-common-chain"))
 
 	// Ignore traffic from the proxy
 	if firewallConfiguration.ProxyUID > 0 {
-		commands = append(commands, makeIgnoreUserID(outputChainName, firewallConfiguration.ProxyUID, "ignore-proxy-user-id"))
+		commands = append(commands, makeIgnoreUserID(bin, outputChainName, firewallConfiguration.ProxyUID, "ignore-proxy-user-id"))
 	}
 
 	// Ignore loopback
-	commands = append(commands, makeIgnoreLoopback(outputChainName, "ignore-loopback"))
+	commands = append(commands, makeIgnoreLoopback(bin, outputChainName, "ignore-loopback"))
 	// Ignore ports
-	commands = addRulesForIgnoredPorts(firewallConfiguration.OutboundPortsToIgnore, outputChainName, commands)
+	commands = addRulesForIgnoredPorts(bin, firewallConfiguration.OutboundPortsToIgnore, outputChainName, commands)
 
-	commands = append(commands, makeRedirectChainToPort(outputChainName, firewallConfiguration.ProxyOutgoingPort, "redirect-all-outgoing-to-proxy-port"))
+	commands = append(commands, makeRedirectChainToPort(bin, outputChainName, firewallConfiguration.ProxyOutgoingPort, "redirect-all-outgoing-to-proxy-port"))
 
 	// Redirect all remaining outbound traffic to the proxy.
 	commands = append(
 		commands,
 		makeJumpFromChainToAnotherForAllProtocols(
+			bin,
 			IptablesOutputChainName,
 			outputChainName,
 			"install-proxy-init-output",
@@ -126,16 +132,17 @@ func addOutgoingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	return commands
 }
 
-func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
-	commands = append(commands, makeCreateNewChain(redirectChainName, "redirect-common-chain"))
-	commands = addRulesForIgnoredPorts(firewallConfiguration.InboundPortsToIgnore, redirectChainName, commands)
-	commands = addRulesForIgnoredSubnets(firewallConfiguration.SubnetsToIgnore, redirectChainName, commands)
-	commands = addRulesForInboundPortRedirect(firewallConfiguration, redirectChainName, commands)
+func addIncomingTrafficRules(commands []*exec.Cmd, bin string, firewallConfiguration FirewallConfiguration) []*exec.Cmd {
+	commands = append(commands, makeCreateNewChain(bin, redirectChainName, "redirect-common-chain"))
+	commands = addRulesForIgnoredPorts(bin, firewallConfiguration.InboundPortsToIgnore, redirectChainName, commands)
+	commands = addRulesForIgnoredSubnets(bin, firewallConfiguration.SubnetsToIgnore, redirectChainName, commands)
+	commands = addRulesForInboundPortRedirect(bin, firewallConfiguration, redirectChainName, commands)
 
 	// Redirect all remaining inbound traffic to the proxy.
 	commands = append(
 		commands,
 		makeJumpFromChainToAnotherForAllProtocols(
+			bin,
 			IptablesPreroutingChainName,
 			redirectChainName,
 			"install-proxy-init-prerouting",
@@ -144,10 +151,12 @@ func addIncomingTrafficRules(commands []*exec.Cmd, firewallConfiguration Firewal
 	return commands
 }
 
-func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration, chainName string, commands []*exec.Cmd) []*exec.Cmd {
+func addRulesForInboundPortRedirect(bin string, firewallConfiguration FirewallConfiguration, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	if firewallConfiguration.Mode == RedirectAllMode {
 		// Create a new chain for redirecting inbound and outbound traffic to the proxy port.
-		commands = append(commands, makeRedirectChainToPort(chainName,
+		commands = append(commands, makeRedirectChainToPort(
+			bin,
+			chainName,
 			firewallConfiguration.ProxyInboundPort,
 			"redirect-all-incoming-to-proxy-port"))
 
@@ -156,6 +165,7 @@ func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration,
 			commands = append(
 				commands,
 				makeRedirectChainToPortBasedOnDestinationPort(
+					bin,
 					chainName,
 					port,
 					firewallConfiguration.ProxyInboundPort,
@@ -165,16 +175,16 @@ func addRulesForInboundPortRedirect(firewallConfiguration FirewallConfiguration,
 	return commands
 }
 
-func addRulesForIgnoredPorts(portsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
+func addRulesForIgnoredPorts(bin string, portsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	for _, destinations := range makeMultiportDestinations(portsToIgnore) {
-		commands = append(commands, makeIgnorePorts(chainName, destinations, fmt.Sprintf("ignore-port-%s", strings.Join(destinations, ","))))
+		commands = append(commands, makeIgnorePorts(bin, chainName, destinations, fmt.Sprintf("ignore-port-%s", strings.Join(destinations, ","))))
 	}
 	return commands
 }
 
-func addRulesForIgnoredSubnets(subnetsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
+func addRulesForIgnoredSubnets(bin string, subnetsToIgnore []string, chainName string, commands []*exec.Cmd) []*exec.Cmd {
 	for _, subnet := range subnetsToIgnore {
-		commands = append(commands, makeIgnoreSubnet(chainName, subnet, fmt.Sprintf("ignore-subnet-%s", subnet)))
+		commands = append(commands, makeIgnoreSubnet(bin, chainName, subnet, fmt.Sprintf("ignore-subnet-%s", subnet)))
 	}
 	return commands
 }
@@ -209,8 +219,8 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 	return append(destinationSlices, destinations)
 }
 
-func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, cmdOut io.Writer) error {
-	if strings.HasSuffix(cmd.Path, "iptables") && firewallConfiguration.UseWaitFlag {
+func executeCommand(bin string, firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, cmdOut io.Writer) error {
+	if strings.HasSuffix(cmd.Path, bin) && firewallConfiguration.UseWaitFlag {
 		log.Info("'useWaitFlag' set: iptables will wait for xtables to become available")
 		cmd.Args = append(cmd.Args, "-w")
 	}
@@ -255,8 +265,8 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, 
 	return nil
 }
 
-func makeIgnoreUserID(chainName string, uid int, comment string) *exec.Cmd {
-	return exec.Command("iptables",
+func makeIgnoreUserID(bin string, chainName string, uid int, comment string) *exec.Cmd {
+	return exec.Command(bin,
 		"-t", "nat",
 		"-A", chainName,
 		"-m", "owner",
@@ -266,16 +276,16 @@ func makeIgnoreUserID(chainName string, uid int, comment string) *exec.Cmd {
 		"--comment", formatComment(comment))
 }
 
-func makeCreateNewChain(name string, comment string) *exec.Cmd {
-	return exec.Command("iptables",
+func makeCreateNewChain(bin string, name string, comment string) *exec.Cmd {
+	return exec.Command(bin,
 		"-t", "nat",
 		"-N", name,
 		"-m", "comment",
 		"--comment", formatComment(comment))
 }
 
-func makeRedirectChainToPort(chainName string, portToRedirect int, comment string) *exec.Cmd {
-	return exec.Command("iptables",
+func makeRedirectChainToPort(bin string, chainName string, portToRedirect int, comment string) *exec.Cmd {
+	return exec.Command(bin,
 		"-t", "nat",
 		"-A", chainName,
 		"-p", "tcp",
@@ -285,8 +295,8 @@ func makeRedirectChainToPort(chainName string, portToRedirect int, comment strin
 		"--comment", formatComment(comment))
 }
 
-func makeIgnorePorts(chainName string, destinations []string, comment string) *exec.Cmd {
-	return exec.Command("iptables",
+func makeIgnorePorts(bin string, chainName string, destinations []string, comment string) *exec.Cmd {
+	return exec.Command(bin,
 		"-t", "nat",
 		"-A", chainName,
 		"-p", "tcp",
@@ -297,8 +307,8 @@ func makeIgnorePorts(chainName string, destinations []string, comment string) *e
 		"--comment", formatComment(comment))
 }
 
-func makeIgnoreSubnet(chainName string, subnet string, comment string) *exec.Cmd {
-	return exec.Command("iptables",
+func makeIgnoreSubnet(bin string, chainName string, subnet string, comment string) *exec.Cmd {
+	return exec.Command(bin,
 		"-t", "nat",
 		"-A", chainName,
 		"-p", "all",
@@ -308,8 +318,8 @@ func makeIgnoreSubnet(chainName string, subnet string, comment string) *exec.Cmd
 		"--comment", formatComment(comment))
 }
 
-func makeIgnoreLoopback(chainName string, comment string) *exec.Cmd {
-	return exec.Command("iptables",
+func makeIgnoreLoopback(bin string, chainName string, comment string) *exec.Cmd {
+	return exec.Command(bin,
 		"-t", "nat",
 		"-A", chainName,
 		"-o", "lo",
@@ -318,8 +328,8 @@ func makeIgnoreLoopback(chainName string, comment string) *exec.Cmd {
 		"--comment", formatComment(comment))
 }
 
-func makeRedirectChainToPortBasedOnDestinationPort(chainName string, destinationPort int, portToRedirect int, comment string) *exec.Cmd {
-	return exec.Command("iptables",
+func makeRedirectChainToPortBasedOnDestinationPort(bin string, chainName string, destinationPort int, portToRedirect int, comment string) *exec.Cmd {
+	return exec.Command(bin,
 		"-t", "nat",
 		"-A", chainName,
 		"-p", "tcp",
@@ -330,14 +340,13 @@ func makeRedirectChainToPortBasedOnDestinationPort(chainName string, destination
 		"--comment", formatComment(comment))
 }
 
-func makeJumpFromChainToAnotherForAllProtocols(
-	chainName string, targetChain string, comment string, delete bool) *exec.Cmd {
+func makeJumpFromChainToAnotherForAllProtocols(bin string, chainName string, targetChain string, comment string, delete bool) *exec.Cmd {
 	action := "-A"
 	if delete {
 		action = "-D"
 	}
 
-	return exec.Command("iptables",
+	return exec.Command(bin,
 		"-t", "nat",
 		action, chainName,
 		"-j", targetChain,
@@ -345,8 +354,8 @@ func makeJumpFromChainToAnotherForAllProtocols(
 		"--comment", formatComment(comment))
 }
 
-func makeShowAllRules() *exec.Cmd {
-	return exec.Command("iptables-save", "-t", "nat")
+func makeShowAllRules(bin string) *exec.Cmd {
+	return exec.Command(bin, "-t", "nat")
 }
 
 // asDestination formats the provided `PortRange` for output in commands.
@@ -356,4 +365,14 @@ func asDestination(portRange ports.PortRange) string {
 	}
 
 	return fmt.Sprintf("%d:%d", portRange.LowerBound, portRange.UpperBound)
+}
+
+// getBinaryName will return the name of the iptables binary to call into,
+// depending on whether the NFT Kernel API mode is on.
+func getBinaryName(useNft bool) string {
+	bin := "iptables"
+	if useNft {
+		bin = "iptables-nft"
+	}
+	return bin
 }
