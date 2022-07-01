@@ -68,7 +68,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	log.Debugf("setting up iptables routing by calling into '%s'", iptablesBin)
 
 	b := bytes.Buffer{}
-	if err := executeCommand(iptablesBin, firewallConfiguration, makeShowAllRules(iptablesBin), &b); err != nil {
+	if err := executeCommand(iptablesBin, firewallConfiguration, makeShowAllRules(firewallConfiguration.UseNFTBackend), &b); err != nil {
 		log.Error("aborting firewall configuration")
 		return err
 	}
@@ -92,7 +92,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 		}
 	}
 
-	_ = executeCommand(iptablesBin, firewallConfiguration, makeShowAllRules(iptablesBin), nil)
+	_ = executeCommand(iptablesBin, firewallConfiguration, makeShowAllRules(firewallConfiguration.UseNFTBackend), nil)
 
 	return nil
 }
@@ -354,7 +354,12 @@ func makeJumpFromChainToAnotherForAllProtocols(bin string, chainName string, tar
 		"--comment", formatComment(comment))
 }
 
-func makeShowAllRules(bin string) *exec.Cmd {
+func makeShowAllRules(useNft bool) *exec.Cmd {
+	bin := "iptables-save"
+	if useNft {
+		bin = "iptables-nft-save"
+	}
+
 	return exec.Command(bin, "-t", "nat")
 }
 
