@@ -68,7 +68,7 @@ spec:
     spec:
       containers:
       - name: tester
-        image: ghcr.io/linkerd/iptables-tester:v1
+        image: cr.l5d.io/linkerd/iptables-tester:v1
         env:
           - name: POD_REDIRECTS_ALL_PORTS_IP
             value: ${POD_REDIRECTS_ALL_PORTS_IP}
