@@ -361,13 +361,3 @@ func asDestination(portRange ports.PortRange) string {
 
 	return fmt.Sprintf("%d:%d", portRange.LowerBound, portRange.UpperBound)
 }
-
-// getBinaryName will return the name of the iptables binary to call into,
-// depending on whether the NFT Kernel API mode is on.
-func getBinaryName(useNft bool) string {
-	bin := "iptables"
-	if useNft {
-		bin = "iptables-nft"
-	}
-	return bin
-}
