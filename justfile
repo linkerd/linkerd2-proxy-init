@@ -10,7 +10,7 @@ amd64_arch := "linux/amd64"
 # Recipes
 #
 
-#
+# Run formatting, tests, and build the iptables container
 default: fmt test build
 
 # Build the project
