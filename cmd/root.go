@@ -24,10 +24,11 @@ type RootOptions struct {
 	SimulateOnly          bool
 	NetNs                 string
 	UseWaitFlag           bool
-	UseNFTBackend         bool
 	TimeoutCloseWaitSecs  int
 	LogFormat             string
 	LogLevel              string
+	FirewallBinPath       string
+	FirewallSaveBinPath   string
 }
 
 func newRootOptions() *RootOptions {
@@ -42,10 +43,11 @@ func newRootOptions() *RootOptions {
 		SimulateOnly:          false,
 		NetNs:                 "",
 		UseWaitFlag:           false,
-		UseNFTBackend:         false,
 		TimeoutCloseWaitSecs:  0,
 		LogFormat:             "plain",
 		LogLevel:              "info",
+		FirewallBinPath:       "/sbin/iptables",
+		FirewallSaveBinPath:   "/sbin/iptables-save",
 	}
 }
 
@@ -96,10 +98,11 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&options.SimulateOnly, "simulate", options.SimulateOnly, "Don't execute any command, just print what would be executed")
 	cmd.PersistentFlags().StringVar(&options.NetNs, "netns", options.NetNs, "Optional network namespace in which to run the iptables commands")
 	cmd.PersistentFlags().BoolVarP(&options.UseWaitFlag, "use-wait-flag", "w", options.UseWaitFlag, "Appends the \"-w\" flag to the iptables commands")
-	cmd.PersistentFlags().BoolVar(&options.UseNFTBackend, "use-nft-backend", options.UseNFTBackend, "Uses iptables-nft to configure routing")
 	cmd.PersistentFlags().IntVar(&options.TimeoutCloseWaitSecs, "timeout-close-wait-secs", options.TimeoutCloseWaitSecs, "Sets nf_conntrack_tcp_timeout_close_wait")
 	cmd.PersistentFlags().StringVar(&options.LogFormat, "log-format", options.LogFormat, "Configure log format ('plain' or 'json')")
 	cmd.PersistentFlags().StringVar(&options.LogLevel, "log-level", options.LogLevel, "Configure log level")
+	cmd.PersistentFlags().StringVar(&options.FirewallBinPath, "firewall-bin-path", options.FirewallBinPath, "Path to iptables binary")
+	cmd.PersistentFlags().StringVar(&options.FirewallSaveBinPath, "firewall-save-bin-path", options.FirewallSaveBinPath, "Path to iptables-save binary")
 	return cmd
 }
 
@@ -131,7 +134,8 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		SimulateOnly:           options.SimulateOnly,
 		NetNs:                  options.NetNs,
 		UseWaitFlag:            options.UseWaitFlag,
-		UseNFTBackend:          options.UseNFTBackend,
+		BinPath:                options.FirewallBinPath,
+		SaveBinPath:            options.FirewallSaveBinPath,
 	}
 
 	if len(options.PortsToRedirect) > 0 {
