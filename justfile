@@ -1,7 +1,6 @@
 registry := "cr.l5d.io/linkerd"
 docker_repo := registry + "/proxy-init"
-dev_tag := "dev-" + `git rev-parse --short=8 HEAD` + "-" + env_var("USER")
-docker_tag := docker_repo + ":" + dev_tag
+docker_tag := docker_repo + ":" + "latest"
 docker_tester_tag := registry + "/iptables-tester:v1" 
 dockerfile_tester_path := "./integration_test/iptables/Dockerfile-tester"
 amd64_arch := "linux/amd64"

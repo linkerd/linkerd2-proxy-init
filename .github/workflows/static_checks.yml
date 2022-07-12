@@ -16,7 +16,7 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
-    - name: Lint
+    - name: Go Lint
       uses: golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc
       with:
         version: v1.29
@@ -28,5 +28,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
-    - name: Format
-      run: make fmt
+    - uses: extractions/setup-just@v1
+      with:
+        just-version: 1.2.0
+    - name: Go Fmt
+      run: just fmt
