@@ -27,6 +27,8 @@ type RootOptions struct {
 	TimeoutCloseWaitSecs  int
 	LogFormat             string
 	LogLevel              string
+	FirewallBinPath       string
+	FirewallSaveBinPath   string
 }
 
 func newRootOptions() *RootOptions {
@@ -44,6 +46,8 @@ func newRootOptions() *RootOptions {
 		TimeoutCloseWaitSecs:  0,
 		LogFormat:             "plain",
 		LogLevel:              "info",
+		FirewallBinPath:       "iptables",
+		FirewallSaveBinPath:   "iptables-save",
 	}
 }
 
@@ -97,6 +101,8 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().IntVar(&options.TimeoutCloseWaitSecs, "timeout-close-wait-secs", options.TimeoutCloseWaitSecs, "Sets nf_conntrack_tcp_timeout_close_wait")
 	cmd.PersistentFlags().StringVar(&options.LogFormat, "log-format", options.LogFormat, "Configure log format ('plain' or 'json')")
 	cmd.PersistentFlags().StringVar(&options.LogLevel, "log-level", options.LogLevel, "Configure log level")
+	cmd.PersistentFlags().StringVar(&options.FirewallBinPath, "firewall-bin-path", options.FirewallBinPath, "Path to iptables binary")
+	cmd.PersistentFlags().StringVar(&options.FirewallSaveBinPath, "firewall-save-bin-path", options.FirewallSaveBinPath, "Path to iptables-save binary")
 	return cmd
 }
 
@@ -128,6 +134,8 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		SimulateOnly:           options.SimulateOnly,
 		NetNs:                  options.NetNs,
 		UseWaitFlag:            options.UseWaitFlag,
+		BinPath:                options.FirewallBinPath,
+		SaveBinPath:            options.FirewallSaveBinPath,
 	}
 
 	if len(options.PortsToRedirect) > 0 {
