@@ -3,9 +3,8 @@ package main
 import (
 	"os"
 
+	"github.com/linkerd/linkerd2-proxy-init/proxy-init/cmd"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/linkerd/linkerd2-proxy-init/cmd"
 )
 
 func main() {
