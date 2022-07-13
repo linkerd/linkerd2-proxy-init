@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "cni-validator",
+]
+
+[profile.release]
+lto = true
