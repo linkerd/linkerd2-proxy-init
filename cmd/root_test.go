@@ -23,8 +23,8 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 			ProxyUID:               expectedProxyUserID,
 			SimulateOnly:           false,
 			UseWaitFlag:            false,
-			BinPath:                "/sbin/iptables",
-			SaveBinPath:            "/sbin/iptables-save",
+			BinPath:                "iptables",
+			SaveBinPath:            "iptables-save",
 		}
 
 		options := newRootOptions()
