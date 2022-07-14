@@ -17,7 +17,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
     - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
-l```
       with:
         just-version: 1.2.0
     - name: Run unit tests
