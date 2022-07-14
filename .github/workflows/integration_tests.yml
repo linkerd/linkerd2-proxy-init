@@ -8,7 +8,7 @@ on:
     branches:
     - master
 jobs:
-  kind_integration_tests:
+  integration_tests:
     name: Proxy Init Integration Tests
     timeout-minutes: 30
     runs-on: ubuntu-20.04
