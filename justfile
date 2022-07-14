@@ -27,7 +27,7 @@ test-unit:
 
 # Run integration tests
 test-integration cluster='init-test':
-  k3d image import -c init-test {{docker_tester_tag}} {{docker_tag}}
+  k3d image import -c {{cluster}} {{docker_tester_tag}} {{docker_tag}}
   cd integration_test && ./run_tests.sh
 
 # Run all tests in a k3d cluster
