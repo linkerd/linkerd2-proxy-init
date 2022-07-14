@@ -18,7 +18,7 @@ jobs:
     - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
       with:
         just-version: 1.2.0
-    - uses: AbsaOSS/k3d-action@v2
+    - uses: AbsaOSS/k3d-action@b176c2a6dcae72e3e64e3e4d61751904ec314002
       name: "Create k3d cluster"
       with:
         cluster-name: init-test
