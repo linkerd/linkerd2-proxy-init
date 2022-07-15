@@ -86,7 +86,15 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 
 	commands = firewallConfiguration.addOutgoingTrafficRules(commands)
 
+	if firewallConfiguration.UseWaitFlag {
+		log.Debug("'useWaitFlag' set: iptables will wait for xtables to become available")
+	}
+
 	for _, cmd := range commands {
+		if firewallConfiguration.UseWaitFlag {
+			cmd.Args = append(cmd.Args, "-w")
+		}
+
 		if err := executeCommand(firewallConfiguration, cmd, nil); err != nil {
 			return err
 		}
@@ -215,13 +223,6 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 }
 
 func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, cmdOut io.Writer) error {
-	if firewallConfiguration.UseWaitFlag {
-		if strings.Contains(cmd.Path, "iptables") && !strings.Contains(cmd.Path, "save") {
-			log.Info("'useWaitFlag' set: iptables will wait for xtables to become available")
-			cmd.Args = append(cmd.Args, "-w")
-		}
-	}
-
 	if len(firewallConfiguration.NetNs) > 0 {
 		nsenterArgs := []string{fmt.Sprintf("--net=%s", firewallConfiguration.NetNs)}
 		originalCmd := strings.Trim(fmt.Sprintf("%v", cmd.Args), "[]")
