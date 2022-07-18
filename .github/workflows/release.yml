@@ -3,20 +3,58 @@ on:
   push:
     tags:
     - "*"
+
+permissions:
+  contents: read
+
+env:
+  GH_ANNOTATION: true
+
 jobs:
-  buildx:
-    name: Build & Push Multi Arch Images
+
+  proxy_init_build:
+    name: Build & Push Proxy Init Multi Arch Images
     runs-on: ubuntu-20.04
+    timeout-minutes: 30
+    permissions:
+      id-token: write # needed for signing the images with GitHub OIDC token
     steps:
     - name: Checkout code
       uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
-    - name: Set up Docker Buildx
-      uses: crazy-max/ghaction-docker-buildx@126d331dc69f4a1aa02452e374835e6a5d565613
-    - name: Docker Buildx (build)
-      run: make images
-    - name: Docker Buildx (push)
+    - name: Set env variables
+      shell: bash
       run: |
-        echo "${{ secrets.DOCKER_GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.DOCKER_GHCR_USERNAME }}" --password-stdin
-        make push
-    - name: Docker Check Manifest
-      run: make inspect-manifest
+        tag="$(git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)"
+        echo "TAG=$tag" >> "$GITHUB_ENV"
+        echo "DOCKER_BUILDKIT_CACHE=${{ runner.temp }}/.buildx-cache" >> "$GITHUB_ENV"
+    - uses: docker/setup-qemu-action@27d0a4f181a40b142cce983c5393082c365d1480
+    - uses: docker/setup-buildx-action@94ab11c41e45d028884a99163086648e898eed25
+    - uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d
+      with:
+        path: ${{ env.DOCKER_BUILDKIT_CACHE }}
+        key: proxy-init-${{ env.TAG }}
+        restore-keys: proxy-init-
+    - uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
+      with:
+        registry: ghcr.io
+        username: ${{ secrets.DOCKER_GHCR_USERNAME }}
+        password: ${{ secrets.DOCKER_GHCR_PAT }}
+    - name: Build docker images
+      shell: bash
+      run: |
+          docker buildx build . \
+          --file=Dockerfile \
+          --tag="ghcr.io/${{ github.repository_owner }}/proxy-init:${TAG}" \
+          --cache-from type=local,src="${DOCKER_BUILDKIT_CACHE}" \
+          --cache-to type=local,dest="${DOCKER_BUILDKIT_CACHE}",mode=max \
+          --platform="linux/amd64,linux/arm64,linux/arm/v7" \
+          --push
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v2
+    - name: Sign the image with Cosign
+      env:
+        COSIGN_EXPERIMENTAL: 1
+      run: cosign sign "ghcr.io/linkerd/proxy-init:$TAG"
+    - name: Prune docker layers cache
+      shell: bash
+      run: bin/docker-cache-prune
