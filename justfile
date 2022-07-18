@@ -1,3 +1,10 @@
+# vim: set ft=make :
+# See https://just.systems/man/en
+
+#
+# Config
+#
+
 registry := "cr.l5d.io/linkerd"
 docker_repo := registry + "/proxy-init"
 docker_tag := docker_repo + ":" + "latest"
@@ -14,21 +21,21 @@ default: fmt test build
 
 # Build the project
 build:
-  go build -o out/linkerd2-proxy-init main.go
+    go build -o out/linkerd2-proxy-init main.go
 
 # Runs Go's code formatting tool and succeeds if no output is printed
 fmt:
-  gofmt -d .
-  test -z "$(gofmt -d .)"
+    gofmt -d .
+    test -z "$(gofmt -d .)"
 
 # Run unit tests
 test-unit:
-  go test -v ./...
+    go test -v ./...
 
 # Run integration tests
 test-integration cluster='init-test':
-  k3d image import -c {{cluster}} {{docker_tester_tag}} {{docker_tag}}
-  cd integration_test && ./run_tests.sh
+    k3d image import -c {{cluster}} {{docker_tester_tag}} {{docker_tag}}
+    cd integration_test && ./run_tests.sh
 
 # Run all tests in a k3d cluster
 test:
@@ -53,5 +60,3 @@ docker-tester arch=amd64_arch:
 		--tag={{docker_tester_tag}} \
 		--platform={{arch}} \
 		--load
-	
-# vim: set ft=make :
