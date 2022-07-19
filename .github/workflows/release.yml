@@ -21,6 +21,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+    - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+      with:
+        just-version: 1.2.0
     - name: Set env variables
       shell: bash
       run: |
@@ -57,4 +60,4 @@ jobs:
       run: cosign sign "ghcr.io/linkerd/proxy-init:$TAG"
     - name: Prune docker layers cache
       shell: bash
-      run: bin/docker-cache-prune
+      run: just docker-cache-prune
