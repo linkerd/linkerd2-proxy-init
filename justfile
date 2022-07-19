@@ -76,6 +76,6 @@ docker-cache-prune:
       name=$(basename "$file")
       if [[ ! "${files[@]}" =~ ${name} ]]; then
     	printf 'pruned from cache: %s\n' "$file"
-    		rm -f "$file"
+    	rm -f "$file"
       fi
     done
