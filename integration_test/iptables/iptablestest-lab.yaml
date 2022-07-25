@@ -8,7 +8,7 @@ metadata:
 spec:
   containers:
   - name: webserver
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "8080"
@@ -17,7 +17,7 @@ spec:
     - name: http
       containerPort: 8080
   - name: other-container
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "9090"
@@ -46,7 +46,7 @@ metadata:
 spec:
   containers:
   - name: webserver
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "8080"
@@ -55,7 +55,7 @@ spec:
     - name: http
       containerPort: 8080
   - name: other-container
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "9090"
@@ -68,7 +68,7 @@ spec:
   # iptable rules are run more than once. The linkerd-init container
   # should log "Found existing firewall configuration..."
   - name: iptables-test
-    image: cr.l5d.io/linkerd/proxy-init:latest
+    image: ghcr.io/linkerd/proxy-init:latest
     imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
     securityContext:
@@ -85,7 +85,7 @@ spec:
     - mountPath: /run
       name: linkerd-proxy-init-xtables-lock
   - name: linkerd-init
-    image: cr.l5d.io/linkerd/proxy-init:latest
+    image: ghcr.io/linkerd/proxy-init:latest
     imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
     securityContext:
@@ -114,7 +114,7 @@ metadata:
 spec:
   containers:
   - name: other-container
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "9090"
@@ -123,7 +123,7 @@ spec:
     - name: http
       containerPort: 9090
   - name: proxy-stub
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "8080"
@@ -138,7 +138,7 @@ spec:
       containerPort: 8080
   initContainers:
   - name: linkerd-init
-    image: cr.l5d.io/linkerd/proxy-init:latest
+    image: ghcr.io/linkerd/proxy-init:latest
     imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
     securityContext:
@@ -178,7 +178,7 @@ metadata:
 spec:
   containers:
   - name: proxy-stub
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "8080"
@@ -193,7 +193,7 @@ spec:
       runAsUser: 2102
   initContainers:
   - name: linkerd-init
-    image: cr.l5d.io/linkerd/proxy-init:latest
+    image: ghcr.io/linkerd/proxy-init:latest
     imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-r", "9090", "-r", "9099"]
     securityContext:
@@ -222,7 +222,7 @@ metadata:
 spec:
   containers:
   - name: proxy-stub
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "8080"
@@ -236,7 +236,7 @@ spec:
       privileged: false
       runAsUser: 2102
   - name: other-container
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "9090"
@@ -245,7 +245,7 @@ spec:
     - name: http
       containerPort: 9090
   - name: blacklisted-container
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "7070"
@@ -255,7 +255,7 @@ spec:
       containerPort: 7070
   initContainers:
   - name: linkerd-init
-    image: cr.l5d.io/linkerd/proxy-init:latest
+    image: ghcr.io/linkerd/proxy-init:latest
     imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102", "--inbound-ports-to-ignore", "6000-8000"]
     securityContext:
@@ -284,7 +284,7 @@ metadata:
 spec:
   containers:
   - name: proxy-stub
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "8080"
@@ -298,7 +298,7 @@ spec:
       privileged: false
       runAsUser: 2102
   - name: other-container
-    image: cr.l5d.io/linkerd/iptables-tester:v1
+    image: ghcr.io/linkerd/iptables-tester:v1
     env:
     - name: PORT
       value: "9090"
@@ -308,7 +308,7 @@ spec:
       containerPort: 9090
   initContainers:
   - name: linkerd-init
-    image: cr.l5d.io/linkerd/proxy-init:latest
+    image: ghcr.io/linkerd/proxy-init:latest
     imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102", "--subnets-to-ignore", "0.0.0.0/0"]
     securityContext:

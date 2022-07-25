@@ -7,6 +7,10 @@ on:
     - '**/*.md'
     branches:
     - master
+
+env:
+  DOCKER_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
+
 jobs:
   integration_tests:
     name: Proxy Init Integration Tests
