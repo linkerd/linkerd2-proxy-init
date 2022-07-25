@@ -4,10 +4,15 @@
 # Config
 #
 
-registry := "cr.l5d.io/linkerd"
-docker_repo := registry + "/proxy-init"
+# If DOCKER_REGISTRY is not already set, use a bogus registry with a unique
+# domain name so that it's virtually impossible to accidentally use an older
+# cached image.
+_test-id := `tr -dc 'a-z0-9' </dev/urandom | fold -w 5 | head -n 1`
+export DOCKER_REGISTRY := env_var_or_default("DOCKER_REGISTRY", "test-" + _test-id + ".local/linkerd")
+
+docker_repo := '${DOCKER_REGISTRY}' + "/proxy-init"
 docker_tag := docker_repo + ":" + "latest"
-docker_tester_tag := registry + "/iptables-tester:v1"
+docker_tester_tag := '${DOCKER_REGISTRY}' + "/iptables-tester:v1"
 dockerfile_tester_path := "./integration_test/iptables/Dockerfile-tester"
 amd64_arch := "linux/amd64"
 docker_cache_path := env_var_or_default("DOCKER_BUILDKIT_CACHE", "")
