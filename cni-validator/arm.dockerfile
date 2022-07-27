@@ -1,4 +1,4 @@
-ARG RUST_VERSION=1.60.0
+ARG RUST_VERSION=1.62.0
 ARG RUST_IMAGE=docker.io/library/rust:${RUST_VERSION}
 ARG RUNTIME_IMAGE=gcr.io/distroless/cc
 
@@ -13,10 +13,10 @@ ARG RUNTIME_IMAGE=gcr.io/distroless/cc
  COPY Cargo.toml Cargo.lock .
  COPY cni-validator /build/
  RUN --mount=type=cache,target=target \
-     --mount=type=cache,from=rust:1.60.0,source=/usr/local/cargo,target=/usr/local/cargo \
+     --mount=type=cache,from=rust:1.62.0,source=/usr/local/cargo,target=/usr/local/cargo \
      cargo fetch
  RUN --mount=type=cache,target=target \
-     --mount=type=cache,from=rust:1.60.0,source=/usr/local/cargo,target=/usr/local/cargo \
+     --mount=type=cache,from=rust:1.62.0,source=/usr/local/cargo,target=/usr/local/cargo \
      cargo build --locked --target=armv7-unknown-linux-gnueabihf --release --package=cni-validator && \
      mv target/armv7-unknown-linux-gnueabihf/release/cni-validator /tmp/
 

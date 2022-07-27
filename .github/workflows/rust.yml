@@ -1,0 +1,117 @@
+name: Rust
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/rust.yml
+      - Cargo.lock
+      - '**/Cargo.toml'
+      - justfile
+      - deny.toml
+      - '**/*.rs'
+      - cni-validator/*.dockerfile
+      - rust-toolchain
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  PROTOC_NO_VENDOR: 1
+  RUST_BACKTRACE: short
+  RUSTUP_MAX_RETRIES: 10
+jobs:
+  fmt:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    container:
+      image: docker://rust:1.62.0
+    steps:
+      - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - run: rustup component add rustfmt
+      - run: just rs-check-fmt
+
+  audit:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+    # Prevent sudden announcement of a new advisory from failing Ci.
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+    steps:
+    - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+    - uses: EmbarkStudios/cargo-deny-action@7257a18a9c2fe3f92b85d41ae473520dff953c97
+      with:
+        command: check ${{ matrix.checks }}
+
+  clippy:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    container:
+      image: docker://rust:1.62.0
+    steps:
+      - run: rustup component add clippy
+      - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+      - uses: olix0r/cargo-action-fmt@ed3530f0739c46ffa0dd983f8746b8c4a3d0a01c
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - run: just rs-fetch
+      - run: just rs-clippy
+
+  check:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    container:
+      image: docker://rust:1.62.0
+    steps:
+      - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+      - uses: olix0r/cargo-action-fmt@ed3530f0739c46ffa0dd983f8746b8c4a3d0a01c
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - run: just rs-fetch
+      - run: just rs-check-dirs
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: docker://rust:1.62.0
+    steps:
+      - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+      - uses: olix0r/cargo-action-fmt@ee1ef42932e44794821dab57ef1bf7a73df8b21f
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - run: just rs-fetch
+      - run: just rs-test-build
+      - run: just rs-test
+
+  rust-toolchain:
+    name: rust toolchain
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - run: |
+          ex=0
+
+          # Check this workflow against the version in rust-toolchain.
+          versions=$(sed -nE 's|.*docker://(.*/)?rust:([^ #]+).*|\2|p' .github/workflows/*)
+          for mismatch in $(echo "$versions" | grep -vF "$(cat rust-toolchain)" || true) ; do
+            echo "::error file=.github/workflows/rust.yml::Workflow uses incorrect rust version(s): $mismatch"
+            ex=$((ex + 1))
+          done
+
+          # Check cni-validator dockerfiles workflow against the version
+          # in rust-toolchain.
+          for f in cni-validator/*.dockerfile ; do
+            versions=$(sed -nE 's|ARG RUST_IMAGE=(.*/)?rust:([^ #]+).*|\2|p' "$f")
+            for mismatch in $(echo "$versions" | grep -vF "$(cat rust-toolchain)" || true) ; do
+              echo "::error file=\"$f\"::$f uses incorrect rust version(s): $mismatch"
+              ex=$((ex + 1))
+            done
+          done
+
+          exit $ex

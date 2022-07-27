@@ -9,11 +9,19 @@ permissions:
 
 env:
   GH_ANNOTATION: true
+  DOCKER_BUILDKIT_CACHE: "${{ runner.temp }}/.buildx-cache"
 
 jobs:
+  tag:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - run: echo "::set-output name=tag::$(git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)"
+        id: tag
 
   proxy_init_build:
     name: Build & Push Proxy Init Multi Arch Images
+    needs: [tag]
     runs-on: ubuntu-20.04
     timeout-minutes: 30
     permissions:
@@ -21,13 +29,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+    - name: Set tag
+      run: echo 'TAG=${{ needs.tag.outputs.tag }}' >> "$GITHUB_ENV"
     - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
-    - name: Set env variables
-      shell: bash
-      run: |
-        tag="$(git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)"
-        echo "TAG=$tag" >> "$GITHUB_ENV"
-        echo "DOCKER_BUILDKIT_CACHE=${{ runner.temp }}/.buildx-cache" >> "$GITHUB_ENV"
     - uses: docker/setup-qemu-action@8b122486cedac8393e77aa9734c3528886e4a1a8
     - uses: docker/setup-buildx-action@dc7b9719a96d48369863986a06765841d7ea23f6
     - uses: actions/cache@0865c47f36e68161719c5b124609996bb5c40129
@@ -59,3 +63,78 @@ jobs:
     - name: Prune docker layers cache
       shell: bash
       run: just docker-cache-prune
+
+  cni_validator_build:
+    runs-on: ubuntu-20.04
+    needs: [tag]
+    timeout-minutes: 30
+    permissions:
+      id-token: write # needed for signing the images with GitHub OIDC token
+    strategy:
+      matrix:
+        arch:
+        - amd64
+        - arm
+        - arm64
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+    - name: Set tag
+      run: echo 'TAG=${{ needs.tag.outputs.tag }}' >> "$GITHUB_ENV"
+    - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+    - uses: docker/setup-buildx-action@dc7b9719a96d48369863986a06765841d7ea23f6
+    - uses: actions/cache@0865c47f36e68161719c5b124609996bb5c40129
+      with:
+        path: ${{ env.DOCKER_BUILDKIT_CACHE }}
+        key: cni-validator-${{ matrix.arch }}-${{ env.TAG }}
+        restore-keys: cni-validator-
+    - uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
+      with:
+        registry: ghcr.io
+        username: ${{ secrets.DOCKER_GHCR_USERNAME }}
+        password: ${{ secrets.DOCKER_GHCR_PAT }}
+    - name: Build docker images
+      shell: bash
+      run: |
+          docker buildx build . \
+          --file="cni-validator/${{ matrix.arch }}.dockerfile" \
+          --tag="ghcr.io/${{ github.repository_owner }}/cni-validator:${TAG}-${{ matrix.arch }}" \
+          --cache-from type=local,src="${DOCKER_BUILDKIT_CACHE}" \
+          --cache-to type=local,dest="${DOCKER_BUILDKIT_CACHE}",mode=max \
+          --platform="${{ matrix.arch }}" \
+          --push
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v2
+    - name: Sign the image with Cosign
+      env:
+        COSIGN_EXPERIMENTAL: 1
+      run: cosign sign "ghcr.io/linkerd/cni-validator:$TAG-${{ matrix.arch }}"
+    - name: Prune docker layers cache
+      shell: bash
+      run: just docker-cache-prune
+
+  cni_validator_manifest:
+    name: CNI validator manifest
+    needs: [tag, cni_validator_build]
+    runs-on: ubuntu-20.04
+    timeout-minutes: 30
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+    - name: Set tag
+      run: echo 'TAG=${{ needs.tag.outputs.tag }}' >> "$GITHUB_ENV"
+    - uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
+      with:
+        registry: ghcr.io
+        username: ${{ secrets.DOCKER_GHCR_USERNAME }}
+        password: ${{ secrets.DOCKER_GHCR_PAT }}
+    - name: Create multiarch manifest
+      shell: bash
+      run: |
+        img="ghcr.io/${{ github.repository_owner }}/cni-validator:$TAG"
+        docker manifest create "$img" "${img}-amd64" "${img}-arm64" "${img}-arm"
+        for arch in amd64 arm64 arm ; do
+          docker manifest annotate "$img" "${img}-${arch}" --os=linux --arch="${arch}"
+        done
+    - run: docker manifest push "ghcr.io/${{ github.repository_owner }}/cni-validator:$TAG"
+      shell: bash

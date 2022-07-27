@@ -12,7 +12,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/linkerd/linkerd2-proxy-init/proxy-init/ports"
+	"github.com/linkerd/linkerd2-proxy-init/pkg/ports"
 )
 
 const (

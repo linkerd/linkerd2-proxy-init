@@ -8,9 +8,10 @@ COPY go.sum .
 RUN go mod download
 
 # build
-COPY . .
+COPY pkg pkg
+COPY proxy-init proxy-init
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-init -mod=readonly -ldflags "-s -w" -v
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-init -mod=readonly -ldflags "-s -w" -v ./proxy-init
 
 ## package runtime
 FROM --platform=$TARGETPLATFORM alpine:3.14.2
