@@ -7,22 +7,27 @@ on:
     - '**/*.md'
     branches:
     - master
+
+env:
+  DOCKER_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
+
 jobs:
-  kind_integration_tests:
-    name: KinD integration tests
+  integration_tests:
+    name: Proxy Init Integration Tests
+    timeout-minutes: 30
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout code
       uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
-    - name: Setup KinD
-      uses: engineerd/setup-kind@aa272fe2a7309878ffc2a81c56cfe3ef108ae7d0
+    - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+    - uses: AbsaOSS/k3d-action@b176c2a6dcae72e3e64e3e4d61751904ec314002
+      name: "Create k3d cluster"
       with:
-        version: v0.11.1
-    - name: Docker build
+        cluster-name: init-test
+    - name: Build images
       run: |
-        make image
-        make tester-image
-    - name: Load image into the local KinD cluster
-      run: make kind-load
+        just docker-proxy-init
+        just docker-tester
+      shell: bash
     - name: Run integration tests
-      run: SKIP_BUILD_TESTER_IMAGE=1 make integration-test
+      run: just test-integration

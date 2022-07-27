@@ -27,20 +27,12 @@ function log(){
     printf '\n%s%s%s\n' "$WHITE" "$msg" "$NORMAL"
 }
 
-
 TESTER_JOB_NAME=iptables-tester
 LAB_YAML_FILE=iptables/iptablestest-lab.yaml
 
 header 'Deleting any existing objects from previous test runs...'
 kubectl delete -f "$LAB_YAML_FILE"
 kubectl delete  "jobs/$TESTER_JOB_NAME"
-
-# if env var not set then build the image
-if [[ -z "${SKIP_BUILD_TESTER_IMAGE}" ]]; then
-  header 'Building the image used in tests...'
-  docker build . -f iptables/Dockerfile-tester --tag ghcr.io/linkerd/iptables-tester:v1
-  sleep 10
-fi
 
 header 'Creating the test lab...'
 kubectl create -f "$LAB_YAML_FILE"

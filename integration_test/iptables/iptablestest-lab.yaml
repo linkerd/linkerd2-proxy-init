@@ -69,7 +69,7 @@ spec:
   # should log "Found existing firewall configuration..."
   - name: iptables-test
     image: ghcr.io/linkerd/proxy-init:latest
-    imagePullPolicy: Never
+    imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
     securityContext:
       allowPrivilegeEscalation: false
@@ -86,7 +86,7 @@ spec:
       name: linkerd-proxy-init-xtables-lock
   - name: linkerd-init
     image: ghcr.io/linkerd/proxy-init:latest
-    imagePullPolicy: Never
+    imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
     securityContext:
       allowPrivilegeEscalation: false
@@ -139,7 +139,7 @@ spec:
   initContainers:
   - name: linkerd-init
     image: ghcr.io/linkerd/proxy-init:latest
-    imagePullPolicy: Never
+    imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
     securityContext:
       allowPrivilegeEscalation: false
@@ -194,7 +194,7 @@ spec:
   initContainers:
   - name: linkerd-init
     image: ghcr.io/linkerd/proxy-init:latest
-    imagePullPolicy: Never
+    imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-r", "9090", "-r", "9099"]
     securityContext:
       allowPrivilegeEscalation: false
@@ -256,7 +256,7 @@ spec:
   initContainers:
   - name: linkerd-init
     image: ghcr.io/linkerd/proxy-init:latest
-    imagePullPolicy: Never
+    imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102", "--inbound-ports-to-ignore", "6000-8000"]
     securityContext:
       allowPrivilegeEscalation: false
@@ -309,7 +309,7 @@ spec:
   initContainers:
   - name: linkerd-init
     image: ghcr.io/linkerd/proxy-init:latest
-    imagePullPolicy: Never
+    imagePullPolicy: IfNotPresent
     args: ["-p", "8080",  "-o", "8080", "-u", "2102", "--subnets-to-ignore", "0.0.0.0/0"]
     securityContext:
       allowPrivilegeEscalation: false
