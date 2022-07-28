@@ -1,5 +1,4 @@
-ARG RUST_VERSION=1.62.0
-ARG RUST_IMAGE=docker.io/library/rust:${RUST_VERSION}
+ARG RUST_IMAGE=docker.io/library/rust:1.62.0
 ARG RUNTIME_IMAGE=gcr.io/distroless/cc
 
  # Builds the operator binary.
