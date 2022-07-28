@@ -18,6 +18,8 @@ jobs:
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
       - run: echo "::set-output name=tag::$(git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)"
         id: tag
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
 
   proxy_init_build:
     name: Build & Push Proxy Init Multi Arch Images

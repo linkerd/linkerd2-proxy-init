@@ -109,35 +109,32 @@ _cargo-test := ```
 # PROXY-INIT #
 ##############
 
-# Run formatting, tests, and build the iptables container
-default: fmt test build
-
 # Build the project
-build:
-    go build -o out/linkerd2-proxy-init main.go
+go-build:
+    go build -o out/linkerd2-proxy-init ./proxy-init
 
 # Runs Go's code formatting tool and succeeds if no output is printed
-fmt:
+go-fmt:
     gofmt -d .
     test -z "$(gofmt -d .)"
 
 # Run unit tests
-test-unit:
+go-test-unit:
     go test -v ./...
 
 # Run integration tests
-test-integration cluster='init-test':
+go-test-integration cluster='init-test':
     k3d image import -c {{ cluster }} {{ docker_tester_tag }} {{ docker_tag }}
     cd integration_test && ./run_tests.sh
 
 # Run all tests in a k3d cluster
-test:
+go-test:
     #!/usr/bin/env bash
     set -eu
-    just test-unit
+    just go-test-unit
     just docker-proxy-init
     just docker-tester
-    just test-integration
+    just go-test-integration
 
 
 ##########
