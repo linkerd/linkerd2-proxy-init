@@ -30,4 +30,4 @@ jobs:
         just docker-tester
       shell: bash
     - name: Run integration tests
-      run: just test-integration
+      run: just go-test-integration
