@@ -1,4 +1,4 @@
-ARG RUST_IMAGE=docker.io/library/rust:1.62.0
+ARG RUST_IMAGE=docker.io/library/rust:1.62.1
 ARG RUNTIME_IMAGE=gcr.io/distroless/cc
 
  # Builds the operator binary.
@@ -12,10 +12,10 @@ ARG RUNTIME_IMAGE=gcr.io/distroless/cc
  COPY Cargo.toml Cargo.lock .
  COPY cni-validator /build/
  RUN --mount=type=cache,target=target \
-     --mount=type=cache,from=rust:1.62.0,source=/usr/local/cargo,target=/usr/local/cargo \
+     --mount=type=cache,from=rust:1.62.1,source=/usr/local/cargo,target=/usr/local/cargo \
      cargo fetch
  RUN --mount=type=cache,target=target \
-     --mount=type=cache,from=rust:1.62.0,source=/usr/local/cargo,target=/usr/local/cargo \
+     --mount=type=cache,from=rust:1.62.1,source=/usr/local/cargo,target=/usr/local/cargo \
      cargo build --locked --target=aarch64-unknown-linux-gnu --release --package=cni-validator && \
      mv target/aarch64-unknown-linux-gnu/release/cni-validator /tmp/
 
