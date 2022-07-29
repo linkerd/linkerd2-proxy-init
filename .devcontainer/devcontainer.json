@@ -18,7 +18,7 @@
         "--memory=12g",
         "--memory-swap=12g",
         // Use the host network so we can access k3d, etc.
-        "--net=host",
+        "--net=host"
     ],
     "overrideCommand": false,
     "remoteUser": "code",
