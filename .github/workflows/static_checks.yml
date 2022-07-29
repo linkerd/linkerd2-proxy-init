@@ -11,8 +11,7 @@ jobs:
   go_lint:
     name: Go lint
     runs-on: ubuntu-20.04
-    container:
-      image: golang:1.14.15
+    container: ghcr.io/linkerd/dev:v21-go
     steps:
     - name: Checkout code
       uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
@@ -23,8 +22,7 @@ jobs:
   go_format:
     name: Go format
     runs-on: ubuntu-20.04
-    container:
-      image: golang:1.14.15
+    container: ghcr.io/linkerd/dev:v21-go
     steps:
     - name: Checkout code
       uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
