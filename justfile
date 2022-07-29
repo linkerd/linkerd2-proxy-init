@@ -123,19 +123,12 @@ go-test-unit:
     go test -v ./...
 
 # Run integration tests
-go-test-integration cluster='init-test':
+go-test-integration cluster='init-test': docker-proxy-init docker-tester
     k3d image import -c {{ cluster }} {{ docker_tester_tag }} {{ docker_tag }}
     cd integration_test && ./run_tests.sh
 
 # Run all tests in a k3d cluster
-go-test:
-    #!/usr/bin/env bash
-    set -eu
-    just go-test-unit
-    just docker-proxy-init
-    just docker-tester
-    just go-test-integration
-
+go-test: go-test-unit go-test-integration
 
 ##########
 # DOCKER #
