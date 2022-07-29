@@ -7,7 +7,7 @@
         "kokakiwi.vscode-just",
         "NathanRidley.autotrim",
         "samverschueren.final-newline",
-        "tamasfe.even-better-toml",
+        "tamasfe.even-better-toml"
     ],
     "settings": {
         "go.lintTool": "golangci-lint"
