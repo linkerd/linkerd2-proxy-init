@@ -1,0 +1,35 @@
+name: Go
+
+# TODO use `just`` from the dev image
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/go.yml
+      - '**/*.go'
+      - go.sum
+      - justfile
+
+jobs:
+  lint:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - uses: golangci/golangci-lint-action@537aa1903e5d359d0b27dbc19ddd22c5087f3fbc
+
+  fmt:
+    runs-on: ubuntu-20.04
+    container: ghcr.io/linkerd/dev:v21-go
+    steps:
+      - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - run: just fmt
+
+  unit-test:
+    runs-on: ubuntu-20.04
+    container: ghcr.io/linkerd/dev:v21-go
+    steps:
+      - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - run: just test-unit
+

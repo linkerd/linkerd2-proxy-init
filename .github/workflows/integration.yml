@@ -1,0 +1,27 @@
+name: Integration tests
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/integration.yml
+      - '**/*.go'
+      - Dockerfile
+      - go.sum
+      - justfile
+
+env:
+  DOCKER_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
+
+jobs:
+  integration:
+    timeout-minutes: 15
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+      - uses: AbsaOSS/k3d-action@b176c2a6dcae72e3e64e3e4d61751904ec314002
+        with:
+          cluster-name: init-test
+      - run: just docker-proxy-init
+      - run: just docker-tester
+      - run: just test-integration
