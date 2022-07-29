@@ -1,13 +1,13 @@
 {
     "name": "linkerd2",
-    "image": "ghcr.io/linkerd/dev:v21",
+    "image": "ghcr.io/linkerd/dev:v22",
     "extensions": [
         "DavidAnson.vscode-markdownlint",
         "golang.go",
         "kokakiwi.vscode-just",
         "NathanRidley.autotrim",
         "samverschueren.final-newline",
-        "tamasfe.even-better-toml",
+        "tamasfe.even-better-toml"
     ],
     "settings": {
         "go.lintTool": "golangci-lint"
@@ -18,7 +18,7 @@
         "--memory=12g",
         "--memory-swap=12g",
         // Use the host network so we can access k3d, etc.
-        "--net=host",
+        "--net=host"
     ],
     "overrideCommand": false,
     "remoteUser": "code",
