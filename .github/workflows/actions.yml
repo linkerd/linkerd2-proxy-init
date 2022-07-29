@@ -3,6 +3,7 @@ name: Actions
 on:
   pull_request:
     paths:
+      - .devcontainer/devcontainer.json
       - .github/workflows/**
 
 permissions:
