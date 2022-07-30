@@ -57,5 +57,4 @@ jobs:
         COSIGN_EXPERIMENTAL: 1
       run: cosign sign "ghcr.io/linkerd/proxy-init:$TAG"
     - name: Prune docker layers cache
-      shell: bash
-      run: just docker-cache-prune
+      run: just docker-cache-prune '${{ env.DOCKER_BUILDKIT_CACHE }}'

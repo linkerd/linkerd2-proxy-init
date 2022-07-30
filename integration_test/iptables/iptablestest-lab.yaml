@@ -3,6 +3,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: pod-with-no-rules
+  namespace: proxy-init-test
   labels:
     app: pod-with-no-rules
 spec:
@@ -30,6 +31,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: svc-pod-with-no-rules
+  namespace: proxy-init-test
 spec:
   selector:
     app: pod-with-no-rules
@@ -41,6 +43,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: pod-with-existing-rules
+  namespace: proxy-init-test
   labels:
     app: pod-with-existing-rules
 spec:
@@ -109,6 +112,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: pod-redirects-all-ports
+  namespace: proxy-init-test
   labels:
     app: pod-redirects-all-ports
 spec:
@@ -162,6 +166,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: svc-pod-redirects-all-ports
+  namespace: proxy-init-test
 spec:
   selector:
     app: pod-redirects-all-ports
@@ -173,6 +178,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: pod-redirects-whitelisted
+  namespace: proxy-init-test
   labels:
     app: pod-redirects-whitelisted
 spec:
@@ -217,6 +223,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: pod-doesnt-redirect-blacklisted
+  namespace: proxy-init-test
   labels:
     app: pod-doesnt-redirect-blacklisted
 spec:
@@ -279,6 +286,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: pod-ignores-subnets
+  namespace: proxy-init-test
   labels:
     app: pod-ignores-subnets
 spec:

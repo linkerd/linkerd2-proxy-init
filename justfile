@@ -4,18 +4,9 @@
 # Config
 #
 
-# If DOCKER_REGISTRY is not already set, use a bogus registry with a unique
-# domain name so that it's virtually impossible to accidentally use an older
-# cached image.
-_test-id := `tr -dc 'a-z0-9' </dev/urandom | fold -w 5 | head -n 1`
-export DOCKER_REGISTRY := env_var_or_default("DOCKER_REGISTRY", "test-" + _test-id + ".local/linkerd")
-
-docker_repo := '${DOCKER_REGISTRY}' + "/proxy-init"
-docker_tag := docker_repo + ":" + "latest"
-docker_tester_tag := '${DOCKER_REGISTRY}' + "/iptables-tester:v1"
-dockerfile_tester_path := "./integration_test/iptables/Dockerfile-tester"
-amd64_arch := "linux/amd64"
-docker_cache_path := env_var_or_default("DOCKER_BUILDKIT_CACHE", "")
+_image := "ghcr.io/linkerd/proxy-init:latest"
+_test-image := "ghcr.io/linkerd/iptables-tester:v1"
+docker-arch := "linux/amd64"
 
 #
 # Recipes
@@ -26,7 +17,7 @@ default: fmt test build
 
 # Build the project
 build:
-    go build -o out/linkerd2-proxy-init main.go
+    go build -o target/linkerd2-proxy-init main.go
 
 # Runs Go's code formatting tool and succeeds if no output is printed
 fmt:
@@ -37,50 +28,126 @@ fmt:
 test-unit:
     go test -v ./...
 
-# Run integration tests
-test-integration cluster='init-test':
-    k3d image import -c {{ cluster }} {{ docker_tester_tag }} {{ docker_tag }}
-    cd integration_test && ./run_tests.sh
+# Run integration tests after preparing dependencies
+test-integration: test-integration-deps test-integration-run
+
+# Run integration tests without preparing dependencies
+test-integration-run:
+    TEST_CTX='k3d-{{ k3d-name }}' integration_test/run.sh
+
+# Build and load images
+test-integration-deps: docker-proxy-init docker-tester _k3d-init
+    {{ _k3d-load }} {{ _test-image }} {{ _image }}
 
 # Run all tests in a k3d cluster
-test:
-    #!/usr/bin/env bash
-    set -eu
-    just test-unit
-    just docker-proxy-init
-    just docker-tester
-    just test-integration
+test: test-unit test-integration
 
 # Build docker image for proxy-init (Development)
-docker-proxy-init arch=amd64_arch:
+docker-proxy-init:
     docker buildx build . \
-    	--tag={{ docker_tag }} \
-    	--platform={{ arch }} \
+    	--tag={{ _image }} \
+    	--platform={{ docker-arch }} \
     	--load \
 
 # Build docker image for iptables-tester (Development)
-docker-tester arch=amd64_arch:
-    docker buildx build ./integration_test \
-    	--file={{ dockerfile_tester_path }} \
-    	--tag={{ docker_tester_tag }} \
-    	--platform={{ arch }} \
+docker-tester:
+    docker buildx build integration_test \
+    	--file=integration_test/iptables/Dockerfile-tester \
+    	--tag={{ _test-image }} \
+    	--platform={{ docker-arch }} \
     	--load
 
 # Prune Docker BuildKit cache
-docker-cache-prune:
+docker-cache-prune dir:
     #!/usr/bin/env bash
     set -euxo pipefail
-   
-    # Deletes all files under the buildkit blob directory that are not referred
+    # Delete all files under the buildkit blob directory that are not referred
     # to any longer in the cache manifest file
-    manifest_sha=$(jq -r .manifests[0].digest < "{{ docker_cache_path }}/index.json")
+    manifest_sha=$(jq -r .manifests[0].digest < '{{ dir }}/index.json')
     manifest=${manifest_sha#"sha256:"}
     files=("$manifest")
-    while IFS= read -r line; do files+=("$line"); done <<< "$(jq -r '.manifests[].digest | sub("^sha256:"; "")' < "{{ docker_cache_path }}/blobs/sha256/$manifest")"
-    for file in "{{ docker_cache_path }}"/blobs/sha256/*; do
+    while IFS= read -r f; do
+        files+=("$f")
+    done < <(jq -r '.manifests[].digest | sub("^sha256:"; "")' <'{{ dir }}/blobs/sha256/$manifest')
+    for file in '{{ dir }}'/blobs/sha256/*; do
       name=$(basename "$file")
       if [[ ! "${files[@]}" =~ ${name} ]]; then
     	printf 'pruned from cache: %s\n' "$file"
     	rm -f "$file"
       fi
     done
+
+##
+## Test cluster
+##
+
+# The name of the k3d cluster to use.
+k3d-name := "l5d-test"
+
+# The kubernetes version to use for the test cluster. e.g. 'v1.24', 'latest', etc
+k3d-k8s := "latest"
+
+k3d-agents := "0"
+k3d-servers := "1"
+
+_context := "--context=k3d-" + k3d-name
+_kubectl := "kubectl " + _context
+
+_k3d-load := "k3d image import --mode=direct --cluster=" + k3d-name
+
+# Run kubectl with the test cluster context.
+k *flags:
+    {{ _kubectl }} {{ flags }}
+
+# Creates a k3d cluster that can be used for testing.
+k3d-create: && _k3d-ready
+    k3d cluster create {{ k3d-name }} \
+        --image='+{{ k3d-k8s }}' \
+        --agents='{{ k3d-agents }}' \
+        --servers='{{ k3d-servers }}' \
+        --no-lb \
+        --k3s-arg '--no-deploy=local-storage,traefik,servicelb,metrics-server@server:*' \
+        --kubeconfig-update-default \
+        --kubeconfig-switch-context=false
+
+# Deletes the test cluster.
+k3d-delete:
+    k3d cluster delete {{ k3d-name }}
+
+# Print information the test cluster's detailed status.
+k3d-info:
+    k3d cluster list {{ k3d-name }} -o json | jq .
+
+# Ensures the test cluster has been initialized.
+_k3d-init: && _k3d-ready
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! k3d cluster list {{ k3d-name }} >/dev/null 2>/dev/null; then
+        {{ just_executable() }} \
+            k3d-name={{ k3d-name }} \
+            k3d-k8s={{ k3d-k8s }} \
+            k3d-create
+    fi
+    k3d kubeconfig merge l5d-test \
+        --kubeconfig-merge-default \
+        --kubeconfig-switch-context=false \
+        >/dev/null
+
+_k3d-ready: _k3d-api-ready _k3d-dns-ready
+
+# Wait for the cluster's API server to be accessible
+_k3d-api-ready:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for i in {1..6} ; do
+        if {{ _kubectl }} cluster-info >/dev/null ; then exit 0 ; fi
+        sleep 10
+    done
+    exit 1
+
+# Wait for the cluster's DNS pods to be ready.
+_k3d-dns-ready:
+    while [ $({{ _kubectl }} get po -n kube-system -l k8s-app=kube-dns -o json |jq '.items | length') = "0" ]; do sleep 1 ; done
+    {{ _kubectl }} wait pod --for=condition=ready \
+        --namespace=kube-system --selector=k8s-app=kube-dns \
+        --timeout=1m
