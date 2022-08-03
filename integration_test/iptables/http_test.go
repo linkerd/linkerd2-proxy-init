@@ -108,7 +108,7 @@ func TestPodWithSomePortsRedirected(t *testing.T) {
 func TestPodWithSomePortsIgnored(t *testing.T) {
 	t.Parallel()
 
-	podIgnoredSomePortsIP := os.Getenv("POD_DOEST_REDIRECT_BLACKLISTED_IP")
+	podIgnoredSomePortsIP := os.Getenv("POD_DOESNT_REDIRECT_BLACKLISTED_IP")
 
 	t.Run("succeeds connecting to pod directly through container's exposed port", func(t *testing.T) {
 		expectSuccessfulGetRequestTo(t, podIgnoredSomePortsIP, proxyContainerPort)
@@ -135,7 +135,7 @@ func TestPodWithSomePortsIgnored(t *testing.T) {
 func TestPodMakesOutboundConnection(t *testing.T) {
 	t.Parallel()
 
-	podIgnoredSomePortsIP := os.Getenv("POD_DOEST_REDIRECT_BLACKLISTED_IP")
+	podIgnoredSomePortsIP := os.Getenv("POD_DOESNT_REDIRECT_BLACKLISTED_IP")
 	podWithNoRulesIP := os.Getenv("POD_WITH_NO_RULES_IP")
 	podWithNoRulesName := "pod-with-no-rules"
 

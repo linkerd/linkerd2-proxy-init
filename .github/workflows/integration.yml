@@ -9,9 +9,6 @@ on:
       - go.sum
       - justfile
 
-env:
-  DOCKER_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
-
 jobs:
   integration:
     timeout-minutes: 15
@@ -21,7 +18,8 @@ jobs:
       - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
       - uses: AbsaOSS/k3d-action@b176c2a6dcae72e3e64e3e4d61751904ec314002
         with:
-          cluster-name: init-test
+          cluster-name: l5d-test
       - run: just docker-proxy-init
       - run: just docker-tester
-      - run: just test-integration
+      - run: just test-integration-deps
+      - run: just test-integration-run
