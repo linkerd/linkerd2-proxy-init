@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -euxo pipefail
 
 cd "${BASH_SOURCE[0]%/*}"
 
@@ -52,7 +52,7 @@ POD_IGNORES_SUBNETS_IP=$(kip pod-ignores-subnets)
 echo "POD_IGNORES_SUBNETS_IP=${POD_IGNORES_SUBNETS_IP}"
 
 echo '# Running tester...'
-output=$(k run iptables-tester \
+k run iptables-tester \
         --attach \
         --command \
         --env=POD_IGNORES_SUBNETS_IP="${POD_IGNORES_SUBNETS_IP}" \
@@ -61,16 +61,13 @@ output=$(k run iptables-tester \
         --env=POD_DOESNT_REDIRECT_BLACKLISTED_IP="${POD_DOESNT_REDIRECT_BLACKLISTED_IP}" \
         --env=POD_WITH_EXISTING_RULES_IP="${POD_WITH_EXISTING_RULES_IP}" \
         --env=POD_WITH_NO_RULES_IP="${POD_WITH_NO_RULES_IP}" \
-        --image=ghcr.io/linkerd/iptables-tester:v1 \
+        --image=test.l5d.io/linkerd/iptables-tester:v1 \
         --image-pull-policy=Never \
         --namespace=proxy-init-test \
         --quiet \
         --restart=Never \
-        --rm)
-echo "$output"
-if ! [[ "$output" =~ status:0 ]]; then
-  echo 'Failed' >&2
-  exit 1
-fi
+        --rm \
+        -- \
+        go test -v -integration-tests
 
 k delete ns proxy-init-test

@@ -1,7 +1,7 @@
-FROM golang:1.19.0
-
-ADD iptables/ /go
-# Kubernetes Jobs will be retried until they return status 0,
-# so we need to output the status for processing but make sure
-# that the container exits with 0
-ENTRYPOINT cd /go && (go test -v -integration-tests; echo "status:$?")
+FROM golang:1.18.5
+ENV GOCACHE=/tmp/
+WORKDIR /src
+COPY integration_test/iptables/http_test.go /src/
+COPY integration_test/iptables/test_service /src/test_service
+COPY go.mod go.sum /src
+RUN go mod tidy

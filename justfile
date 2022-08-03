@@ -4,8 +4,8 @@
 # Config
 #
 
-_image := "ghcr.io/linkerd/proxy-init:latest"
-_test-image := "ghcr.io/linkerd/iptables-tester:v1"
+_image := "test.l5d.io/linkerd/proxy-init:latest"
+_test-image := "test.l5d.io/linkerd/iptables-tester:v1"
 docker-arch := "linux/amd64"
 
 #
@@ -51,7 +51,7 @@ docker-proxy-init:
 
 # Build docker image for iptables-tester (Development)
 docker-tester:
-    docker buildx build integration_test \
+    docker buildx build . \
     	--file=integration_test/iptables/Dockerfile-tester \
     	--tag={{ _test-image }} \
     	--platform={{ docker-arch }} \
