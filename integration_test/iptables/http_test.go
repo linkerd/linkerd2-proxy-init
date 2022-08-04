@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 const (
@@ -211,8 +212,10 @@ func makeCallFromContainerToAnother(t *testing.T, fromPodNamed string, fromConta
 
 func expectCannotConnectGetRequestTo(t *testing.T, host string, port string) {
 	targetURL := fmt.Sprintf("http://%s:%s/", host, port)
-	fmt.Printf("Expecting failed GET to %s\n", targetURL)
-	resp, err := http.Get(targetURL)
+	c := &http.Client{
+		Timeout: time.Second * 3,
+	}
+	resp, err := c.Get(targetURL)
 	if err == nil {
 		t.Fatalf("Expected error when connecting to %s, got:\n%+v", targetURL, resp)
 	}
