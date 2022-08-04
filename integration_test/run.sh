@@ -61,7 +61,7 @@ k run iptables-tester \
         --env=POD_DOESNT_REDIRECT_BLACKLISTED_IP="${POD_DOESNT_REDIRECT_BLACKLISTED_IP}" \
         --env=POD_WITH_EXISTING_RULES_IP="${POD_WITH_EXISTING_RULES_IP}" \
         --env=POD_WITH_NO_RULES_IP="${POD_WITH_NO_RULES_IP}" \
-        --image=test.l5d.io/linkerd/iptables-tester:v1 \
+        --image=test.l5d.io/linkerd/iptables-tester:test \
         --image-pull-policy=Never \
         --namespace=proxy-init-test \
         --quiet \

@@ -4,8 +4,8 @@
 # Config
 #
 
-_image := "test.l5d.io/linkerd/proxy-init:latest"
-_test-image := "test.l5d.io/linkerd/iptables-tester:v1"
+_image := "test.l5d.io/linkerd/proxy-init:test"
+_test-image := "test.l5d.io/linkerd/iptables-tester:test"
 docker-arch := "linux/amd64"
 
 #
