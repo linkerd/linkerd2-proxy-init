@@ -68,6 +68,6 @@ k run iptables-tester \
         --restart=Never \
         --rm \
         -- \
-        go test -v -integration-tests
+        go test -integration-tests
 
 k delete ns proxy-init-test
