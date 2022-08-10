@@ -13,7 +13,7 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-init -mod=readonly -ldflags "-s -w" -v
 
 ## package runtime
-FROM --platform=$TARGETPLATFORM alpine:3.16.1
+FROM --platform=$TARGETPLATFORM alpine:3.16.2
 RUN apk add iptables libcap
 RUN touch /run/xtables.lock && chmod 0666 /run/xtables.lock
 RUN setcap cap_net_raw,cap_net_admin+eip /sbin/xtables-legacy-multi && \
