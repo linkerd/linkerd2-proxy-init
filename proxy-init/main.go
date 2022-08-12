@@ -5,7 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/linkerd/linkerd2-proxy-init/cmd"
+	"github.com/linkerd/linkerd2-proxy-init/proxy-init/cmd"
 )
 
 func main() {
