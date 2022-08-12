@@ -1,7 +1,0 @@
-FROM golang:1.18
-ENV GOCACHE=/tmp/
-WORKDIR /src
-COPY integration_test/iptables/http_test.go /src/
-COPY integration_test/iptables/test_service /src/test_service
-COPY go.mod go.sum /src
-RUN go mod tidy

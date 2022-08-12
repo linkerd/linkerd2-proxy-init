@@ -1,0 +1,6 @@
+FROM golang:1.18
+ENV GOCACHE=/tmp/
+WORKDIR /src
+COPY proxy-init/integration/iptables/. /src/
+COPY go.mod go.sum /src
+RUN go mod tidy && go mod download

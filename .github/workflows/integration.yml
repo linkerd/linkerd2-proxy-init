@@ -4,11 +4,11 @@ on:
   pull_request:
     paths:
       - .github/workflows/integration.yml
-      - '**/*.go'
       - Dockerfile
+      - go.mod
       - go.sum
-      - integration_test/**
       - justfile
+      - proxy-init/**
 
 jobs:
   integration:
@@ -20,7 +20,7 @@ jobs:
       - uses: AbsaOSS/k3d-action@b176c2a6dcae72e3e64e3e4d61751904ec314002
         with:
           cluster-name: l5d-test
-      - run: just docker-proxy-init
-      - run: just docker-tester
-      - run: just test-integration-deps
-      - run: just test-integration-run
+      - run: just proxy-init-image
+      - run: just proxy-init-test-image
+      - run: just proxy-init-test-integration-deps
+      - run: just proxy-init-test-integration-run

@@ -16,6 +16,6 @@ updates:
       interval: "daily"
 
   - package-ecosystem: "docker"
-    directory: "/integration_test/iptables"
+    directory: "/proxy-init/integration/iptables"
     schedule:
       interval: "daily"
