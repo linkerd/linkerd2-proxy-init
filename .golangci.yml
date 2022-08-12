@@ -1,0 +1,46 @@
+linters:
+  enable:
+    - deadcode
+    - depguard
+    - errcheck
+    - errorlint
+    - exportloopref
+    - goconst
+    - gocritic
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - revive
+    - staticcheck
+    - typecheck
+    - unconvert
+    - unused
+    - varcheck
+    ## TODO: enable more linters!
+    # - dupl
+    # - gochecknoglobals
+    # - gochecknoinits
+    # - gocyclo
+    # - interfacer
+    # - lll
+    # - maligned
+    # - prealloc
+    # - stylecheck
+
+  # Disabled for go1.18: https://github.com/golangci/golangci-lint/issues/2649
+  disable:
+    - bodyclose
+    - structcheck
+    - unparam
+
+
+issues:
+  exclude-use-default: false
+  exclude-rules:
+    # False-positive reports about invoking commands with variables.
+    - linters:
+        - gosec
+      text: "G204: Subprocess launched with .*"

@@ -70,9 +70,8 @@ func NewRootCmd() *cobra.Command {
 				if err != nil {
 					log.Error(string(out))
 					return err
-				} else {
-					log.Info(string(out))
 				}
+				log.Info(string(out))
 			}
 
 			config, err := BuildFirewallConfiguration(options)
