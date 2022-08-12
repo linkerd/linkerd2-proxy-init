@@ -7,8 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/linkerd/linkerd2-proxy-init/proxy-init/pkg/iptables"
-	"github.com/linkerd/linkerd2-proxy-init/proxy-init/pkg/ports"
+	"github.com/linkerd/linkerd2-proxy-init/proxy-init/internal/iptables"
+	"github.com/linkerd/linkerd2-proxy-init/proxy-init/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -108,11 +108,11 @@ func NewRootCmd() *cobra.Command {
 
 // BuildFirewallConfiguration returns an iptables FirewallConfiguration suitable to use to configure iptables.
 func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfiguration, error) {
-	if !ports.IsValid(options.IncomingProxyPort) {
+	if !util.IsValidPort(options.IncomingProxyPort) {
 		return nil, fmt.Errorf("--incoming-proxy-port must be a valid TCP port number")
 	}
 
-	if !ports.IsValid(options.OutgoingProxyPort) {
+	if !util.IsValidPort(options.OutgoingProxyPort) {
 		return nil, fmt.Errorf("--outgoing-proxy-port must be a valid TCP port number")
 	}
 
