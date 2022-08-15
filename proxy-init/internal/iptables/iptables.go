@@ -12,7 +12,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/linkerd/linkerd2-proxy-init/ports"
+	"github.com/linkerd/linkerd2-proxy-init/proxy-init/internal/util"
 )
 
 const (
@@ -200,7 +200,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 	}
 	destinations := make([]string, 0)
 	for _, portOrRange := range portsToIgnore {
-		if portRange, err := ports.ParsePortRange(portOrRange); err == nil {
+		if portRange, err := util.ParsePortRange(portOrRange); err == nil {
 			// The number of ports referenced for the range
 			portCount := 2
 			if portRange.LowerBound == portRange.UpperBound {
@@ -357,7 +357,7 @@ func (fc FirewallConfiguration) makeShowAllRules() *exec.Cmd {
 }
 
 // asDestination formats the provided `PortRange` for output in commands.
-func asDestination(portRange ports.PortRange) string {
+func asDestination(portRange util.PortRange) string {
 	if portRange.LowerBound == portRange.UpperBound {
 		return fmt.Sprintf("%d", portRange.LowerBound)
 	}

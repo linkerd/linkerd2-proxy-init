@@ -8,74 +8,56 @@ _image := "test.l5d.io/linkerd/proxy-init:test"
 _test-image := "test.l5d.io/linkerd/iptables-tester:test"
 docker-arch := "linux/amd64"
 
-#
-# Recipes
-#
+##
+## Recipes
+##
 
-# Run formatting, tests, and build the iptables container
-default: fmt test build
+default: proxy-init-test-unit
 
-# Build the project
-build:
-    go build -o target/linkerd2-proxy-init main.go
+build: proxy-init-build
 
-# Runs Go's code formatting tool and succeeds if no output is printed
-fmt:
-    gofmt -d .
-    test -z "$(gofmt -d .)"
+test: proxy-init-test-unit proxy-init-test-integration
 
-# Run unit tests
-test-unit:
-    go test -v ./...
+# Check whether the Go code is formatted.
+go-fmt-check:
+    out=$(gofmt -d .) ; [ -z "$out" ] || (echo "$out" ; exit 1)
 
-# Run integration tests after preparing dependencies
-test-integration: test-integration-deps test-integration-run
+##
+## proxy-init
+##
+
+proxy-init-build:
+    go build -o target/linkerd2-proxy-init ./proxy-init
+
+# Run proxy-init unit tests
+proxy-init-test-unit:
+    go test -v ./proxy-init/...
+
+# Run proxy-init integration tests after preparing dependencies
+proxy-init-test-integration: proxy-init-test-integration-deps proxy-init-test-integration-run
 
 # Run integration tests without preparing dependencies
-test-integration-run:
-    TEST_CTX='k3d-{{ k3d-name }}' integration_test/run.sh
+proxy-init-test-integration-run:
+    TEST_CTX='k3d-{{ k3d-name }}' ./proxy-init/integration/run.sh
 
 # Build and load images
-test-integration-deps: docker-proxy-init docker-tester _k3d-init
+proxy-init-test-integration-deps: proxy-init-image proxy-init-test-image _k3d-init
     {{ _k3d-load }} {{ _test-image }} {{ _image }}
 
-# Run all tests in a k3d cluster
-test: test-unit test-integration
-
 # Build docker image for proxy-init (Development)
-docker-proxy-init:
+proxy-init-image:
     docker buildx build . \
     	--tag={{ _image }} \
     	--platform={{ docker-arch }} \
     	--load \
 
 # Build docker image for iptables-tester (Development)
-docker-tester:
+proxy-init-test-image:
     docker buildx build . \
-    	--file=integration_test/iptables/Dockerfile-tester \
+        --file=proxy-init/integration/iptables/Dockerfile-tester \
     	--tag={{ _test-image }} \
     	--platform={{ docker-arch }} \
     	--load
-
-# Prune Docker BuildKit cache
-docker-cache-prune dir:
-    #!/usr/bin/env bash
-    set -euxo pipefail
-    # Delete all files under the buildkit blob directory that are not referred
-    # to any longer in the cache manifest file
-    manifest_sha=$(jq -r .manifests[0].digest < '{{ dir }}/index.json')
-    manifest=${manifest_sha#"sha256:"}
-    files=("$manifest")
-    while IFS= read -r f; do
-        files+=("$f")
-    done < <(jq -r '.manifests[].digest | sub("^sha256:"; "")' <'{{ dir }}/blobs/sha256/$manifest')
-    for file in '{{ dir }}'/blobs/sha256/*; do
-      name=$(basename "$file")
-      if [[ ! "${files[@]}" =~ ${name} ]]; then
-    	printf 'pruned from cache: %s\n' "$file"
-    	rm -f "$file"
-      fi
-    done
 
 ##
 ## Test cluster
@@ -151,3 +133,27 @@ _k3d-dns-ready:
     {{ _kubectl }} wait pod --for=condition=ready \
         --namespace=kube-system --selector=k8s-app=kube-dns \
         --timeout=1m
+
+##
+## CI utilities
+##
+
+# Prune Docker BuildKit cache
+docker-cache-prune dir:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    # Delete all files under the buildkit blob directory that are not referred
+    # to any longer in the cache manifest file
+    manifest_sha=$(jq -r .manifests[0].digest < '{{ dir }}/index.json')
+    manifest=${manifest_sha#"sha256:"}
+    files=("$manifest")
+    while IFS= read -r f; do
+        files+=("$f")
+    done < <(jq -r '.manifests[].digest | sub("^sha256:"; "")' <'{{ dir }}/blobs/sha256/$manifest')
+    for file in '{{ dir }}'/blobs/sha256/*; do
+      name=$(basename "$file")
+      if [[ ! "${files[@]}" =~ ${name} ]]; then
+    	printf 'pruned from cache: %s\n' "$file"
+    	rm -f "$file"
+      fi
+    done

@@ -1,4 +1,4 @@
-package ports
+package util
 
 import (
 	"fmt"
@@ -12,22 +12,23 @@ type PortRange struct {
 	UpperBound int
 }
 
-// IsValid checks the provided to determine whether or not the port candidate
-// is a valid TCP port number. Valid TCP ports range from 0 to 65535.
-func IsValid(port int) bool {
+// IsValidPort checks the provided to determine whether or not the port
+// candidate is a valid TCP port number. Valid TCP ports range from 1 to 65535.
+func IsValidPort(port int) bool {
 	return port >= 0 && port <= 65535
 }
 
 // ParsePort parses and verifies the validity of the port candidate.
 func ParsePort(port string) (int, error) {
 	i, err := strconv.Atoi(port)
-	if err != nil || !IsValid(i) {
+	if err != nil || !IsValidPort(i) {
 		return -1, fmt.Errorf("\"%s\" is not a valid TCP port", port)
 	}
 	return i, nil
 }
 
-// ParsePortRange parses and checks the provided range candidate to ensure it is a valid TCP port range.
+// ParsePortRange parses and checks the provided range candidate to ensure it is
+// a valid TCP port range.
 func ParsePortRange(portRange string) (PortRange, error) {
 	bounds := strings.Split(portRange, "-")
 	if len(bounds) > 2 {
@@ -38,11 +39,11 @@ func ParsePortRange(portRange string) (PortRange, error) {
 		bounds = append(bounds, bounds[0])
 	}
 	lower, err := strconv.Atoi(bounds[0])
-	if err != nil || !IsValid(lower) {
+	if err != nil || !IsValidPort(lower) {
 		return PortRange{}, fmt.Errorf("\"%s\" is not a valid lower-bound", bounds[0])
 	}
 	upper, err := strconv.Atoi(bounds[1])
-	if err != nil || !IsValid(upper) {
+	if err != nil || !IsValidPort(upper) {
 		return PortRange{}, fmt.Errorf("\"%s\" is not a valid upper-bound", bounds[1])
 	}
 	if upper < lower {
