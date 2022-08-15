@@ -13,7 +13,7 @@ docker-arch := "linux/amd64"
 ## Recipes
 ##
 
-default: proxy-init-test-unit
+default: proxy-init-lint proxy-init-test-unit
 
 build: proxy-init-build validator-build
 
@@ -120,6 +120,9 @@ validator-image:
 
 proxy-init-build:
     go build -o target/linkerd2-proxy-init ./proxy-init
+
+proxy-init-lint:
+    golangci-lint run ./proxy-init/...
 
 # Run proxy-init unit tests
 proxy-init-test-unit:

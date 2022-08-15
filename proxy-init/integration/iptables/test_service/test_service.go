@@ -24,6 +24,8 @@ func returnHostAndPortHandler(w http.ResponseWriter, r *http.Request) {
 func callOtherServiceHandler(w http.ResponseWriter, r *http.Request) {
 	url := r.FormValue("url")
 	log.Printf("Got request [%v] making HTTP call to [%s]", r, url)
+	// This is only used in tests, so skip URL validation.
+	//nolint:gosec
 	downstreamResp, err := http.Get(url)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
