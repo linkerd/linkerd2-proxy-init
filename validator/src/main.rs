@@ -13,7 +13,7 @@ use tracing::{debug, error, info, Instrument};
 /// Validate that a container's networking is setup for the Linkerd proxy
 ///
 /// Validation is done by binding a server on the proxy's outbound port and
-/// initiatinga connection to an arbitrary (hopefully unroutable) address. If
+/// initiating a connection to an arbitrary (hopefully unroutable) address. If
 /// networking has been configured properly, the connection should be
 /// established to the server.
 #[derive(Parser)]
@@ -90,14 +90,14 @@ async fn main() {
     }
 }
 
-// === Valdiation ===
+// === Validation ===
 
 /// Validates that connecting to `connect_addr` actually connects to
 /// `listen_addr`.
 ///
-/// This validates the the operating system (i.e. iptables) is configured to
+/// This validates that the operating system (i.e. iptables) is configured to
 /// redirect connections to a Linkerd proxy (with an outbound port of
-/// `listen_addr).
+/// `listen_addr`).
 async fn validate(listen_addr: SocketAddr, connect_addr: SocketAddr) -> Result<()> {
     // First, bind the server address so that all connections can be processed
     // by the server.
@@ -118,7 +118,7 @@ async fn validate(listen_addr: SocketAddr, connect_addr: SocketAddr) -> Result<(
     tokio::spawn(serve(listener, token.clone()).in_current_span());
 
     // Connect to an arbitrary address, read data from the connection, and fail
-    // if it does match the server's token.
+    // if it doesn't match the server's token.
     info!("Connecting to {connect_addr}");
     let data = connect(connect_addr, token.len()).await?;
     debug!(data = ?String::from_utf8_lossy(&*data), size = data.len());
