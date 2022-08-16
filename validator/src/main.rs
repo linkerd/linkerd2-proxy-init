@@ -171,6 +171,9 @@ async fn connect(addr: SocketAddr, size: usize) -> Result<Bytes> {
     while buf.len() != size {
         let size = socket.read_buf(&mut buf).await?;
         debug!(bytes = %size, "Read message from server");
+        if size == 0 {
+            break;
+        }
     }
     Ok(buf.freeze())
 }
