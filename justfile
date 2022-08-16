@@ -12,7 +12,9 @@ docker-arch := "linux/amd64"
 ## Recipes
 ##
 
-default: proxy-init-lint proxy-init-test-unit
+default: lint proxy-init-test-unit
+
+lint: sh-lint md-lint proxy-init-lint action-lint action-dev-check
 
 build: proxy-init-build
 
@@ -140,6 +142,33 @@ _k3d-dns-ready:
 ##
 ## CI utilities
 ##
+
+# Format actionlint output for Github Actions if running in CI.
+_actionlint-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else {
+  '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::{{$err.Message}}%0A```%0A{{replace $err.Snippet "\\n" "%0A"}}%0A```\n{{end}}'
+}
+
+# Lints all GitHub Actions workflows
+action-lint:
+    actionlint \
+        {{ if _actionlint-fmt != '' { "-format '" + _actionlint-fmt + "'" } else { "" } }} \
+        .github/workflows/*
+
+action-dev-check:
+    action-dev-check
+
+md-lint:
+    markdownlint-cli2 '**/*.md' '!target'
+
+# Lints all shell scripts in the repo.
+sh-lint:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    files=$(while IFS= read -r f ; do
+        if [ "$(file -b --mime-type "$f")" = text/x-shellscript ]; then echo "$f"; fi
+    done < <(find . -type f ! \( -path ./.git/\* -or -path \*/target/\* \)) | xargs)
+    echo "shellcheck $files" >&2
+    shellcheck $files
 
 # Prune Docker BuildKit cache
 docker-cache-prune dir:
