@@ -1,185 +1,181 @@
-use std::{net::SocketAddr, process::exit, sync::Arc, time};
-
 use anyhow::{anyhow, bail, ensure, Context, Result};
+use bytes::{Bytes, BytesMut};
 use clap::Parser;
 use rand::distributions::{Alphanumeric, DistString};
+use std::{net::SocketAddr, process::exit, time};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
-    sync::Notify,
+    signal::unix as signal,
 };
 use tracing::{debug, error, info, Instrument};
 
+/// Validate that a container's networking is setup for the Linkerd proxy
+///
+/// Validation is done by binding a server on the proxy's outbound port and
+/// initiatinga connection to an arbitrary (hopefully unroutable) address. If
+/// networking has been configured properly, the connection should be
+/// established to the server.
 #[derive(Parser)]
 #[clap(version)]
 struct Args {
-    #[clap(
-        long,
-        env = "CNI_VALIDATOR_LOG_LEVEL",
-        default_value = "cni_validator=info,warn"
-    )]
+    #[clap(long, env = "LINKERD_VALIDATOR_LOG_LEVEL", default_value = "info")]
     log_level: kubert::LogFilter,
 
-    #[clap(long, env = "CNI_VALIDATOR_LOG_FORMAT", default_value = "plain")]
+    #[clap(long, env = "LINKERD_VALIDATOR_LOG_FORMAT", default_value = "plain")]
     log_format: kubert::LogFormat,
 
-    #[clap(long, default_value = "0.0.0.0:4140")]
-    outbound_proxy_addr: SocketAddr,
-
-    #[clap(long)]
-    target_addr: SocketAddr,
-
-    #[clap(parse(try_from_str = parse_timeout), long, default_value = "120s")]
+    #[clap(parse(try_from_str = parse_timeout), long, default_value = "10s")]
     timeout: std::time::Duration,
+
+    /// Address to which connections are supposed to be redirected by the
+    /// operating system
+    #[clap(long, default_value = "0.0.0.0:4140")]
+    listen_addr: SocketAddr,
+
+    /// Address to which the client will attempt to connect
+    #[clap(long, default_value = "192.0.2.2:1404")]
+    connect_addr: SocketAddr,
 }
 
 // ERRNO 95: Operation not supported
 const UNSUCCESSFUL_EXIT_CODE: i32 = 95;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<()> {
+async fn main() {
     let Args {
         log_level,
         log_format,
-        outbound_proxy_addr,
-        target_addr,
         timeout,
+        listen_addr,
+        connect_addr,
     } = Args::parse();
 
-    log_format.try_init(log_level)?;
+    log_format
+        .try_init(log_level)
+        .expect("must configure logging");
 
-    let rng_resp = Alphanumeric.sample_string(&mut rand::thread_rng(), 8);
-    info!(%outbound_proxy_addr, %target_addr, "Validating outbound traffic is redirected to proxy's outbound port");
-
-    let (shutdown_tx, shutdown_rx) = kubert::shutdown::sigint_or_sigterm()?;
-    let notify_ready = Arc::new(Notify::new());
-
-    let server_task = tokio::spawn(outbound_serve(
-        outbound_proxy_addr,
-        notify_ready.clone(),
-        shutdown_rx,
-        rng_resp.clone(),
-    ));
-
-    let validation_task = tokio::spawn(validate_outbound_redirect(
-        target_addr,
-        notify_ready,
-        timeout,
-        rng_resp,
-    ));
+    let mut sigint = signal::signal(signal::SignalKind::interrupt()).expect("must register SIGINT");
+    let mut sigterm =
+        signal::signal(signal::SignalKind::terminate()).expect("must register SIGTERM");
 
     tokio::select! {
-        task = validation_task => {
-            if let Err(error) = task.expect("Failed to run validator task") {
-                error!(%error, "Failed to validate");
+        biased;
+
+        // If validation fails, exit with an error.
+        res = validate(listen_addr, connect_addr) => {
+            if let Err(error) = res {
+                error!(%error);
                 exit(UNSUCCESSFUL_EXIT_CODE);
             }
-
-             info!("Validation passed successfully...exiting");
-            Ok(())
+            info!("Validated");
         }
 
-         _ = shutdown_tx.signaled() => {
-            if let Err(error) = server_task.await.expect("Failed to run outbound server task") {
-                error!(%error, "Failed to validate outbound routing configuration");
-            } else {
-                error!("Failed to validate due to server terminating early");
-            }
+        // If validation doesn't complete in a timely manner, exit with an
+        // error.
+        () = tokio::time::sleep(timeout) => {
+            error!(?timeout, "Failed to validate networking configuration");
+            exit(UNSUCCESSFUL_EXIT_CODE);
+        }
 
-             exit(UNSUCCESSFUL_EXIT_CODE);
+        // If the process is terminated by a signal, exit with an error.
+        _ = sigint.recv() => {
+            error!("Killed by SIGINT");
+            exit(UNSUCCESSFUL_EXIT_CODE);
+        }
+        _ = sigterm.recv() => {
+            error!("Killed by SIGTERM");
+            exit(UNSUCCESSFUL_EXIT_CODE);
         }
     }
 }
 
-#[tracing::instrument(level = "debug", skip_all)]
-async fn validate_outbound_redirect(
-    target_addr: SocketAddr,
-    ready: Arc<Notify>,
-    timeout: time::Duration,
-    expected_resp: String,
-) -> Result<()> {
-    if tokio::time::timeout(timeout, ready.notified())
-        .await
-        .is_err()
-    {
-        bail!("timed-out ({:?}) waiting for server to be ready", timeout);
-    }
+// === Valdiation ===
 
-    let mut stream = {
-        debug!("Building validation client");
-        let socket = TcpStream::connect(target_addr).await?;
-        debug_assert_eq!(target_addr, socket.peer_addr().unwrap());
-        debug!("Connection established");
-        socket
-    };
+/// Validates that connecting to `connect_addr` actually connects to
+/// `listen_addr`.
+///
+/// This validates the the operating system (i.e. iptables) is configured to
+/// redirect connections to a Linkerd proxy (with an outbound port of
+/// `listen_addr).
+async fn validate(listen_addr: SocketAddr, connect_addr: SocketAddr) -> Result<()> {
+    // First, bind the server address so that all connections can be processed
+    // by the server.
+    let listener = TcpListener::bind(listen_addr).await?;
+    info!("Listening for connections on {listen_addr}");
 
-    tokio::select! {
-        is_readable = stream.readable() => {
-            is_readable.context("cannot read off client socket")?;
-        }
+    // Generate a random token to be sent from the server. Clients use the
+    // server response to ensure that it is connecting to this process.
+    let token = format!(
+        "{}\n",
+        Alphanumeric.sample_string(&mut rand::thread_rng(), 63)
+    );
+    debug!(?token);
+    let token = Bytes::from(token);
 
-         () = tokio::time::sleep(timeout) => {
-            bail!("timed out ({:?}) waiting for socket to become readable", timeout);
-        }
-    };
+    // Spawn a server on a background task that writes the response and then
+    // closes client the connection.
+    tokio::spawn(serve(listener, token.clone()).in_current_span());
 
-    let mut buf = [0u8; 8];
-    let read_sz = stream.read_exact(&mut buf).await?;
-    let resp = String::from_utf8(buf[..expected_resp.len()].to_vec())?;
-    debug!(redirect_response = %resp, bytes_read = %read_sz);
+    // Connect to an arbitrary address, read data from the connection, and fail
+    // if it does match the server's token.
+    info!("Connecting to {connect_addr}");
+    let data = connect(connect_addr, token.len()).await?;
+    debug!(data = ?String::from_utf8_lossy(&*data), size = data.len());
     ensure!(
-        resp == expected_resp,
-        "expected client to receive {:?}, got {:?} instead",
-        expected_resp,
-        resp
+        data == token,
+        "expected client to receive {:?}; got {:?} instead",
+        String::from_utf8_lossy(&*token),
+        String::from_utf8_lossy(&*data),
     );
     Ok(())
 }
 
-#[tracing::instrument(name = "outbound_server", skip(ready, shutdown))]
-async fn outbound_serve(
-    listen_addr: SocketAddr,
-    ready: Arc<Notify>,
-    shutdown: kubert::shutdown::Watch,
-    resp: String,
-) -> Result<()> {
-    let listener = TcpListener::bind(listen_addr)
-        .await
-        .expect("Failed to bind server");
-    info!("Listening for incoming connections");
-
-    ready.notify_one();
-
-    tokio::select! {
-        _ = accept(listener, resp).in_current_span() => unreachable!("`accept` function never returns"),
-        _ = shutdown.signaled() => debug!("Received shutdown signal")
-    }
-
-    Ok(())
-}
-
-async fn accept(listener: TcpListener, resp: String) {
+/// Accepts connections from `listener`, writes `token` to the socket, and then closes the
+/// connection.
+#[tracing::instrument(level = "debug", skip_all)]
+async fn serve(listener: TcpListener, token: Bytes) {
     loop {
-        let (mut stream, client_addr) = listener
+        let (mut socket, client_addr) = listener
             .accept()
             .await
             .expect("Failed to establish connection");
-        info!("Accepted connection");
-        let rng_resp = resp.clone();
-        let _ = tokio::spawn(
+        let token = token.clone();
+        tokio::spawn(
             async move {
-                let resp_bytes = rng_resp.as_bytes();
-                // We expect this write to complete instantaneously,
-                // a timeout is not needed here.
-                match stream.write_all(resp_bytes).await {
-                    Ok(()) => debug!(written_bytes = resp_bytes.len()),
+                debug!("Accepted");
+                // We expect this write to complete instantaneously, so a timeout is not needed
+                // here.
+                match socket.write_all(&*token).await {
+                    Ok(()) => debug!(bytes = token.len(), "Wrote message to client"),
                     Err(error) => error!(%error, "Failed to write bytes to client"),
                 }
             }
-            .instrument(tracing::info_span!("conn", %client_addr)),
+            .instrument(tracing::info_span!("conn", client.addr = %client_addr)),
         );
     }
 }
+
+/// Connects to the target address and reads exactly `size` bytes.
+#[tracing::instrument(level = "debug", skip_all)]
+async fn connect(addr: SocketAddr, size: usize) -> Result<Bytes> {
+    let mut socket = TcpStream::connect(addr).await?;
+    debug!(client.addr = %socket.local_addr()?, "Connected");
+
+    socket
+        .readable()
+        .await
+        .context("cannot read from client socket")?;
+
+    let mut buf = BytesMut::with_capacity(size);
+    while buf.len() != size {
+        let size = socket.read_buf(&mut buf).await?;
+        debug!(bytes = %size, "Read message from server");
+    }
+    Ok(buf.freeze())
+}
+
+// === Utility functions ===
 
 pub fn parse_timeout(s: &str) -> Result<time::Duration> {
     let s = s.trim();

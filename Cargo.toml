@@ -1,7 +1,5 @@
 [workspace]
-members = [
-    "validator",
-]
+members = ["validator"]
 
 [profile.release]
 lto = true
