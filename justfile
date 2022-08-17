@@ -41,12 +41,12 @@ rs-fetch:
 	{{ _cargo }} fetch --locked
 
 # Format Rust code
-rs-fmt: 
+rs-fmt-check:
 	{{ _cargo }} fmt --all -- --check
 
 # Lint Rust code
 rs-clippy:
-	{{ _cargo }} clippy --frozen --workspace --all-targets --no-deps {{ _fmt }}
+	{{ _cargo }} clippy --frozen --workspace --all-targets --no-deps {{ _cargo-fmt }}
 
 # Audit Rust dependencies
 rs-audit-deps:
@@ -54,7 +54,7 @@ rs-audit-deps:
 
 # Build Rust unit and integration tests
 rs-test-build:
-	{{ _cargo-test }} --no-run --frozen --workspace {{ _fmt }}
+	{{ _cargo-test }} --no-run --frozen --workspace {{ _cargo-fmt }}
 
 # Run unit tests in whole Rust workspace
 rs-test *flags:
@@ -68,11 +68,11 @@ rs-check-dir dir *flags:
 		&& {{ _cargo }} check --frozen \
 		{{ if rs-build-type == "release" { "--release" } else { "" } }} \
 		{{ flags }} \
-		{{ _fmt }}
+		{{ _cargo-fmt }}
 
 # If recipe is run in github actions (and cargo-action-fmt is installed), then add a
 # command suffix that formats errors
-_fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else {
+_cargo-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else {
     ```
     if command -v cargo-action-fmt >/dev/null 2>&1 ; then
         echo "--message-format=json | cargo-action-fmt"
