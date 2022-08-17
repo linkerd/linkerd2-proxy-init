@@ -6,20 +6,19 @@
 
 _image := "test.l5d.io/linkerd/proxy-init:test"
 _test-image := "test.l5d.io/linkerd/iptables-tester:test"
-_validator-image := "test.l5d.io/linkerd/network-validator:test"
 docker-arch := "linux/amd64"
 
 ##
 ## Recipes
 ##
 
-default: lint proxy-init-test-unit
+default: lint test
 
-lint: sh-lint md-lint proxy-init-lint action-lint action-dev-check
+lint: sh-lint md-lint rs-clippy proxy-init-lint action-lint action-dev-check
 
 build: proxy-init-build validator-build
 
-test: proxy-init-test-unit proxy-init-test-integration validator-test-unit
+test: rs-test proxy-init-test-unit proxy-init-test-integration
 
 # Check whether the Go code is formatted.
 go-fmt-check:
@@ -54,7 +53,7 @@ rs-audit-deps:
 	{{ _cargo }} deny check
 
 # Build Rust unit and integration tests
-rs-test-build: 
+rs-test-build:
 	{{ _cargo-test }} --no-run --frozen --workspace {{ _fmt }}
 
 # Run unit tests in whole Rust workspace
@@ -100,21 +99,6 @@ validator-build *flags:
 	{{ _cargo }} build --workspace -p linkerd-network-validator \
 		{{ if rs-build-type == "release" { "--release" } else { "" } }} \
 		{{ flags }}
-
-# Run validator unit tests
-validator-test-unit *flags: 
-	cd validator \
-		&& {{ _cargo-test }} --frozen \
-		{{ if rs-build-type == "release" { "--release" } else { "" } }} \
-		{{ flags }}
-
-# Build a docker image for firewall validator (Development)
-validator-image:
-	docker buildx build . \
-		--file=linkerd-network-validator/Dockerfile \
-		--tag={{ _validator-image }} \
-		--platform={{ docker-arch }} \
-		--load
 
 ##
 ## proxy-init
