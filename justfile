@@ -6,20 +6,19 @@
 
 _image := "test.l5d.io/linkerd/proxy-init:test"
 _test-image := "test.l5d.io/linkerd/iptables-tester:test"
-_validator-image := "test.l5d.io/linkerd/network-validator:test"
 docker-arch := "linux/amd64"
 
 ##
 ## Recipes
 ##
 
-default: lint proxy-init-test-unit
+default: lint test
 
-lint: sh-lint md-lint proxy-init-lint action-lint action-dev-check
+lint: sh-lint md-lint rs-clippy proxy-init-lint action-lint action-dev-check
 
 build: proxy-init-build validator-build
 
-test: proxy-init-test-unit proxy-init-test-integration validator-test-unit
+test: rs-test proxy-init-test-unit proxy-init-test-integration
 
 # Check whether the Go code is formatted.
 go-fmt-check:
@@ -42,20 +41,20 @@ rs-fetch:
 	{{ _cargo }} fetch --locked
 
 # Format Rust code
-rs-fmt: 
+rs-fmt-check:
 	{{ _cargo }} fmt --all -- --check
 
 # Lint Rust code
 rs-clippy:
-	{{ _cargo }} clippy --frozen --workspace --all-targets --no-deps {{ _fmt }}
+	{{ _cargo }} clippy --frozen --workspace --all-targets --no-deps {{ _cargo-fmt }}
 
 # Audit Rust dependencies
 rs-audit-deps:
 	{{ _cargo }} deny check
 
 # Build Rust unit and integration tests
-rs-test-build: 
-	{{ _cargo-test }} --no-run --frozen --workspace {{ _fmt }}
+rs-test-build:
+	{{ _cargo-test }} --no-run --frozen --workspace {{ _cargo-fmt }}
 
 # Run unit tests in whole Rust workspace
 rs-test *flags:
@@ -69,11 +68,11 @@ rs-check-dir dir *flags:
 		&& {{ _cargo }} check --frozen \
 		{{ if rs-build-type == "release" { "--release" } else { "" } }} \
 		{{ flags }} \
-		{{ _fmt }}
+		{{ _cargo-fmt }}
 
 # If recipe is run in github actions (and cargo-action-fmt is installed), then add a
 # command suffix that formats errors
-_fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else {
+_cargo-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else {
     ```
     if command -v cargo-action-fmt >/dev/null 2>&1 ; then
         echo "--message-format=json | cargo-action-fmt"
@@ -100,21 +99,6 @@ validator-build *flags:
 	{{ _cargo }} build --workspace -p linkerd-network-validator \
 		{{ if rs-build-type == "release" { "--release" } else { "" } }} \
 		{{ flags }}
-
-# Run validator unit tests
-validator-test-unit *flags: 
-	cd validator \
-		&& {{ _cargo-test }} --frozen \
-		{{ if rs-build-type == "release" { "--release" } else { "" } }} \
-		{{ flags }}
-
-# Build a docker image for firewall validator (Development)
-validator-image:
-	docker buildx build . \
-		--file=linkerd-network-validator/Dockerfile \
-		--tag={{ _validator-image }} \
-		--platform={{ docker-arch }} \
-		--load
 
 ##
 ## proxy-init
