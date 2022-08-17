@@ -19,10 +19,18 @@ use tracing::{debug, error, info, Instrument};
 #[derive(Parser)]
 #[clap(version)]
 struct Args {
-    #[clap(long, env = "LINKERD_VALIDATOR_LOG_LEVEL", default_value = "info")]
+    #[clap(
+        long,
+        env = "LINKERD_NETWORK_VALIDATOR_LOG_LEVEL",
+        default_value = "info"
+    )]
     log_level: kubert::LogFilter,
 
-    #[clap(long, env = "LINKERD_VALIDATOR_LOG_FORMAT", default_value = "plain")]
+    #[clap(
+        long,
+        env = "LINKERD_NETWORK_VALIDATOR_LOG_FORMAT",
+        default_value = "plain"
+    )]
     log_format: kubert::LogFormat,
 
     #[clap(parse(try_from_str = parse_timeout), long, default_value = "10s")]

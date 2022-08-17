@@ -6,7 +6,7 @@
 
 _image := "test.l5d.io/linkerd/proxy-init:test"
 _test-image := "test.l5d.io/linkerd/iptables-tester:test"
-_validator-image := "test.l5d.io/linkerd/validator:test"
+_validator-image := "test.l5d.io/linkerd/network-validator:test"
 docker-arch := "linux/amd64"
 
 ##
@@ -95,7 +95,7 @@ _cargo-test := _cargo + ```
 
 # Build validator code
 validator-build *flags:
-	{{ _cargo }} build --workspace -p validator \
+	{{ _cargo }} build --workspace -p linkerd-network-validator \
 		{{ if rs-build-type == "release" { "--release" } else { "" } }} \
 		{{ flags }}
 
@@ -109,7 +109,7 @@ validator-test-unit *flags:
 # Build a docker image for firewall validator (Development)
 validator-image:
 	docker buildx build . \
-		--file=validator/Dockerfile \
+		--file=linkerd-network-validator/Dockerfile \
 		--tag={{ _validator-image }} \
 		--platform={{ docker-arch }} \
 		--load

@@ -1,5 +1,5 @@
 [workspace]
-members = ["validator"]
+members = ["linkerd-network-validator"]
 
 [profile.release]
 lto = true
