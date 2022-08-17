@@ -6,6 +6,7 @@
         "golang.go",
         "kokakiwi.vscode-just",
         "NathanRidley.autotrim",
+        "rust-lang.rust-analyzer",
         "samverschueren.final-newline",
         "tamasfe.even-better-toml"
     ],
