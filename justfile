@@ -12,17 +12,93 @@ docker-arch := "linux/amd64"
 ## Recipes
 ##
 
-default: lint proxy-init-test-unit
+default: lint test
 
-lint: sh-lint md-lint proxy-init-lint action-lint action-dev-check
+lint: sh-lint md-lint rs-clippy proxy-init-lint action-lint action-dev-check
 
-build: proxy-init-build
+build: proxy-init-build validator-build
 
-test: proxy-init-test-unit proxy-init-test-integration
+test: rs-test proxy-init-test-unit proxy-init-test-integration
 
 # Check whether the Go code is formatted.
 go-fmt-check:
     out=$(gofmt -d .) ; [ -z "$out" ] || (echo "$out" ; exit 1)
+
+##
+## rust
+##
+
+# By default we compile in development mode because it's faster
+rs-build-type := if env_var_or_default("RELEASE", "") == "" { "debug" } else { "release" }
+
+# Overrides the default Rust toolchain version
+rs-toolchain := ""
+
+_cargo := "cargo" + if rs-toolchain != "" { " +" + rs-toolchain } else { "" }
+
+# Fetch Rust dependencies
+rs-fetch:
+	{{ _cargo }} fetch --locked
+
+# Format Rust code
+rs-fmt-check:
+	{{ _cargo }} fmt --all -- --check
+
+# Lint Rust code
+rs-clippy:
+	{{ _cargo }} clippy --frozen --workspace --all-targets --no-deps {{ _cargo-fmt }}
+
+# Audit Rust dependencies
+rs-audit-deps:
+	{{ _cargo }} deny check
+
+# Build Rust unit and integration tests
+rs-test-build:
+	{{ _cargo-test }} --no-run --frozen --workspace {{ _cargo-fmt }}
+
+# Run unit tests in whole Rust workspace
+rs-test *flags:
+	{{ _cargo-test }} --frozen --workspace \
+		{{ if rs-build-type == "release" { "--release" } else { "" } }} \
+		{{ flags }}
+
+# Check a specific Rust crate
+rs-check-dir dir *flags:
+	cd {{ dir }} \
+		&& {{ _cargo }} check --frozen \
+		{{ if rs-build-type == "release" { "--release" } else { "" } }} \
+		{{ flags }} \
+		{{ _cargo-fmt }}
+
+# If recipe is run in github actions (and cargo-action-fmt is installed), then add a
+# command suffix that formats errors
+_cargo-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else {
+    ```
+    if command -v cargo-action-fmt >/dev/null 2>&1 ; then
+        echo "--message-format=json | cargo-action-fmt"
+    fi
+    ```
+}
+
+# When available, use cargo-nextest to run Rust tests; if the binary is not available,
+# use default test runner
+_cargo-test := _cargo + ```
+	if command -v cargo-nextest >/dev/null 2>&1 ; then
+		echo " nextest run"
+	else
+		echo " test"
+	fi
+```
+
+##
+## validator
+##
+
+# Build validator code
+validator-build *flags:
+	{{ _cargo }} build --workspace -p linkerd-network-validator \
+		{{ if rs-build-type == "release" { "--release" } else { "" } }} \
+		{{ flags }}
 
 ##
 ## proxy-init
