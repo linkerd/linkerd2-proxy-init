@@ -50,6 +50,5 @@ RUN setcap cap_net_raw,cap_net_admin+eip /sbin/xtables-legacy-multi && \
     setcap cap_net_raw,cap_net_admin+eip /sbin/xtables-nft-multi && \
     setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/proxy-init
 
-
 USER 65534
 ENTRYPOINT ["/usr/local/bin/proxy-init"]
