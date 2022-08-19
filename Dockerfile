@@ -17,16 +17,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-
 ##
 
 # Compile from target platform to target arch
-FROM --platform=$TARGETPLATFORM docker.io/library/rust:1.62.1 as rust
+FROM --platform=$TARGETPLATFORM docker.io/library/rust:1.63.0-slim as rust
 WORKDIR /build
 COPY Cargo.toml Cargo.lock .
 COPY validator /build/
 ARG TARGETARCH
 RUN --mount=type=cache,target=target \
-   --mount=type=cache,from=rust:1.62.1,source=/usr/local/cargo,target=/usr/local/cargo \
+   --mount=type=cache,from=docker.io/library/rust:1.63.0-slim,source=/usr/local/cargo,target=/usr/local/cargo \
    cargo fetch
 RUN --mount=type=cache,target=target \
-   --mount=type=cache,from=rust:1.62.1,source=/usr/local/cargo,target=/usr/local/cargo \
+   --mount=type=cache,from=docker.io/library/rust:1.63.0-slim,source=/usr/local/cargo,target=/usr/local/cargo \
    target=$(rustup show | sed -n 's/^Default host: \(.*\)/\1/p' | sed 's/-gnu$/-musl/') ; \
    rustup target add "${target}" && \
    cargo build --locked --target="$target" --release --package=linkerd-network-validator && \
