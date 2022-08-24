@@ -53,6 +53,7 @@ func main() {
 
 	http.HandleFunc("/", returnHostAndPortHandler)
 	http.HandleFunc("/call", callOtherServiceHandler)
+	//nolint:gosec
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
 	if err != nil {
 		panic(err)
