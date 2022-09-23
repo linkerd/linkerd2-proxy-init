@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-
 ##
 
 # Compile from target platform to target arch
-FROM --platform=$TARGETPLATFORM docker.io/library/rust:1.63.0-slim as rust
+FROM --platform=$TARGETPLATFORM docker.io/library/rust:1.64.0-slim as rust
 WORKDIR /build
 COPY Cargo.toml Cargo.lock .
 COPY validator /build/
