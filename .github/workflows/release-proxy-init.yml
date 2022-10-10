@@ -1,4 +1,4 @@
-name: Init release
+name: Proxy-init release
 
 on:
   pull_request:
