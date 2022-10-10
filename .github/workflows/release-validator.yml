@@ -57,6 +57,7 @@ jobs:
     container: ghcr.io/linkerd/dev:v30-rust
     steps:
       # TODO Pull these deps into the devcontainer?
+      - run: apt-get update
       - run: apt-get install -y docker.io musl-tools
       - if: matrix.arch == 'amd64'
         run: apt-get install -y binutils-x86-64-linux-gnu
