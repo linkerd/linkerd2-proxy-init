@@ -1,0 +1,99 @@
+name: Validator release
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/release-validator.yml
+  push:
+    tags: ["validator/v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  meta:
+    timeout-minutes: 3
+    runs-on: ubuntu-latest
+    container: ghcr.io/linkerd/dev:v30-tools
+    steps:
+      - id: meta
+        shell: bash
+        run: |
+          set -eu
+          shopt -s extglob
+          ref="${{ github.ref }}"
+          if [[ "$ref" == refs/tags/validator/v+([0-9]).+([0-9]).+([0-9])?(-+([a-z0-9-])) ]]; then
+            echo ::set-output name=version::"${ref##refs/tags/validator/}"
+            echo ::set-output name=mode::release
+          else
+            sha="${{ github.sha }}"
+            echo ::set-output name=version::"test-${sha:0:7}"
+            echo ::set-output name=mode::test
+          fi
+      - if: steps.meta.outputs.mode == 'release'
+        uses: actions/checkout@dcd71f646680f2efd8db4afa5ad64fdcba30e748
+      - if: steps.meta.outputs.mode == 'release'
+        name: Check that validator version matches release version
+        shell: bash
+        run: |
+          version=$(cargo metadata --format-version=1 \
+              | jq -r '.packages[] | select(.name == "linkerd-network-validator") | .version')
+          # shellcheck disable=SC2193
+          if [[ "v${version}" != '${{ steps.meta.outputs.version }}' ]]; then
+            echo "::error ::Crate version v${version} does not match tag ${{ steps.meta.outputs.version }}"
+            exit 1
+          fi
+    outputs:
+      mode: ${{ steps.meta.outputs.mode }}
+      version: ${{ steps.meta.outputs.version }}
+
+  package:
+    needs: meta
+    strategy:
+      matrix:
+        arch: [amd64, arm64, arm]
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    container: ghcr.io/linkerd/dev:v30-rust
+    steps:
+      # TODO Pull these deps into the devcontainer?
+      - run: apt-get install -y docker.io musl-tools
+      - if: matrix.arch == 'amd64'
+        run: apt-get install -y binutils-x86-64-linux-gnu
+      - if: matrix.arch == 'arm64'
+        run: apt-get install -y binutils-aarch64-linux-gnu
+      - if: matrix.arch == 'arm'
+        run: apt-get install -y binutils-arm-linux-gnueabihf
+      - run: cargo install cross
+
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - run: just validator-package
+        env:
+          CARGO: cross
+          CARGO_RELEASE: "1"
+          CROSS_DOCKER_IN_DOCKER: true
+          VALIDATOR_VERSION: ${{ needs.meta.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.arch }}-artifacts
+          path: target/package/${{ needs.meta.outputs.version }}
+
+  publish:
+    needs: [meta, package]
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
+        with:
+          path: ${{ runner.temp }}/artifacts
+      - run: find $RUNNER_TEMP/artifacts -type f -ls
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - if: needs.meta.outputs.mode == 'release'
+        uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
+        with:
+          name: validator ${{ needs.meta.outputs.version }}
+          files: ${{ runner.temp }}/artifacts/**/*

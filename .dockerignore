@@ -1,1 +1,5 @@
+Cargo.toml
+Cargo.lock
+rust-toolchain
+validator/
 target/

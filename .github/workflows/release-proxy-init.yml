@@ -1,0 +1,93 @@
+name: Init release
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/release-proxy-init.yml
+  push:
+    tags: ["init/v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  meta:
+    timeout-minutes: 3
+    runs-on: ubuntu-latest
+    container: ghcr.io/linkerd/dev:v30-tools
+    steps:
+      - id: meta
+        shell: bash
+        run: |
+          set -eu
+          shopt -s extglob
+          ref='${{ github.ref }}'
+          if [[ "$ref" == refs/tags/proxy-init/v+([0-9]).+([0-9]).+([0-9])?(-+([a-z0-9-])) ]]; then
+            echo ::set-output name=version::"${ref##refs/tags/proxy-init/}"
+            echo ::set-output name=mode::release
+          else
+            sha='${{ github.sha }}'
+            echo ::set-output name=version::"test-${sha:0:7}"
+            echo ::set-output name=mode::test
+          fi
+    outputs:
+      repo: ghcr.io/${{ github.repository_owner }}/proxy-init
+      mode: ${{ steps.meta.outputs.mode }}
+      version: ${{ steps.meta.outputs.version }}
+
+  docker-publish:
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write # needed for signing the images with GitHub OIDC token
+    steps:
+      - uses: extractions/setup-just@aa5d15c144db4585980a44ebfdd2cf337c4f14cb
+      - uses: docker/setup-qemu-action@8b122486cedac8393e77aa9734c3528886e4a1a8
+      - uses: docker/setup-buildx-action@dc7b9719a96d48369863986a06765841d7ea23f6
+
+      # Build multi-arch docker images for proxy-init:
+      - uses: actions/cache@ac8075791e805656e71b4ba23325ace9e3421120
+        with:
+          path: ${{ runner.temp }}/.buildx-cache
+          key: proxy-init-${{ needs.meta.outputs.mode }}-${{ needs.meta.outputs.version }}
+          restore-keys: proxy-init-${{ needs.meta.outputs.mode }}-
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - name: Build docker images
+        run: |
+            docker buildx build . \
+              --tag="${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}" \
+              --cache-from type=local,src="$RUNNER_TEMP/.buildx-cache" \
+              --cache-to type=local,dest="$RUNNER_TEMP/.buildx-cache",mode=max \
+              --platform="linux/amd64,linux/arm64,linux/arm/v7" \
+              --load
+      - run: just action-prune-docker
+
+      # Only publish images on release
+      - if: needs.meta.outputs.mode == 'release'
+        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.DOCKER_GHCR_USERNAME }}
+          password: ${{ secrets.DOCKER_GHCR_PAT }}
+      - if: needs.meta.outputs.mode == 'release'
+        uses: sigstore/cosign-installer@ced07f21fb1da67979f539bbc6304c16c0677e76
+      - if: needs.meta.outputs.mode == 'release'
+        run: cosign sign "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
+        env:
+          COSIGN_EXPERIMENTAL: 1
+      - if: needs.meta.outputs.mode == 'release'
+        run: docker push "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
+
+  github:
+    needs: [meta, package]
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - if: needs.meta.outputs.mode == 'release'
+        uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
+        with:
+          name: proxy-init ${{ needs.meta.outputs.version }}
