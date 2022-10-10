@@ -79,7 +79,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.arch }}-artifacts
-          path: target/package/${{ needs.meta.outputs.version }}
+          path: target/package/
 
   publish:
     needs: [meta, package]
