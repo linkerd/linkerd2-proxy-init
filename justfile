@@ -115,8 +115,7 @@ _cargo-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else 
     ```
 }
 
-# When available, use cargo-nextest to run Rust tests; if the binary is not available,D
-
+# When available, use cargo-nextest to run Rust tests; if the binary is not available,
 # use default test runner
 _cargo-test := _cargo + ```
     if command -v cargo-nextest >/dev/null 2>&1 ; then
