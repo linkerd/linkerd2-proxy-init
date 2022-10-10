@@ -59,8 +59,7 @@ jobs:
               --tag="${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}" \
               --cache-from type=local,src="$RUNNER_TEMP/.buildx-cache" \
               --cache-to type=local,dest="$RUNNER_TEMP/.buildx-cache",mode=max \
-              --platform="linux/amd64,linux/arm64,linux/arm/v7" \
-              --load
+              --platform="linux/amd64,linux/arm64,linux/arm/v7"
       - run: just action-prune-docker
 
       # Only publish images on release
@@ -71,13 +70,18 @@ jobs:
           username: ${{ secrets.DOCKER_GHCR_USERNAME }}
           password: ${{ secrets.DOCKER_GHCR_PAT }}
       - if: needs.meta.outputs.mode == 'release'
+        run: |
+            docker buildx build . --push \
+              --tag="${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}" \
+              --cache-from type=local,src="$RUNNER_TEMP/.buildx-cache" \
+              --cache-to type=local,dest="$RUNNER_TEMP/.buildx-cache",mode=max \
+              --platform="linux/amd64,linux/arm64,linux/arm/v7"
+      - if: needs.meta.outputs.mode == 'release'
         uses: sigstore/cosign-installer@ced07f21fb1da67979f539bbc6304c16c0677e76
       - if: needs.meta.outputs.mode == 'release'
         run: cosign sign "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
         env:
           COSIGN_EXPERIMENTAL: 1
-      - if: needs.meta.outputs.mode == 'release'
-        run: docker push "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
 
   github:
     needs: [meta, docker-publish]
