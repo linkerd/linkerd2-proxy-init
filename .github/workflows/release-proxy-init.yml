@@ -80,7 +80,7 @@ jobs:
         run: docker push "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
 
   github:
-    needs: [meta, package]
+    needs: [meta, docker-publish]
     timeout-minutes: 5
     permissions:
       contents: write
