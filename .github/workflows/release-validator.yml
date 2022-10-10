@@ -58,21 +58,27 @@ jobs:
     steps:
       # TODO Pull these deps into the devcontainer?
       - run: apt-get update
-      - run: apt-get install -y docker.io musl-tools
+      - run: apt-get install -y musl-tools
       - if: matrix.arch == 'amd64'
         run: apt-get install -y binutils-x86-64-linux-gnu
       - if: matrix.arch == 'arm64'
         run: apt-get install -y binutils-aarch64-linux-gnu
       - if: matrix.arch == 'arm'
         run: apt-get install -y binutils-arm-linux-gnueabihf
-      - run: cargo install cross
+      - if: matrix.arch != 'amd64'
+        name: Install cross
+        run: |
+          apt-get install -y docker.io
+          cargo install cross
+          (
+            echo 'CARGO=cross'
+            echo 'CROSS_DOCKER_IN_DOCKER=true'
+          ) >> "$GITHUB_ENV"
 
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
       - run: just validator-package
         env:
-          CARGO: cross
           CARGO_RELEASE: "1"
-          CROSS_DOCKER_IN_DOCKER: true
           VALIDATOR_VERSION: ${{ needs.meta.outputs.version }}
           ARCH: ${{ matrix.arch }}
 

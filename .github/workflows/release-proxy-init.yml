@@ -53,8 +53,7 @@ jobs:
           key: proxy-init-${{ needs.meta.outputs.mode }}-${{ needs.meta.outputs.version }}
           restore-keys: proxy-init-${{ needs.meta.outputs.mode }}-
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
-      - name: Build docker images
-        run: |
+      - run: |
             docker buildx build . \
               --tag="${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}" \
               --cache-from type=local,src="$RUNNER_TEMP/.buildx-cache" \
