@@ -91,7 +91,7 @@ jobs:
       - uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           path: ${{ runner.temp }}/artifacts
-      - run: find $RUNNER_TEMP/artifacts -type f -ls
+      - run: find "$RUNNER_TEMP"/artifacts -type f -ls
       - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
       - if: needs.meta.outputs.mode == 'release'
         uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
