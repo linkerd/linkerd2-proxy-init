@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/linkerd/dev:v30-rust
     steps:
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - id: meta
         shell: bash
         run: |
@@ -32,8 +33,6 @@ jobs:
               echo mode=test
             ) >> "$GITHUB_OUTPUT"
           fi
-      - if: steps.meta.outputs.mode == 'release'
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - if: steps.meta.outputs.mode == 'release'
         name: Check that validator version matches release version
         shell: bash
