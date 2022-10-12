@@ -46,7 +46,7 @@ rs-fmt-check:
 
 # Lint Rust code
 rs-clippy:
-    {{ _cargo }} clippy --frozen --workspace --all-targets --no-deps {{ _cargo-fmt }}
+    {{ _cargo }} clippy {{ _cargo-build-flags }} --all-targets --no-deps {{ _cargo-fmt }}
 
 # Audit Rust dependencies
 rs-audit-deps:
@@ -54,21 +54,18 @@ rs-audit-deps:
 
 # Build Rust unit and integration tests
 rs-test-build:
-    {{ _cargo-test }} --no-run --frozen --workspace {{ _cargo-fmt }}
+    {{ _cargo-test }} {{ _cargo-build-flags }} --workspace --no-run {{ _cargo-fmt }}
 
 # Run unit tests in whole Rust workspace
 rs-test *flags:
-    {{ _cargo-test }} --frozen --workspace \
-        {{ if rs-build-type == "release" { "--release" } else { "" } }} \
-        {{ flags }}
+    {{ _cargo-test }} {{ _cargo-build-flags }} --workspace {{ flags }}
 
 # Check a specific Rust crate
 rs-check-dir dir *flags:
     cd {{ dir }} \
-        && {{ _cargo }} check --frozen \
-        {{ if rs-build-type == "release" { "--release" } else { "" } }} \
-        {{ flags }} \
-        {{ _cargo-fmt }}
+        && {{ _cargo }} check {{ _cargo-build-flags }} {{ flags }} {{ _cargo-fmt }}
+
+_cargo-build-flags := "--frozen" + if rs-build-type == "release" { " --release" } else { "" }
 
 # If recipe is run in github actions (and cargo-action-fmt is installed), then add a
 # command suffix that formats errors
@@ -80,10 +77,10 @@ _cargo-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else 
     ```
 }
 
-# When available, use cargo-nextest to run Rust tests; if the binary is not available,
-# use default test runner
+# Use cargo-nextest to run Rust tests if available locally. We use the default
+# runner in CI.
 _cargo-test := _cargo + ```
-    if command -v cargo-nextest >/dev/null 2>&1 ; then
+    if [ "${GITHUB_ACTIONS:-}" != "true" ] && command -v cargo-nextest >/dev/null 2>&1 ; then
         echo " nextest run"
     else
         echo " test"
