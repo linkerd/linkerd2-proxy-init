@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euxo pipefail
+set -euo pipefail
 
 # Delete all files under the buildkit blob directory that are not referred
 # to any longer in the cache manifest file
