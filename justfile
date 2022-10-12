@@ -172,7 +172,7 @@ proxy-init-image:
     docker buildx build . \
         --tag={{ _image }} \
         --platform={{ docker-arch }} \
-        --load \
+        --load
 
 # Build docker image for iptables-tester (Development)
 proxy-init-test-image:
