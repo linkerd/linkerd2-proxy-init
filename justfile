@@ -16,8 +16,6 @@ default: lint test
 
 lint: sh-lint md-lint rs-clippy proxy-init-lint action-lint action-dev-check
 
-build: proxy-init-build validator-build
-
 test: rs-test proxy-init-test-unit proxy-init-test-integration
 
 # Check whether the Go code is formatted.
@@ -35,39 +33,6 @@ rs-build-type := if env_var_or_default("CARGO_RELEASE", "") == "" { "debug" } el
 rs-toolchain := ""
 
 export RUST_BACKTRACE := env_var_or_default("RUST_BACKTRACE", "short")
-
-# The version name to use for packages.
-_validator-version := env_var_or_default("VALIDATOR_VERSION", ```
-    cargo metadata --format-version=1 \
-        | jq -r '.packages[] | select(.name == "linkerd-network-validator") | .version' \
-        | head -n 1
-    ```)
-
-# The architecture name to use for packages. Either 'amd64', 'arm64', or 'arm'.
-_arch := env_var_or_default("ARCH", "amd64")
-
-# If a `package_arch` is specified, then we change the default cargo `--target`
-# to support cross-compilation. Otherwise, we use `rustup` to find the default.
-_cargo-target := if _arch == "amd64" {
-        "x86_64-unknown-linux-musl"
-    } else if _arch == "arm64" {
-        "aarch64-unknown-linux-musl"
-    } else if _arch == "arm" {
-        "armv7-unknown-linux-musleabihf"
-    } else {
-        `rustup show | sed -n 's/^Default host: \(.*\)/\1/p'`
-    }
-
-# Support cross-compilation when `_arch` changes.
-export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER := "aarch64-linux-gnu-gcc"
-export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER := "arm-linux-gnueabihf-gcc"
-_strip := if _arch == "arm64" { "aarch64-linux-gnu-strip" } else if _arch == "arm" { "arm-linux-gnueabihf-strip" } else { "strip" }
-
-_target-dir := "target" / _cargo-target / rs-build-type
-_validator-bin := _target-dir / "linkerd-network-validator"
-_validator-package-name := "linkerd-network-validator-" + _validator-version + "-" + _arch
-_validator-package-dir := "target/package" / _validator-package-name
-_shasum := "shasum -a 256"
 
 _cargo := env_var_or_default("CARGO", "cargo") + if rs-toolchain != "" { " +" + rs-toolchain } else { "" }
 
@@ -129,18 +94,8 @@ _cargo-test := _cargo + ```
 ## validator
 ##
 
-# Build validator code
-validator-build *flags:
-    {{ _cargo }} build --workspace -p linkerd-network-validator \
-        --target={{ _cargo-target }} \
-        {{ if rs-build-type == "release" { "--release" } else { "" } }} \
-        {{ flags }}
-
-validator-package: rs-fetch validator-build
-    @-mkdir -p target/package
-    cp {{ _validator-bin }} target/package/{{ _validator-package-name }}
-    {{ _strip }} target/package/{{ _validator-package-name }}
-    {{ _shasum }} target/package/{{ _validator-package-name }} >target/package/{{ _validator-package-name }}.shasum
+validator *args:
+    {{ just_executable() }} --justfile=validator/.justfile {{ args }}
 
 ##
 ## proxy-init
