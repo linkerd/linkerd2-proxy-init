@@ -47,12 +47,12 @@ jobs:
       - uses: docker/setup-buildx-action@dc7b9719a96d48369863986a06765841d7ea23f6
 
       # Build multi-arch docker images for proxy-init:
-      - uses: actions/cache@ac8075791e805656e71b4ba23325ace9e3421120
+      - uses: actions/cache@56461b9eb0f8438fd15c7a9968e3c9ebb18ceff1
         with:
           path: ${{ runner.temp }}/.buildx-cache
           key: proxy-init-${{ needs.meta.outputs.mode }}-${{ needs.meta.outputs.version }}
           restore-keys: proxy-init-${{ needs.meta.outputs.mode }}-
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - run: |
             docker buildx build . \
               --tag="${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}" \
@@ -89,7 +89,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - if: needs.meta.outputs.mode == 'release'
         uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
         with:

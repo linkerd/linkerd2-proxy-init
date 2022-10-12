@@ -31,7 +31,7 @@ jobs:
             echo ::set-output name=mode::test
           fi
       - if: steps.meta.outputs.mode == 'release'
-        uses: actions/checkout@dcd71f646680f2efd8db4afa5ad64fdcba30e748
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - if: steps.meta.outputs.mode == 'release'
         name: Check that validator version matches release version
         shell: bash
@@ -75,7 +75,7 @@ jobs:
             echo 'CROSS_DOCKER_IN_DOCKER=true'
           ) >> "$GITHUB_ENV"
 
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - run: just validator-package
         env:
           CARGO_RELEASE: "1"
@@ -98,7 +98,7 @@ jobs:
         with:
           path: ${{ runner.temp }}/artifacts
       - run: find "$RUNNER_TEMP"/artifacts -type f -ls
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - if: needs.meta.outputs.mode == 'release'
         uses: softprops/action-gh-release@1e07f4398721186383de40550babbdf2b84acfc5
         with:
