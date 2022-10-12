@@ -16,8 +16,6 @@ default: lint test
 
 lint: sh-lint md-lint rs-clippy proxy-init-lint action-lint action-dev-check
 
-build: proxy-init-build validator-build
-
 test: rs-test proxy-init-test-unit proxy-init-test-integration
 
 # Check whether the Go code is formatted.
@@ -36,39 +34,6 @@ rs-toolchain := ""
 
 export RUST_BACKTRACE := env_var_or_default("RUST_BACKTRACE", "short")
 
-# The version name to use for packages.
-_validator-version := env_var_or_default("VALIDATOR_VERSION", ```
-    cargo metadata --format-version=1 \
-        | jq -r '.packages[] | select(.name == "linkerd-network-validator") | .version' \
-        | head -n 1
-    ```)
-
-# The architecture name to use for packages. Either 'amd64', 'arm64', or 'arm'.
-_arch := env_var_or_default("ARCH", "amd64")
-
-# If a `package_arch` is specified, then we change the default cargo `--target`
-# to support cross-compilation. Otherwise, we use `rustup` to find the default.
-_cargo-target := if _arch == "amd64" {
-        "x86_64-unknown-linux-musl"
-    } else if _arch == "arm64" {
-        "aarch64-unknown-linux-musl"
-    } else if _arch == "arm" {
-        "armv7-unknown-linux-musleabihf"
-    } else {
-        `rustup show | sed -n 's/^Default host: \(.*\)/\1/p'`
-    }
-
-# Support cross-compilation when `_arch` changes.
-export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER := "aarch64-linux-gnu-gcc"
-export CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER := "arm-linux-gnueabihf-gcc"
-_strip := if _arch == "arm64" { "aarch64-linux-gnu-strip" } else if _arch == "arm" { "arm-linux-gnueabihf-strip" } else { "strip" }
-
-_target-dir := "target" / _cargo-target / rs-build-type
-_validator-bin := _target-dir / "linkerd-network-validator"
-_validator-package-name := "linkerd-network-validator-" + _validator-version + "-" + _arch
-_validator-package-dir := "target/package" / _validator-package-name
-_shasum := "shasum -a 256"
-
 _cargo := env_var_or_default("CARGO", "cargo") + if rs-toolchain != "" { " +" + rs-toolchain } else { "" }
 
 # Fetch Rust dependencies
@@ -81,7 +46,7 @@ rs-fmt-check:
 
 # Lint Rust code
 rs-clippy:
-    {{ _cargo }} clippy --frozen --workspace --all-targets --no-deps {{ _cargo-fmt }}
+    {{ _cargo }} clippy {{ _cargo-build-flags }} --all-targets --no-deps {{ _cargo-fmt }}
 
 # Audit Rust dependencies
 rs-audit-deps:
@@ -89,21 +54,18 @@ rs-audit-deps:
 
 # Build Rust unit and integration tests
 rs-test-build:
-    {{ _cargo-test }} --no-run --frozen --workspace {{ _cargo-fmt }}
+    {{ _cargo-test }} {{ _cargo-build-flags }} --workspace --no-run {{ _cargo-fmt }}
 
 # Run unit tests in whole Rust workspace
 rs-test *flags:
-    {{ _cargo-test }} --frozen --workspace \
-        {{ if rs-build-type == "release" { "--release" } else { "" } }} \
-        {{ flags }}
+    {{ _cargo-test }} {{ _cargo-build-flags }} --workspace {{ flags }}
 
 # Check a specific Rust crate
 rs-check-dir dir *flags:
     cd {{ dir }} \
-        && {{ _cargo }} check --frozen \
-        {{ if rs-build-type == "release" { "--release" } else { "" } }} \
-        {{ flags }} \
-        {{ _cargo-fmt }}
+        && {{ _cargo }} check {{ _cargo-build-flags }} {{ flags }} {{ _cargo-fmt }}
+
+_cargo-build-flags := "--frozen" + if rs-build-type == "release" { " --release" } else { "" }
 
 # If recipe is run in github actions (and cargo-action-fmt is installed), then add a
 # command suffix that formats errors
@@ -115,10 +77,10 @@ _cargo-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else 
     ```
 }
 
-# When available, use cargo-nextest to run Rust tests; if the binary is not available,
-# use default test runner
+# Use cargo-nextest to run Rust tests if available locally. We use the default
+# runner in CI.
 _cargo-test := _cargo + ```
-    if command -v cargo-nextest >/dev/null 2>&1 ; then
+    if [ "${GITHUB_ACTIONS:-}" != "true" ] && command -v cargo-nextest >/dev/null 2>&1 ; then
         echo " nextest run"
     else
         echo " test"
@@ -129,18 +91,8 @@ _cargo-test := _cargo + ```
 ## validator
 ##
 
-# Build validator code
-validator-build *flags:
-    {{ _cargo }} build --workspace -p linkerd-network-validator \
-        --target={{ _cargo-target }} \
-        {{ if rs-build-type == "release" { "--release" } else { "" } }} \
-        {{ flags }}
-
-validator-package: rs-fetch validator-build
-    @-mkdir -p target/package
-    cp {{ _validator-bin }} target/package/{{ _validator-package-name }}
-    {{ _strip }} target/package/{{ _validator-package-name }}
-    {{ _shasum }} target/package/{{ _validator-package-name }} >target/package/{{ _validator-package-name }}.shasum
+validator *args:
+    {{ just_executable() }} --justfile=validator/.justfile {{ args }}
 
 ##
 ## proxy-init
@@ -172,7 +124,7 @@ proxy-init-image:
     docker buildx build . \
         --tag={{ _image }} \
         --platform={{ docker-arch }} \
-        --load \
+        --load
 
 # Build docker image for iptables-tester (Development)
 proxy-init-test-image:
@@ -287,25 +239,3 @@ sh-lint:
     done < <(find . -type f ! \( -path ./.git/\* -or -path \*/target/\* \)) | xargs)
     echo "shellcheck $files" >&2
     shellcheck $files
-
-# Prune Docker BuildKit cache (in CI)
-action-prune-docker:
-    #!/usr/bin/env bash
-    set -euxo pipefail
-    # Delete all files under the buildkit blob directory that are not referred
-    # to any longer in the cache manifest file
-    manifest_sha=$(jq -r .manifests[0].digest < "$RUNNER_TEMP/.buildx-cache/index.json")
-    manifest=${manifest_sha#"sha256:"}
-    files=("$manifest")
-    while IFS= read -r f; do
-        files+=("$f")
-    done < <(jq -r '.manifests[].digest | sub("^sha256:"; "")' < "$RUNNER_TEMP/.buildx-cache/blobs/sha256/$manifest")
-    for file in "$RUNNER_TEMP"/.buildx-cache/blobs/sha256/*; do
-        for name in "${files[@]}"; do
-            if [[ "${file##*/}" == "$name" ]]; then
-                rm -f "$file"
-                echo "deleted: $name"
-                break;
-            fi
-        done
-    done

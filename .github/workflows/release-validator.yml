@@ -14,8 +14,9 @@ jobs:
   meta:
     timeout-minutes: 3
     runs-on: ubuntu-latest
-    container: ghcr.io/linkerd/dev:v30-tools
+    container: ghcr.io/linkerd/dev:v30-rust
     steps:
+      - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - id: meta
         shell: bash
         run: |
@@ -28,18 +29,15 @@ jobs:
             ) >> "$GITHUB_OUTPUT"
           else
             sha="${{ github.sha }}"
-            ( echo version="test-${sha:0:7}"
+            ( echo version="v$(just validator --evaluate version)-${sha:0:7}"
               echo mode=test
             ) >> "$GITHUB_OUTPUT"
           fi
       - if: steps.meta.outputs.mode == 'release'
-        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
-      - if: steps.meta.outputs.mode == 'release'
         name: Check that validator version matches release version
         shell: bash
         run: |
-          version=$(cargo metadata --format-version=1 \
-              | jq -r '.packages[] | select(.name == "linkerd-network-validator") | .version')
+          version=$(just validator --evaluate version)
           # shellcheck disable=SC2193
           if [[ "v${version}" != '${{ steps.meta.outputs.version }}' ]]; then
             echo "::error ::Crate version v${version} does not match tag ${{ steps.meta.outputs.version }}"
@@ -78,7 +76,7 @@ jobs:
           ) >> "$GITHUB_ENV"
 
       - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
-      - run: just validator-package
+      - run: just validator package
         env:
           CARGO_RELEASE: "1"
           VALIDATOR_VERSION: ${{ needs.meta.outputs.version }}
