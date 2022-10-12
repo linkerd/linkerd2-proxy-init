@@ -23,12 +23,14 @@ jobs:
           shopt -s extglob
           ref='${{ github.ref }}'
           if [[ "$ref" == refs/tags/proxy-init/v+([0-9]).+([0-9]).+([0-9])?(-+([a-z0-9-])) ]]; then
-            echo ::set-output name=version::"${ref##refs/tags/proxy-init/}"
-            echo ::set-output name=mode::release
+            ( echo version="${ref##refs/tags/proxy-init/}"
+              echo mode=release
+            ) >> "$GITHUB_OUTPUT"
           else
             sha='${{ github.sha }}'
-            echo ::set-output name=version::"test-${sha:0:7}"
-            echo ::set-output name=mode::test
+            ( echo version="test-${sha:0:7}"
+              echo mode=test
+            ) >> "$GITHUB_OUTPUT"
           fi
     outputs:
       repo: ghcr.io/${{ github.repository_owner }}/proxy-init
