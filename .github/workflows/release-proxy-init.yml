@@ -77,7 +77,7 @@ jobs:
               --cache-to type=local,dest="$RUNNER_TEMP/.buildx-cache",mode=max \
               --platform="linux/amd64,linux/arm64,linux/arm/v7"
       - if: needs.meta.outputs.mode == 'release'
-        uses: sigstore/cosign-installer@ced07f21fb1da67979f539bbc6304c16c0677e76
+        uses: sigstore/cosign-installer@7cc35d7fdbe70d4278a0c96779081e6fac665f88
       - if: needs.meta.outputs.mode == 'release'
         run: cosign sign "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
         env:
