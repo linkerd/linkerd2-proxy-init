@@ -5,7 +5,7 @@ on:
     paths:
       - .github/workflows/release-proxy-init.yml
   push:
-    tags: ["init/v*"]
+    tags: ["proxy-init/v*"]
 
 permissions:
   contents: read
