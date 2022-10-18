@@ -1,6 +1,8 @@
 # Releases
 
-There are two subpackage within the proxy-init repo with releasable artifacts. Each uses the same process for releasing but have their own tag identifiers that trigger the github release workflow.
+There are two subpackage within the proxy-init repo with releasable artifacts.
+Each uses the same process for releasing but have their own tag identifiers
+that trigger the github release workflow.
 
 The Tag identifier format is:
 
@@ -9,11 +11,13 @@ The Tag identifier format is:
 
 ## Step 1: Prepare an appropriate log message for the release
 
-Take a look at the changes from the last release to now within the project subdirectory you're going to release from.
+Take a look at the changes from the last release to now within the project
+subdirectory you're going to release from.
 
 `git log v2.0.0..HEAD -p proxy-init`
 
-Prepare a commit message. For each meaningful commit since the last tag, add a single line. Use `git show` on another release tag to see the format we use.
+Prepare a commit message. For each meaningful commit since the last tag, add
+a single line. Use `git show` on another release tag to see the format we use.
 
 ## Step 2: Tag the release
 
@@ -31,9 +35,12 @@ There you go, a release should be running in github, you can check the Actions p
 
 ### Whoops! How to delete a tag
 
-If you need to redo the release due to a workflow error or change, delete the tag you created both locally and remotely.
+If you need to redo the release due to a workflow error or change, delete
+the tag you created both locally and remotely.
 
 `git tag -d $TAGNAME`
 `git push origin :refs/tags/$TAGNAME`
 
-**Note:** If the release was successful then a docker image was also pushed for `proxy-init`. If you think this needs to be deleted, consult with your peers.
+**Note:** If the release was successful then a docker image was also pushed
+for `proxy-init`. If you think this needs to be deleted, consult with your
+peers.
