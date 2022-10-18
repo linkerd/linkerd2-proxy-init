@@ -31,7 +31,8 @@ By default in git, tags are local so we'll need to push the tag to `origin`.
 
 `git push origin proxy-init/v2.1.0`
 
-There you go, a release should be running in github, you can check the Actions page.
+There you go, a release should be running in github, you can check the Actions
+page.
 
 ### Whoops! How to delete a tag
 
