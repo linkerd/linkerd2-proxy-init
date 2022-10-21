@@ -45,7 +45,7 @@ jobs:
       id-token: write # needed for signing the images with GitHub OIDC token
     steps:
       - uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18
-      - uses: docker/setup-buildx-action@c74574e6c82eeedc46366be1b0d287eff9085eb6
+      - uses: docker/setup-buildx-action@8c0edbc76e98fa90f69d9a2c020dcb50019dc325
 
       # Build multi-arch docker images for proxy-init:
       - uses: actions/cache@9b0c1fce7a93df8e3bb8926b0d6e9d89e92f20a7
