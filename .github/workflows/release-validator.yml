@@ -14,7 +14,7 @@ jobs:
   meta:
     timeout-minutes: 3
     runs-on: ubuntu-latest
-    container: ghcr.io/linkerd/dev:v30-rust
+    container: ghcr.io/linkerd/dev:v32-rust
     steps:
       - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - id: meta
@@ -54,33 +54,17 @@ jobs:
         arch: [amd64, arm64, arm]
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    container: ghcr.io/linkerd/dev:v30-rust
+    container: ghcr.io/linkerd/dev:v32-rust-cross
     steps:
-      # TODO Pull these deps into the devcontainer?
-      - run: apt-get update
-      - run: apt-get install -y musl-tools
-      - if: matrix.arch == 'amd64'
-        run: apt-get install -y binutils-x86-64-linux-gnu
-      - if: matrix.arch == 'arm64'
-        run: apt-get install -y binutils-aarch64-linux-gnu
-      - if: matrix.arch == 'arm'
-        run: apt-get install -y binutils-arm-linux-gnueabihf
       - if: matrix.arch != 'amd64'
-        name: Install cross
-        run: |
-          apt-get install -y docker.io
-          cargo install cross
-          (
-            echo 'CARGO=cross'
-            echo 'CROSS_DOCKER_IN_DOCKER=true'
-          ) >> "$GITHUB_ENV"
+        run: echo 'CARGO=cross' >> "$GITHUB_ENV"
 
       - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - run: just validator package
         env:
+          ARCH: ${{ matrix.arch }}
           CARGO_RELEASE: "1"
           VALIDATOR_VERSION: ${{ needs.meta.outputs.version }}
-          ARCH: ${{ matrix.arch }}
 
       - uses: actions/upload-artifact@v3
         with:
