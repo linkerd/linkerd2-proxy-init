@@ -82,7 +82,8 @@ async fn main() {
         // If validation doesn't complete in a timely manner, exit with an
         // error.
         () = tokio::time::sleep(timeout) => {
-            error!(?timeout, "Failed to validate networking configuration");
+            error!(?timeout, "Failed to validate networking configuration. \
+            Check that iptables or firewall rules are working as expected.");
             exit(UNSUCCESSFUL_EXIT_CODE);
         }
 
@@ -128,7 +129,11 @@ async fn validate(listen_addr: SocketAddr, connect_addr: SocketAddr) -> Result<(
     // Connect to an arbitrary address, read data from the connection, and fail
     // if it doesn't match the server's token.
     info!("Connecting to {connect_addr}");
-    let data = connect(connect_addr, token.len()).await?;
+    let data = connect(connect_addr, token.len()).await.map_err(|error| {
+        error!(%error, "Unable to connect to validator. Please ensure iptables or firewall \
+                        rules are rewriting traffic as expected");
+        error
+    })?;
     debug!(data = ?String::from_utf8_lossy(&*data), size = data.len());
     ensure!(
         data == token,
