@@ -17,7 +17,7 @@
 // 1) https://github.com/istio/cni/blob/c63a509539b5ed165a6617548c31b686f13c2133/cmd/istio-cni/main.go
 
 package main
-
+// "github.com/linkerd/linkerd2/pkg/k8s"
 import (
 	"context"
 	"encoding/json"
@@ -25,14 +25,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
+	"github.com/linkerd/linkerd2-proxy-init/proxy-init/cmd"
+	"github.com/linkerd/linkerd2-proxy-init/proxy-init/internal/iptables"
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/cni/pkg/version"
-	"github.com/linkerd/linkerd2-proxy-init/cmd"
-	"github.com/linkerd/linkerd2-proxy-init/iptables"
-	"github.com/linkerd/linkerd2/pkg/k8s"
+
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

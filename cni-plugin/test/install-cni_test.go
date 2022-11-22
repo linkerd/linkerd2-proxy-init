@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/linkerd/linkerd2/testutil"
+	"github.com/linkerd/linkerd2-proxy-init/testutil"
 )
 
 const (
