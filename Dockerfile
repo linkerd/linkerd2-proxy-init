@@ -3,7 +3,7 @@
 ##
 
 # Cross compile from native platform to target arch
-FROM --platform=$BUILDPLATFORM golang:1.18-alpine as go
+FROM --platform=$BUILDPLATFORM golang:1.19-alpine as go
 WORKDIR /build
 COPY go.mod .
 COPY go.sum .
