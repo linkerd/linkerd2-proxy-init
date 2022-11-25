@@ -51,7 +51,7 @@ _cargo-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else 
 }
 
 package: build
-    @-mkdir -p {{ _package-dir }}
+    @mkdir -p {{ _package-dir }}
     cp {{ _bin }} {{ _package-dir / _package-name }}
     {{ _strip }} {{ _package-dir / _package-name }}
     {{ _shasum }} {{ _package-dir / _package-name }} > {{ _package-dir / _package-name }}.shasum
