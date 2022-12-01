@@ -9,6 +9,7 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 COPY ./proxy-init ./proxy-init
+COPY pkg pkg
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-init -mod=readonly -ldflags "-s -w" -v ./proxy-init
 
