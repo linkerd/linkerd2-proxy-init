@@ -181,8 +181,8 @@ func startDocker(testNum int, wd string, testWorkRootDir string, tempCNINetDir s
 	if err != nil {
 		errFileContents, _ := os.ReadFile(errFileName)
 		t.Logf("%v contents:\n\n%v\n\n", errFileName, string(errFileContents))
-		t.Fatalf("test %v ERROR: failed to start docker container '%v', see %v", 
-					testNum, dockerImage, errFileName)
+		t.Fatalf("test %v ERROR: failed to start docker container '%v', see %v",
+			testNum, dockerImage, errFileName)
 	}
 	t.Logf("Container ID: %s", containerID)
 	return strings.Trim(string(containerID), "\n")
