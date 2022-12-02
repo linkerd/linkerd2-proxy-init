@@ -132,6 +132,7 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 }
 
 // cmdAdd is called by the CNI runtime for ADD requests
+// nolint:gosec
 func cmdAdd(args *skel.CmdArgs) error {
 	logrus.Debug("linkerd-cni: cmdAdd, parsing config")
 	conf, err := parseConfig(args.StdinData)
@@ -178,7 +179,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			return err
 		}
 
-		client, err := kubernetes.NewForConfig(config) // nolint:gosec
+		client, err := kubernetes.NewForConfig(config)
 		if err != nil {
 			return err
 		}
