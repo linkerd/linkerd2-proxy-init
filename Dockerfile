@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /out/linkerd2-proxy-
 ## Runtime
 ## 
 
-FROM --platform=$TARGETPLATFORM alpine:3.16.3 as runtime
+FROM --platform=$TARGETPLATFORM alpine:3.17.0 as runtime
 RUN apk add iptables libcap && \
     touch /run/xtables.lock && \
     chmod 0666 /run/xtables.lock
