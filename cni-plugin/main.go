@@ -105,7 +105,7 @@ func configureLogging(logLevel string) {
 func parseConfig(stdin []byte) (*PluginConf, error) {
 	conf := PluginConf{}
 
-	logrus.Debugf("linkerd-cni: stdin to plugin: %v", string(stdin))
+	logrus.Debugf("linkerd-cni: stdin to plugin: %v", string(stdin)) //nolint:gosec
 	if err := json.Unmarshal(stdin, &conf); err != nil {
 		return nil, fmt.Errorf("linkerd-cni: failed to parse network configuration: %w", err)
 	}
@@ -178,7 +178,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			return err
 		}
 
-		client, err := kubernetes.NewForConfig(config)
+		client, err := kubernetes.NewForConfig(config) // nolint:gosec
 		if err != nil {
 			return err
 		}
