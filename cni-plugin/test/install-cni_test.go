@@ -200,12 +200,12 @@ func docker(cmd, containerID string, t *testing.T) {
 // compareConfResult does a string compare of 2 test files.
 func compareConfResult(testWorkRootDir string, tempCNINetDir string, result string, expected string, t *testing.T) {
 	tempResult := tempCNINetDir + "/" + result
-	resultFile, err := os.ReadFile(tempResult)
+	resultFile, err := os.ReadFile(tempResult) //nolint:gosec
 	if err != nil {
 		t.Fatalf("failed to read file %v: %v", tempResult, err)
 	}
 
-	expectedFile, err := os.ReadFile(expected)
+	expectedFile, err := os.ReadFile(expected) //nolint:gosec
 	if err != nil {
 		t.Fatalf("failed to read file %v, err: %v", expected, err)
 	}
@@ -213,7 +213,7 @@ func compareConfResult(testWorkRootDir string, tempCNINetDir string, result stri
 	if bytes.Equal(resultFile, expectedFile) {
 		t.Logf("PASS: result matches expected: %v v. %v", tempResult, expected)
 	} else {
-		tempFail := mktemp(testWorkRootDir, result+".fail.XXXX", t)
+		tempFail := mktemp(testWorkRootDir, result+".fail.XXXX", t) //nolint:gosec
 		cp(tempResult, tempFail+"/"+result, t)
 		t.Errorf("FAIL: result doesn't match expected: %v v. %v\nCheck %v for diff contents", tempResult, expected, tempFail)
 	}
@@ -246,7 +246,7 @@ func doTest(testNum int, wd string, initialNetConfFile string, finalNetConfFile 
 	if initialNetConfFile != "NONE" {
 		setEnv(cniConfName, initialNetConfFile, t)
 	}
-	defaultData, err := os.ReadFile(wd + "../deployment/linkerd-cni.conf.default")
+	defaultData, err := os.ReadFile(wd + "../deployment/linkerd-cni.conf.default") //nolint:gosec
 	if err != nil {
 		t.Fatalf("failed to read file %v, err: %v", wd+"../deployment/linkerd-cni.conf.default", err)
 	}
