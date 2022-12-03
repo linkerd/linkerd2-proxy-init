@@ -15,7 +15,7 @@
 
 // This file was inspired by:
 // 1) https://github.com/istio/cni/blob/c63a509539b5ed165a6617548c31b686f13c2133/cmd/istio-cni/main.go
-//nolint:gosec
+
 package main
 
 import (

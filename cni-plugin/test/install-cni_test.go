@@ -83,7 +83,7 @@ func ls(dir string, t *testing.T) []string {
 }
 
 func cp(src, dest string, t *testing.T) {
-	data, err := os.ReadFile(src)
+	data, err := os.ReadFile(src) //nolint:gosec
 	if err != nil {
 		t.Fatalf("failed to read file %v: %v", src, err)
 	}
@@ -162,7 +162,7 @@ func startDocker(testNum int, wd string, testWorkRootDir string, tempCNINetDir s
 	args = append(args, dockerImage, "install-cni.sh")
 
 	// Create a temporary log file to write docker command error log.
-	errFile, err := os.Create(errFileName)
+	errFile, err := os.Create(errFileName) //nolint:gosec
 	if err != nil {
 		t.Fatalf("couldn't create docker stderr file: %v", err)
 	}
@@ -179,7 +179,7 @@ func startDocker(testNum int, wd string, testWorkRootDir string, tempCNINetDir s
 
 	containerID, err := cmd.Output()
 	if err != nil {
-		errFileContents, _ := os.ReadFile(errFileName)
+		errFileContents, _ := os.ReadFile(errFileName) //nolint:gosec
 		t.Logf("%v contents:\n\n%v\n\n", errFileName, string(errFileContents))
 		t.Fatalf("test %v ERROR: failed to start docker container '%v', see %v",
 			testNum, dockerImage, errFileName)
