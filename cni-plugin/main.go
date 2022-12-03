@@ -15,7 +15,7 @@
 
 // This file was inspired by:
 // 1) https://github.com/istio/cni/blob/c63a509539b5ed165a6617548c31b686f13c2133/cmd/istio-cni/main.go
-
+// nolint:gosec
 package main
 
 import (
@@ -105,7 +105,7 @@ func configureLogging(logLevel string) {
 func parseConfig(stdin []byte) (*PluginConf, error) {
 	conf := PluginConf{}
 
-	logrus.Debugf("linkerd-cni: stdin to plugin: %v", string(stdin)) //nolint:gosec
+	logrus.Debugf("linkerd-cni: stdin to plugin: %v", string(stdin))
 	if err := json.Unmarshal(stdin, &conf); err != nil {
 		return nil, fmt.Errorf("linkerd-cni: failed to parse network configuration: %w", err)
 	}
@@ -132,7 +132,6 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 }
 
 // cmdAdd is called by the CNI runtime for ADD requests
-// nolint:gosec
 func cmdAdd(args *skel.CmdArgs) error {
 	logrus.Debug("linkerd-cni: cmdAdd, parsing config")
 	conf, err := parseConfig(args.StdinData)
