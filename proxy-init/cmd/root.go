@@ -7,8 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/linkerd/linkerd2-proxy-init/pkg/linkerd-iptables"
-	"github.com/linkerd/linkerd2-proxy-init/pkg/linkerd-util"
+	iptables "github.com/linkerd/linkerd2-proxy-init/internal/linkerd-iptables"
+	util "github.com/linkerd/linkerd2-proxy-init/internal/linkerd-util"
 	"github.com/spf13/cobra"
 )
 
