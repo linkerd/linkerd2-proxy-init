@@ -30,7 +30,7 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/cni/pkg/version"
-	iptables "github.com/linkerd/linkerd2-proxy-init/internal/linkerd-iptables"
+	"github.com/linkerd/linkerd2-proxy-init/internal/iptables"
 	"github.com/linkerd/linkerd2-proxy-init/proxy-init/cmd"
 
 	"github.com/sirupsen/logrus"

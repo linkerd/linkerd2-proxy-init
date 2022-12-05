@@ -6,10 +6,10 @@ import (
 	"os/exec"
 
 	log "github.com/sirupsen/logrus"
-
-	iptables "github.com/linkerd/linkerd2-proxy-init/internal/linkerd-iptables"
-	util "github.com/linkerd/linkerd2-proxy-init/internal/linkerd-util"
 	"github.com/spf13/cobra"
+
+	"github.com/linkerd/linkerd2-proxy-init/internal/iptables"
+	"github.com/linkerd/linkerd2-proxy-init/internal/util"
 )
 
 // RootOptions provides the information that will be used to build a firewall configuration.
