@@ -6,6 +6,7 @@
 
 _image := "test.l5d.io/linkerd/proxy-init:test"
 _test-image := "test.l5d.io/linkerd/iptables-tester:test"
+_cni-plugin-test-image := "test.l5d/linkerd/cni-plugin:test"
 docker-arch := "linux/amd64"
 
 ##
@@ -133,6 +134,33 @@ proxy-init-test-image:
         --tag={{ _test-image }} \
         --platform={{ docker-arch }} \
         --load
+
+##
+## cni-plugin
+##
+
+cni-plugin-build:
+    go build -o target/linkerd2-cni-plugin ./cni-plugin
+
+cni-plugin-lint:
+    golangci-lint run ./cni-plugin/...
+
+cni-plugin-test-unit:
+    go test -v ./cni-plugin/...
+
+# TODO(stevej): this does not run within the devcontainer
+cni-plugin-installer-integration-run: cni-plugin-image
+    HUB=test.l5d/linkerd TAG=test go test ./cni-plugin/test/... -integration-tests
+
+
+# Build test image for cni-plugin
+cni-plugin-image:
+    docker buildx build . \
+        --tag={{ _cni-plugin-test-image }} \
+        --platform={{ docker-arch }} \
+        -f Dockerfile-cni-plugin \
+        --load
+
 
 ##
 ## Test cluster
