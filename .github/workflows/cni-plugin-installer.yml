@@ -13,4 +13,5 @@ jobs:
     container: ghcr.io/linkerd/dev:v32-tools
     steps:
       - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
+      - uses: docker/setup-buildx-action@8c0edbc76e98fa90f69d9a2c020dcb50019dc325
       - run: just cni-plugin-installer-integration-run
