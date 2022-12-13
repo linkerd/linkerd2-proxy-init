@@ -6,7 +6,8 @@
 
 _image := "test.l5d.io/linkerd/proxy-init:test"
 _test-image := "test.l5d.io/linkerd/iptables-tester:test"
-_cni-plugin-test-image := "test.l5d/linkerd/cni-plugin:test"
+_cni-plugin-image := "test.l5d.io/linkerd/cni-plugin:test"
+_cni-plugin-test-image := "test.l5d/linkerd/cni-plugin-tester:test"
 docker-arch := "linux/amd64"
 
 ##
@@ -153,13 +154,30 @@ cni-plugin-installer-integration-run: cni-plugin-image
     HUB=test.l5d/linkerd TAG=test go test ./cni-plugin/test/... -integration-tests
 
 
-# Build test image for cni-plugin
 cni-plugin-image:
     docker buildx build . \
+        --tag={{ _cni-plugin-image }} \
+        --platform={{ docker-arch }} \
+        --load
+
+# Build test image for cni-plugin
+cni-plugin-test-image:
+    docker buildx build . \
+        --file=cni-plugin/integration/smoketest/Dockerfile-tester \
         --tag={{ _cni-plugin-test-image }} \
         --platform={{ docker-arch }} \
-        -f Dockerfile-cni-plugin \
         --load
+
+# Build and load images for cni-plugin
+cni-plugin-test-integration-deps: cni-plugin-image cni-plugin-test-image _k3d-init
+    {{ _k3d-load }} {{ _cni-plugin-test-image }} {{ _cni-plugin-image }}
+
+# Run proxy-init integration tests after preparing dependencies
+cni-plugin-test-integration: cni-plugin-test-integration-deps cni-plugin-test-integration-run
+
+# Run integration tests without preparing dependencies
+cni-plugin-test-integration-run:
+    TEST_CTX='k3d-{{ k3d-name }}' ./cni-plugin/integration/run.sh
 
 
 ##
