@@ -15,11 +15,11 @@ arch := env_var_or_default("TARGETARCH", "amd64")
 
 # If an `_arch` is specified, then we change the default cargo `--target` to
 # support cross-compilation. Otherwise, we use `rustup` to find the default.
-_cargo-target := if _arch == "amd64" {
+_cargo-target := if arch == "amd64" {
         "x86_64-unknown-linux-musl"
-    } else if _arch == "arm64" {
+    } else if arch == "arm64" {
         "aarch64-unknown-linux-musl"
-    } else if _arch == "arm" {
+    } else if arch == "arm" {
         "armv7-unknown-linux-musleabihf"
     } else {
         `rustup show | sed -n 's/^Default host: \(.*\)/\1/p'`
@@ -28,7 +28,7 @@ _cargo-target := if _arch == "amd64" {
 _target-dir := "../target" / _cargo-target / profile
 _target-bin := _target-dir / "linkerd-network-validator"
 
-_package-name := "linkerd-network-validator-" + version + "-" + _arch
+_package-name := "linkerd-network-validator-" + version + "-" + arch
 _package-dir := "../target/package"
 _package-bin := _package-dir / _package-name
 _package-dbg := _package-bin + ".dbg"

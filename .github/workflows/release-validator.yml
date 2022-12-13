@@ -57,10 +57,7 @@ jobs:
     container: ghcr.io/linkerd/dev:v38-rust-musl
     steps:
       - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
-      - run: just arch=${{ matrix.arch }} rs-profile=release validator package
-        env:
-          VALIDATOR_VERSION: ${{ needs.meta.outputs.version }}
-
+      - run: just validator arch=${{ matrix.arch }} profile=release version=${{ needs.meta.outputs.version }} package
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.arch }}-artifacts
