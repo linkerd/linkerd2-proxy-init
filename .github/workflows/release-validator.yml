@@ -14,7 +14,7 @@ jobs:
   meta:
     timeout-minutes: 3
     runs-on: ubuntu-latest
-    container: ghcr.io/linkerd/dev:v32-rust
+    container: ghcr.io/linkerd/dev:v38-rust
     steps:
       - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
       - id: meta
@@ -29,7 +29,7 @@ jobs:
             ) >> "$GITHUB_OUTPUT"
           else
             sha="${{ github.sha }}"
-            ( echo version="v$(just validator --evaluate version)-${sha:0:7}"
+            ( echo version="$(just validator --evaluate version)-${sha:0:7}"
               echo mode=test
             ) >> "$GITHUB_OUTPUT"
           fi
@@ -54,18 +54,10 @@ jobs:
         arch: [amd64, arm64, arm]
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    container: ghcr.io/linkerd/dev:v32-rust-cross
+    container: ghcr.io/linkerd/dev:v38-rust-musl
     steps:
-      - if: matrix.arch != 'amd64'
-        run: echo 'CARGO=cross' >> "$GITHUB_ENV"
-
       - uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8
-      - run: just validator package
-        env:
-          ARCH: ${{ matrix.arch }}
-          CARGO_RELEASE: "1"
-          VALIDATOR_VERSION: ${{ needs.meta.outputs.version }}
-
+      - run: just validator arch=${{ matrix.arch }} profile=release version=${{ needs.meta.outputs.version }} package
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.arch }}-artifacts

@@ -28,7 +28,7 @@ linters:
     # - prealloc
     # - stylecheck
 
-  # Disabled for go1.18: https://github.com/golangci/golangci-lint/issues/2649
+  # Disabled for generics https://github.com/golangci/golangci-lint/issues/2649
   disable:
     - bodyclose
     - structcheck

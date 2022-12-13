@@ -17,13 +17,13 @@ var (
 )
 
 func returnHostAndPortHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Got request [%v] returning [%s]", r, response())
+	log.Printf("Got request [%v] returning [%s]\n", r, response())
 	fmt.Fprintln(w, response())
 }
 
 func callOtherServiceHandler(w http.ResponseWriter, r *http.Request) {
 	url := r.FormValue("url")
-	log.Printf("Got request [%v] making HTTP call to [%s]", r, url)
+	log.Printf("Got request [%v] making HTTP call to [%s]\n", r, url)
 	// This is only used in tests, so skip URL validation.
 	//nolint:gosec
 	downstreamResp, err := http.Get(url)
@@ -49,7 +49,7 @@ func response() string {
 }
 
 func main() {
-	fmt.Printf("Starting stub HTTP server on port [%s] will serve [%s] proxy [%t]", port, hostname, amITheProxy)
+	fmt.Printf("Starting stub HTTP server on port [%s] will serve [%s] proxy [%t]\n", port, hostname, amITheProxy)
 
 	http.HandleFunc("/", returnHostAndPortHandler)
 	http.HandleFunc("/call", callOtherServiceHandler)

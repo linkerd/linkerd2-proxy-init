@@ -1,6 +1,8 @@
-FROM golang:1.18
+FROM ghcr.io/linkerd/dev:v38-go
 ENV GOCACHE=/tmp/
 WORKDIR /src
-COPY proxy-init/integration/iptables/. /src/
-COPY go.mod go.sum /src
+COPY go.mod go.sum .
+COPY proxy-init/integration/iptables/. .
 RUN go mod tidy && go mod download
+RUN go build -o /usr/local/bin/test_service ./test_service/test_service.go
+ENTRYPOINT ["/usr/local/bin/test_service"]
