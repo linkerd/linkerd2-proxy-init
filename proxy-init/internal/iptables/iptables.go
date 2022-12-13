@@ -78,7 +78,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	matches := chainRegex.FindAllString(b.String(), 1)
 	if len(matches) > 0 {
 		log.Infof("skipping iptables setup: found %d existing chains", len(matches))
-		log.Debugf("matching chains: %v", matches)
+		log.Infof("matching chains: %v", matches)
 		return nil
 	}
 
