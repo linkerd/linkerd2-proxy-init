@@ -22,15 +22,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/containernetworking/cni/pkg/skel"
 	"github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/cni/pkg/version"
-	"github.com/linkerd/linkerd2-proxy-init/pkg/linkerd-iptables"
+	"github.com/linkerd/linkerd2-proxy-init/internal/iptables"
 	"github.com/linkerd/linkerd2-proxy-init/proxy-init/cmd"
-	"os"
-	"strconv"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -38,6 +39,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+// TrueAsString the boolean true formatted as a string
+const TrueAsString = "true"
 
 // ProxyInit is the configuration for the proxy-init binary
 type ProxyInit struct {
@@ -84,12 +88,12 @@ func main() {
 }
 
 func configureLogging(logLevel string) {
-	if strings.EqualFold(logLevel, "debug") {
+	switch strings.ToLower(logLevel) {
+	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
-	} else if strings.EqualFold(logLevel, "info") {
+	case "info":
 		logrus.SetLevel(logrus.InfoLevel)
-	} else {
-		// Default level
+	default:
 		logrus.SetLevel(logrus.WarnLevel)
 	}
 
@@ -221,7 +225,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			// TODO(stevej): hardcoded. This originates in values.yaml?
-			k8sProxyIgnoreOutboundPortsAnnotation := "true"
+			k8sProxyIgnoreOutboundPortsAnnotation := TrueAsString
 			// Check if there are any overridden ports to be skipped
 			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, k8sProxyIgnoreOutboundPortsAnnotation)
 			if err != nil {
@@ -234,7 +238,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.OutboundPortsToIgnore = strings.Split(outboundSkipOverride, ",")
 			}
 
-			k8sProxyIgnoreInboundPortsAnnotation := "true"
+			k8sProxyIgnoreInboundPortsAnnotation := TrueAsString
 			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, k8sProxyIgnoreInboundPortsAnnotation)
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
@@ -247,7 +251,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			// TODO(stevej) hardcoded. This originates in values.yaml?
-			k8sProxyUIDAnnotation := "true"
+			k8sProxyUIDAnnotation := TrueAsString
 			// Override ProxyUID from annotations.
 			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod, k8sProxyUIDAnnotation)
 			if err != nil {
