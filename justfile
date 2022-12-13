@@ -1,10 +1,8 @@
-# vim: set ft=make :
-# See https://just.systems/man/en
 #
 # Config
 #
 
-_image := "test.l5d.io/linkerd/proxy-init:test"
+proxy-init-image := "test.l5d.io/linkerd/proxy-init:test"
 _test-image := "test.l5d.io/linkerd/iptables-tester:test"
 _cni-plugin-image := "test.l5d.io/linkerd/cni-plugin:test"
 _cni-plugin-test-image := "test.l5d/linkerd/cni-plugin-tester:test"
@@ -29,14 +27,14 @@ go-fmt-check:
 ##
 
 # By default we compile in development mode because it's faster
-rs-build-type := if env_var_or_default("CARGO_RELEASE", "") == "" { "debug" } else { "release" }
+rs-profile := "debug"
+
+rs-target := "x86_64-unknown-linux-gnu"
 
 # Overrides the default Rust toolchain version
 rs-toolchain := ""
 
-export RUST_BACKTRACE := env_var_or_default("RUST_BACKTRACE", "short")
-
-_cargo := env_var_or_default("CARGO", "cargo") + if rs-toolchain != "" { " +" + rs-toolchain } else { "" }
+_cargo := 'just-cargo profile=' + rs-profile + ' target='  + rs-target + ' toolchain=' + rs-toolchain
 
 # Fetch Rust dependencies
 rs-fetch:
@@ -48,46 +46,24 @@ rs-fmt-check:
 
 # Lint Rust code
 rs-clippy:
-    {{ _cargo }} clippy {{ _cargo-build-flags }} --all-targets --no-deps {{ _cargo-fmt }}
+    {{ _cargo }} clippy --all-targets --no-deps
 
 # Audit Rust dependencies
 rs-audit-deps:
-    {{ _cargo }} deny check
+    cargo-deny --all-features check
 
 # Build Rust unit and integration tests
 rs-test-build:
-    {{ _cargo-test }} {{ _cargo-build-flags }} --workspace --no-run {{ _cargo-fmt }}
+    {{ _cargo }} test-build --workspace --no-run
 
 # Run unit tests in whole Rust workspace
 rs-test *flags:
-    {{ _cargo-test }} {{ _cargo-build-flags }} --workspace {{ flags }}
+    {{ _cargo }} test --workspace {{ flags }}
 
 # Check a specific Rust crate
 rs-check-dir dir *flags:
     cd {{ dir }} \
-        && {{ _cargo }} check {{ _cargo-build-flags }} {{ flags }} {{ _cargo-fmt }}
-
-_cargo-build-flags := "--frozen" + if rs-build-type == "release" { " --release" } else { "" }
-
-# If recipe is run in github actions (and cargo-action-fmt is installed), then add a
-# command suffix that formats errors
-_cargo-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else {
-    ```
-    if command -v cargo-action-fmt >/dev/null 2>&1 ; then
-        echo "--message-format=json | cargo-action-fmt"
-    fi
-    ```
-}
-
-# Use cargo-nextest to run Rust tests if available locally. We use the default
-# runner in CI.
-_cargo-test := _cargo + ```
-    if [ "${GITHUB_ACTIONS:-}" != "true" ] && command -v cargo-nextest >/dev/null 2>&1 ; then
-        echo " nextest run"
-    else
-        echo " test"
-    fi
-```
+        && {{ _cargo }} check {{ flags }}
 
 ##
 ## validator
@@ -113,28 +89,24 @@ proxy-init-test-unit:
 # Run proxy-init integration tests after preparing dependencies
 proxy-init-test-integration: proxy-init-test-integration-deps proxy-init-test-integration-run
 
+# Build and load images
+proxy-init-test-integration-deps: build-proxy-init-image build-proxy-init-test-image _k3d-ready
+    @just-k3d import {{ _test-image }} {{ proxy-init-image }}
+
 # Run integration tests without preparing dependencies
 proxy-init-test-integration-run:
-    TEST_CTX='k3d-{{ k3d-name }}' ./proxy-init/integration/run.sh
-
-# Build and load images
-proxy-init-test-integration-deps: proxy-init-image proxy-init-test-image _k3d-init
-    {{ _k3d-load }} {{ _test-image }} {{ _image }}
+    TEST_CTX="k3d-$(just-k3d --evaluate K3D_CLUSTER_NAME)" ./proxy-init/integration/run.sh
 
 # Build docker image for proxy-init (Development)
-proxy-init-image:
-    docker buildx build . \
-        --tag={{ _image }} \
-        --platform={{ docker-arch }} \
-        --load
+build-proxy-init-image *args='--load':
+    docker buildx build . --tag={{ proxy-init-image }} {{ args }}
 
 # Build docker image for iptables-tester (Development)
-proxy-init-test-image:
+build-proxy-init-test-image *args='--load':
     docker buildx build . \
         --file=proxy-init/integration/iptables/Dockerfile-tester \
         --tag={{ _test-image }} \
-        --platform={{ docker-arch }} \
-        --load
+        {{ args }}
 
 ##
 ## cni-plugin
@@ -184,104 +156,38 @@ cni-plugin-test-integration-run:
 ## Test cluster
 ##
 
-# The name of the k3d cluster to use.
-k3d-name := "l5d-test"
-
-# The kubernetes version to use for the test cluster. e.g. 'v1.24', 'latest', etc
-k3d-k8s := "latest"
-
-k3d-agents := "0"
-k3d-servers := "1"
-
-_context := "--context=k3d-" + k3d-name
-_kubectl := "kubectl " + _context
-
-_k3d-load := "k3d image import --mode=direct --cluster=" + k3d-name
-
-# Run kubectl with the test cluster context.
-k *flags:
-    {{ _kubectl }} {{ flags }}
+export K3S_DISABLE := "local-storage,traefik,servicelb,metrics-server@server:*"
+export K3D_CREATE_FLAGS := '--no-lb'
 
 # Creates a k3d cluster that can be used for testing.
-k3d-create: && _k3d-ready
-    k3d cluster create {{ k3d-name }} \
-        --image='+{{ k3d-k8s }}' \
-        --agents='{{ k3d-agents }}' \
-        --servers='{{ k3d-servers }}' \
-        --no-lb \
-        --k3s-arg '--disable=local-storage,traefik,servicelb,metrics-server@server:*' \
-        --kubeconfig-update-default \
-        --kubeconfig-switch-context=false
+k3d-create:
+    @just-k3d create
 
 # Deletes the test cluster.
 k3d-delete:
-    k3d cluster delete {{ k3d-name }}
+    @just-k3d delete
 
 # Print information the test cluster's detailed status.
 k3d-info:
-    k3d cluster list {{ k3d-name }} -o json | jq .
+    @just-k3d info
 
-# Ensures the test cluster has been initialized.
-_k3d-init: && _k3d-ready
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if ! k3d cluster list {{ k3d-name }} >/dev/null 2>/dev/null; then
-        {{ just_executable() }} \
-            k3d-name={{ k3d-name }} \
-            k3d-k8s={{ k3d-k8s }} \
-            k3d-create
-    fi
-    k3d kubeconfig merge l5d-test \
-        --kubeconfig-merge-default \
-        --kubeconfig-switch-context=false \
-        >/dev/null
-
-_k3d-ready: _k3d-api-ready _k3d-dns-ready
-
-# Wait for the cluster's API server to be accessible
-_k3d-api-ready:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    for i in {1..6} ; do
-        if {{ _kubectl }} cluster-info >/dev/null ; then exit 0 ; fi
-        sleep 10
-    done
-    exit 1
-
-# Wait for the cluster's DNS pods to be ready.
-_k3d-dns-ready:
-    while [ $({{ _kubectl }} get po -n kube-system -l k8s-app=kube-dns -o json |jq '.items | length') = "0" ]; do sleep 1 ; done
-    {{ _kubectl }} wait pod --for=condition=ready \
-        --namespace=kube-system --selector=k8s-app=kube-dns \
-        --timeout=1m
+_k3d-ready:
+    @just-k3d ready
 
 ##
 ## CI utilities
 ##
 
-# Format actionlint output for Github Actions if running in CI.
-_actionlint-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else {
-  '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::{{$err.Message}}%0A```%0A{{replace $err.Snippet "\\n" "%0A"}}%0A```\n{{end}}'
-}
-
 # Lints all GitHub Actions workflows
 action-lint:
-    actionlint \
-        {{ if _actionlint-fmt != '' { "-format '" + _actionlint-fmt + "'" } else { "" } }} \
-        .github/workflows/*
+    @just-dev lint-actions
 
 action-dev-check:
-    action-dev-check
+    @just-dev check-action-images
 
 md-lint:
-    markdownlint-cli2 '**/*.md' '!target'
+    @just-md lint
 
 # Lints all shell scripts in the repo.
 sh-lint:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    files=$(while IFS= read -r f ; do
-        if [ "$(file -b --mime-type "$f")" = text/x-shellscript ]; then echo "$f"; fi
-    done < <(find . -type f ! \( -path ./.git/\* -or -path \*/target/\* \)) | xargs)
-    echo "shellcheck $files" >&2
-    shellcheck $files
+    @just-sh lint
