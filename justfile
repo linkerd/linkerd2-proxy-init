@@ -4,8 +4,8 @@
 
 proxy-init-image := "test.l5d.io/linkerd/proxy-init:test"
 _test-image := "test.l5d.io/linkerd/iptables-tester:test"
-_cni-plugin-image := "test.l5d.io/linkerd/cni-plugin:test"
-_cni-plugin-test-image := "test.l5d/linkerd/cni-plugin-tester:test"
+cni-plugin-image := "test.l5d.io/linkerd/cni-plugin:test"
+_cni-plugin-test-image := "test.l5d.io/linkerd/cni-plugin-tester:test"
 docker-arch := "linux/amd64"
 
 ##
@@ -122,34 +122,30 @@ cni-plugin-test-unit:
     go test -v ./cni-plugin/...
 
 # TODO(stevej): this does not run within the devcontainer
-cni-plugin-installer-integration-run: cni-plugin-image
+cni-plugin-installer-integration-run: build-cni-plugin-image
     HUB=test.l5d/linkerd TAG=test go test ./cni-plugin/test/... -integration-tests
 
+# Build docker image for proxy-init (Development)
+build-cni-plugin-image *args='--load':
+    docker buildx build . --tag={{ cni-plugin-image }} {{ args }}
 
-cni-plugin-image:
-    docker buildx build . \
-        --tag={{ _cni-plugin-image }} \
-        --platform={{ docker-arch }} \
-        --load
-
-# Build test image for cni-plugin
-cni-plugin-test-image:
+# Build docker image for cni-plugin-tester (Development)
+build-cni-plugin-test-image *args='--load':
     docker buildx build . \
         --file=cni-plugin/integration/smoketest/Dockerfile-tester \
         --tag={{ _cni-plugin-test-image }} \
-        --platform={{ docker-arch }} \
-        --load
+        {{ args }}
 
 # Build and load images for cni-plugin
-cni-plugin-test-integration-deps: cni-plugin-image cni-plugin-test-image _k3d-init
-    {{ _k3d-load }} {{ _cni-plugin-test-image }} {{ _cni-plugin-image }}
+cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-image _k3d-ready
+    @just-k3d import {{ _cni-plugin-test-image }} {{ cni-plugin-image }}
 
 # Run proxy-init integration tests after preparing dependencies
 cni-plugin-test-integration: cni-plugin-test-integration-deps cni-plugin-test-integration-run
 
 # Run integration tests without preparing dependencies
 cni-plugin-test-integration-run:
-    TEST_CTX='k3d-{{ k3d-name }}' ./cni-plugin/integration/run.sh
+    TEST_CTX="k3d-$(just-k3d --evaluate K3D_CLUSTER_NAME)" ./cni-plugin/integration/run.sh
 
 
 ##
