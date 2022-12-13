@@ -29,7 +29,7 @@ jobs:
             ) >> "$GITHUB_OUTPUT"
           else
             sha="${{ github.sha }}"
-            ( echo version="v$(just validator --evaluate version)-${sha:0:7}"
+            ( echo version="$(just validator --evaluate version)-${sha:0:7}"
               echo mode=test
             ) >> "$GITHUB_OUTPUT"
           fi
