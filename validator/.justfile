@@ -29,18 +29,23 @@ _target-dir := "../target" / _cargo-target / profile
 _target-bin := _target-dir / "linkerd-network-validator"
 
 _package-name := "linkerd-network-validator-" + version + "-" + arch
-_package-dir := "../target/package"
-_package-bin := _package-dir / _package-name
+_package-tgz := "../target/package" / _package-name + ".tgz"
+_package-dir := "../target/package" / _package-name
+_package-bin := _package-dir / "linkerd-network-validator"
 _package-dbg := _package-bin + ".dbg"
 
 _cargo := 'just-cargo profile=' + profile + ' target=' + _cargo-target
 _objcopy := 'llvm-objcopy-' + `just-cargo --evaluate _llvm-version`
+_shasum := "shasum -a 256"
 
 package: build
     @mkdir -p {{ _package-dir }}
     {{ _objcopy }} --only-keep-debug {{ _target-bin }} {{ _package-bin }}.dbg
     {{ _objcopy }} --strip-unneeded {{ _target-bin }} {{ _package-bin }}
     {{ _objcopy }} --add-gnu-debuglink={{ _package-dbg }} {{ _package-bin }}
+    tar -C ../target/package -czf {{ _package-tgz }} {{ _package-name }}
+    (cd ../target/package && {{ _shasum }} {{ _package-name }}.tgz > {{ _package-name }}.txt)
+    @rm -rf {{ _package-dir }}
 
 build *flags:
     {{ _cargo }} fetch --locked
