@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestPodWithNoRules(t *testing.T) {
+func TestPodShouldFail(t *testing.T) {
 	t.Parallel()
 
 	podIP := os.Getenv("POD_WITH_NO_RULES_IP")
