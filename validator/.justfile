@@ -6,60 +6,47 @@
 # Users are expected to interact with this via the top-level Justfile.
 
 # The version name to use for packages.
-version := env_var_or_default("VALIDATOR_VERSION", ```
-    cd .. && cargo metadata --format-version=1 \
-        | jq -r '.packages[] | select(.name == "linkerd-network-validator") | .version' \
-        | head -n 1
-    ```)
+version := `just-cargo crate-version linkerd-network-validator`
+
+profile := 'debug'
 
 # The architecture name to use for packages. Either 'amd64', 'arm64', or 'arm'.
-_arch := env_var_or_default("ARCH", "amd64")
+arch := env_var_or_default("TARGETARCH", "amd64")
 
 # If an `_arch` is specified, then we change the default cargo `--target` to
 # support cross-compilation. Otherwise, we use `rustup` to find the default.
-_cargo-target := if _arch == "amd64" {
+_cargo-target := if arch == "amd64" {
         "x86_64-unknown-linux-musl"
-    } else if _arch == "arm64" {
+    } else if arch == "arm64" {
         "aarch64-unknown-linux-musl"
-    } else if _arch == "arm" {
+    } else if arch == "arm" {
         "armv7-unknown-linux-musleabihf"
     } else {
         `rustup show | sed -n 's/^Default host: \(.*\)/\1/p'`
     }
 
-_target-dir := "../target" / _cargo-target / "release"
-_bin := _target-dir / "linkerd-network-validator"
-_package-name := "linkerd-network-validator-" + version + "-" + _arch
-_package-dir := "../target/package"
+_target-dir := "../target" / _cargo-target / profile
+_target-bin := _target-dir / "linkerd-network-validator"
+
+_package-name := "linkerd-network-validator-" + version + "-" + arch
+_package-tgz := "../target/package" / _package-name + ".tgz"
+_package-dir := "../target/package" / _package-name
+_package-bin := _package-dir / "linkerd-network-validator"
+_package-dbg := _package-bin + ".dbg"
+
+_cargo := 'just-cargo profile=' + profile + ' target=' + _cargo-target
+_objcopy := 'llvm-objcopy-' + `just-cargo --evaluate _llvm-version`
 _shasum := "shasum -a 256"
 
-export RUST_BACKTRACE := env_var_or_default("RUST_BACKTRACE", "short")
-
-# Support cross-compilation when `_arch` changes.
-_strip := if _arch == "arm64" { "aarch64-linux-gnu-strip" } else if _arch == "arm" { "arm-linux-gnueabihf-strip" } else { "strip" }
-
-_cargo := env_var_or_default("CARGO", "cargo")
-
-# If recipe is run in github actions (and cargo-action-fmt is installed), then add a
-# command suffix that formats errors
-_cargo-fmt := if env_var_or_default("GITHUB_ACTIONS", "") != "true" { "" } else {
-    ```
-    if command -v cargo-action-fmt >/dev/null 2>&1 ; then
-        echo "--message-format=json | cargo-action-fmt"
-    fi
-    ```
-}
-
 package: build
-    @-mkdir -p {{ _package-dir }}
-    cp {{ _bin }} {{ _package-dir / _package-name }}
-    {{ _strip }} {{ _package-dir / _package-name }}
-    {{ _shasum }} {{ _package-dir / _package-name }} > {{ _package-dir / _package-name }}.shasum
+    @mkdir -p {{ _package-dir }}
+    {{ _objcopy }} --only-keep-debug {{ _target-bin }} {{ _package-bin }}.dbg
+    {{ _objcopy }} --strip-unneeded {{ _target-bin }} {{ _package-bin }}
+    {{ _objcopy }} --add-gnu-debuglink={{ _package-dbg }} {{ _package-bin }}
+    tar -C ../target/package -czf {{ _package-tgz }} {{ _package-name }}
+    (cd ../target/package && {{ _shasum }} {{ _package-name }}.tgz > {{ _package-name }}.txt)
+    @rm -rf {{ _package-dir }}
 
 build *flags:
     {{ _cargo }} fetch --locked
-    {{ _cargo }} build --workspace -p linkerd-network-validator \
-        --release \
-        --target={{ _cargo-target }} \
-        {{ flags }} \
-        {{ _cargo-fmt }}
+    {{ _cargo }} build --workspace -p linkerd-network-validator {{ flags }}
