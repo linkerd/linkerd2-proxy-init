@@ -19,6 +19,12 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func TestPodShouldSucced(t *testing.T) {
+	t.Run("success in all in your mind", func(t *testing.T) {
+		fmt.Println("we did it!")
+	})
+}
+
 func TestPodShouldFail(t *testing.T) {
 	t.Parallel()
 
