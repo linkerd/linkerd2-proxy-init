@@ -1,4 +1,4 @@
-name: cni-plugin-installer
+name: cni-plugin-integration
 
 on:
   workflow_dispatch:
@@ -18,4 +18,6 @@ jobs:
       - uses: linkerd/dev/actions/setup-tools@v38
       - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b
       - run: just k3d-create
-      - run: just cni-plugin-test-integration-run
+      - run: just build-cni-plugin-image
+      - run: just build-cni-plugin-test-image
+      - run: cni-plugin-test-integration
