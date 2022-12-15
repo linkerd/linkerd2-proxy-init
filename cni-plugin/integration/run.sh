@@ -13,6 +13,14 @@ function k() {
   fi
 }
 
+function cleanup() {
+    echo '# Cleaning up...'
+    k delete -f manifests/cni-plugin-lab.yaml
+    k delete ns cni-plugin-test
+}
+
+trap cleanup EXIT
+
 # Get the IP of a test pod.
 function kip() {
     local name=$1
@@ -43,13 +51,7 @@ k run cni-plugin-tester \
         --image-pull-policy=Never \
         --namespace=cni-plugin-test \
         --restart=Never \
+        --rm \
         -- \
-        go test -integration-tests
+        go test -v -integration-tests
 
-function cleanup() {
-    echo '# Cleaning up...'
-    k delete -f manifests/cni-plugin-lab.yaml
-    k delete ns cni-plugin-test
-}
-
-trap EXIT cleanup

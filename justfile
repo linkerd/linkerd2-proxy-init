@@ -127,7 +127,10 @@ cni-plugin-installer-integration-run: build-cni-plugin-image
 
 # Build docker image for proxy-init (Development)
 build-cni-plugin-image *args='--load':
-    docker buildx build . --tag={{ cni-plugin-image }} {{ args }}
+    docker buildx build . \
+        --file=Dockerfile-cni-plugin \
+        --tag={{ cni-plugin-image }} \
+        {{ args }}
 
 # Build docker image for cni-plugin-tester (Development)
 build-cni-plugin-test-image *args='--load':
@@ -137,7 +140,7 @@ build-cni-plugin-test-image *args='--load':
         {{ args }}
 
 # Build and load images for cni-plugin
-cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-image _k3d-ready
+cni-plugin-test-integration-deps: build-cni-plugin-image _k3d-ready
     @just-k3d import {{ _cni-plugin-test-image }} {{ cni-plugin-image }}
 
 # Run proxy-init integration tests after preparing dependencies
