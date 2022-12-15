@@ -218,7 +218,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			// Check if there are any overridden ports to be skipped
-			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, /* k8sProxyIgnoreOutboundPortsAnnotation */ "true")
+			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod /* k8sProxyIgnoreOutboundPortsAnnotation */, "true")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -229,7 +229,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.OutboundPortsToIgnore = strings.Split(outboundSkipOverride, ",")
 			}
 
-			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, /* k8sProxyIgnoreInboundPortsAnnotation */ "true")
+			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod /* k8sProxyIgnoreInboundPortsAnnotation */, "true")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -241,7 +241,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			// Override ProxyUID from annotations.
-			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod, /* k8sProxyUIDAnnotation */ "true")
+			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod /* k8sProxyUIDAnnotation */, "true")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
