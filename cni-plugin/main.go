@@ -40,9 +40,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// TrueAsString the boolean true formatted as a string
-const TrueAsString = "true"
-
 // ProxyInit is the configuration for the proxy-init binary
 type ProxyInit struct {
 	IncomingProxyPort     int      `json:"incoming-proxy-port"`
@@ -232,8 +229,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.OutboundPortsToIgnore = strings.Split(outboundSkipOverride, ",")
 			}
 
-			k8sProxyIgnoreInboundPortsAnnotation := TrueAsString
-			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, k8sProxyIgnoreInboundPortsAnnotation)
+			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, /* k8sProxyIgnoreInboundPortsAnnotation */ "true")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
