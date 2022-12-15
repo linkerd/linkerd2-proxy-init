@@ -188,21 +188,17 @@ func cmdAdd(args *skel.CmdArgs) error {
 			return err
 		}
 
-		k8sProxyContainerName := "linkerd-proxy"
 		containsLinkerdProxy := false
 		for _, container := range pod.Spec.Containers {
-			// TODO(stevej): hardcoded. k8s.ProxyContainerName originates in values.yaml?
-			if container.Name == k8sProxyContainerName {
+			if container.Name == "linkerd-proxy" {
 				containsLinkerdProxy = true
 				break
 			}
 		}
 
-		k8sInitContainerName := "linkerd-init"
 		containsInitContainer := false
 		for _, container := range pod.Spec.InitContainers {
-			// TODO(stevej): hardcoded. k8s.InitContainerName originates in values.yaml?
-			if container.Name == k8sInitContainerName {
+			if container.Name == "linkerd-init" {
 				containsInitContainer = true
 				break
 			}
@@ -224,10 +220,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 				FirewallSaveBinPath:   "iptables-save",
 			}
 
-			// TODO(stevej): hardcoded. This originates in values.yaml?
-			k8sProxyIgnoreOutboundPortsAnnotation := TrueAsString
 			// Check if there are any overridden ports to be skipped
-			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, k8sProxyIgnoreOutboundPortsAnnotation)
+			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, /* k8sProxyIgnoreOutboundPortsAnnotation */ "true")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -250,10 +244,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.InboundPortsToIgnore = strings.Split(inboundSkipOverride, ",")
 			}
 
-			// TODO(stevej) hardcoded. This originates in values.yaml?
-			k8sProxyUIDAnnotation := TrueAsString
 			// Override ProxyUID from annotations.
-			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod, k8sProxyUIDAnnotation)
+			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod, /* k8sProxyUIDAnnotation */ "true")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
