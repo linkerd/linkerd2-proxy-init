@@ -123,7 +123,7 @@ cni-plugin-test-unit:
 
 # TODO(stevej): this does not run within the devcontainer
 cni-plugin-installer-integration-run: build-cni-plugin-image
-    HUB=test.l5d/linkerd TAG=test go test ./cni-plugin/test/... -integration-tests
+    HUB=test.l5d.io/linkerd TAG=test go test -cover -v -mod=readonly ./cni-plugin/test/... -integration-tests
 
 # Build docker image for proxy-init (Development)
 build-cni-plugin-image *args='--load':
