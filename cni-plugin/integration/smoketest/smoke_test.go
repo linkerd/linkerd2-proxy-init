@@ -20,15 +20,17 @@ func TestMain(m *testing.M) {
 }
 
 func TestPodShouldSucced(t *testing.T) {
+	t.Parallel()
+
 	t.Run("success in all in your mind", func(t *testing.T) {
 		fmt.Println("we did it!")
 	})
 }
 
-func TestPodShouldFail(t *testing.T) {
+func TestPodShouldSkip(t *testing.T) {
 	t.Parallel()
 
 	t.Run("succeeds connecting to pod directly through container's exposed port", func(t *testing.T) {
-		t.Fatalf("failed so I can see it's working.")
+		t.Skip("skipping because it's not ready yet.")
 	})
 }

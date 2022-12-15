@@ -140,7 +140,7 @@ build-cni-plugin-test-image *args='--load':
         {{ args }}
 
 # Build and load images for cni-plugin
-cni-plugin-test-integration-deps: build-cni-plugin-image _k3d-ready
+cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-image _k3d-ready
     @just-k3d import {{ _cni-plugin-test-image }} {{ cni-plugin-image }}
 
 # Run proxy-init integration tests after preparing dependencies

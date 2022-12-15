@@ -53,5 +53,5 @@ k run cni-plugin-tester \
         --restart=Never \
         --rm \
         -- \
-        go test -v -integration-tests
+        go test -v ./cni-plugin/integration/... -integration-tests
 
