@@ -20,4 +20,4 @@ jobs:
       - run: just k3d-create
       - run: just build-cni-plugin-image
       - run: just build-cni-plugin-test-image
-      - run: cni-plugin-test-integration
+      - run: just cni-plugin-test-integration
