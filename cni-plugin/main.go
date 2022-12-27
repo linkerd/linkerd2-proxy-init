@@ -229,7 +229,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.OutboundPortsToIgnore = strings.Split(outboundSkipOverride, ",")
 			}
 
-			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, "true" /* k8sProxyIgnoreInboundPortsAnnotation */)
+			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod)
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
