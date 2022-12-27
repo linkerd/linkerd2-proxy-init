@@ -14,7 +14,7 @@ jobs:
     container: ghcr.io/linkerd/dev:v38-go
     steps:
       - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b
-      - run: just go-lint --verbose --timeout=10m
+      - run: just lint --verbose --timeout=10m
 
   fmt:
     runs-on: ubuntu-20.04

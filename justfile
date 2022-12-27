@@ -11,7 +11,7 @@ _test-image := "test.l5d.io/linkerd/iptables-tester:test"
 
 default: lint test
 
-lint: sh-lint md-lint rs-clippy proxy-init-lint action-lint action-dev-check
+lint: sh-lint md-lint rs-clippy proxy-init-lint cni-plugin-lint action-lint action-dev-check
 
 test: rs-test proxy-init-test-unit proxy-init-test-integration
 
@@ -68,6 +68,12 @@ rs-check-dir dir *flags:
 
 validator *args:
     {{ just_executable() }} --justfile=validator/.justfile {{ args }}
+
+
+## cni-plugin
+
+cni-plugin-lint:
+    golangci-lint run ./cni-plugin/...
 
 ##
 ## proxy-init
