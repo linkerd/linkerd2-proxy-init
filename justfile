@@ -91,6 +91,7 @@ proxy-init-lint *flags:
 # Run proxy-init unit tests
 proxy-init-test-unit:
     go test -v ./proxy-init/...
+    go test -v ./internal/...
 
 # Run proxy-init integration tests after preparing dependencies
 proxy-init-test-integration: proxy-init-test-integration-deps proxy-init-test-integration-run
