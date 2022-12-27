@@ -218,7 +218,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			// Check if there are any overridden ports to be skipped
-			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, "true" /* k8sProxyIgnoreOutboundPortsAnnotation */)
+			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod)
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -321,7 +321,7 @@ func getAnnotationOverride(ctx context.Context, api *kubernetes.Clientset, pod *
 		return "", err
 	}
 
-	if override := ns.GetObjectMeta().GetAnnotations()[key]; override != "" {
+	if override := ns.GetObjectMeta().GetAnnotations()["config.linkerd.io/skip-outbound-ports"]; override != "" {
 		return override, nil
 	}
 
