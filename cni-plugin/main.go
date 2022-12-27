@@ -309,9 +309,9 @@ func cmdDel(args *skel.CmdArgs) error {
 	return nil
 }
 
-func getAnnotationOverride(ctx context.Context, api *kubernetes.Clientset, pod *v1.Pod, key string) (string, error) {
+func getAnnotationOverride(ctx context.Context, api *kubernetes.Clientset, pod *v1.Pod) (string, error) {
 	// Check if the annotation is present on the pod
-	if override := pod.GetObjectMeta().GetAnnotations()[key]; override != "" {
+	if override := pod.GetObjectMeta().GetAnnotations()["config.linkerd.io/skip-outbound-ports"]; override != "" {
 		return override, nil
 	}
 
