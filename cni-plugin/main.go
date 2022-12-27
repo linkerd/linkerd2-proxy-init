@@ -218,7 +218,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			// Check if there are any overridden ports to be skipped
-			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod)
+			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, "config.linkerd.io/skip-outbound-ports")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -229,7 +229,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.OutboundPortsToIgnore = strings.Split(outboundSkipOverride, ",")
 			}
 
-			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod)
+			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, "config.linkerd.io/skip-inbound-ports")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -241,7 +241,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			// Override ProxyUID from annotations.
-			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod)
+			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod, "config.linkerd.io/proxy-uid")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -309,9 +309,9 @@ func cmdDel(args *skel.CmdArgs) error {
 	return nil
 }
 
-func getAnnotationOverride(ctx context.Context, api *kubernetes.Clientset, pod *v1.Pod) (string, error) {
+func getAnnotationOverride(ctx context.Context, api *kubernetes.Clientset, pod *v1.Pod, key string) (string, error) {
 	// Check if the annotation is present on the pod
-	if override := pod.GetObjectMeta().GetAnnotations()["config.linkerd.io/skip-outbound-ports"]; override != "" {
+	if override := pod.GetObjectMeta().GetAnnotations()[key]; override != "" {
 		return override, nil
 	}
 
@@ -321,7 +321,7 @@ func getAnnotationOverride(ctx context.Context, api *kubernetes.Clientset, pod *
 		return "", err
 	}
 
-	if override := ns.GetObjectMeta().GetAnnotations()["config.linkerd.io/skip-outbound-ports"]; override != "" {
+	if override := ns.GetObjectMeta().GetAnnotations()[key]; override != "" {
 		return override, nil
 	}
 
