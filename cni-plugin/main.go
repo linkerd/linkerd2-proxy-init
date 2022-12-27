@@ -241,7 +241,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			// Override ProxyUID from annotations.
-			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod /* k8sProxyUIDAnnotation */, "true")
+			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod)
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
