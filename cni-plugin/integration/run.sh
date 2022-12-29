@@ -16,6 +16,7 @@ function k() {
 function cleanup() {
     echo '# Cleaning up...'
     k delete -f manifests/cni-plugin-lab.yaml
+    k delete serviceaccount linkerd-cni
     k delete ns cni-plugin-test
 }
 
@@ -39,6 +40,7 @@ fi
 
 echo '# Creating the test lab...'
 k create ns cni-plugin-test
+k create serviceaccount linkerd-cni
 k create -f manifests/cni-plugin-lab.yaml
 
 # TODO(stevej): image-pull-policy should be changed to Never and
@@ -51,7 +53,6 @@ k run cni-plugin-tester \
         --image-pull-policy=Never \
         --namespace=cni-plugin-test \
         --restart=Never \
-        --rm \
         -- \
         go test -v ./cni-plugin/integration/... -integration-tests
 
