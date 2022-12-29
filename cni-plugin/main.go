@@ -30,12 +30,14 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/cni/pkg/version"
-	"github.com/linkerd/linkerd2-proxy-init/cmd"
-	"github.com/linkerd/linkerd2-proxy-init/iptables"
-	"github.com/linkerd/linkerd2/pkg/k8s"
+	"github.com/linkerd/linkerd2-proxy-init/internal/iptables"
+	"github.com/linkerd/linkerd2-proxy-init/proxy-init/cmd"
+
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // ProxyInit is the configuration for the proxy-init binary
@@ -83,12 +85,12 @@ func main() {
 }
 
 func configureLogging(logLevel string) {
-	if strings.EqualFold(logLevel, "debug") {
+	switch strings.ToLower(logLevel) {
+	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
-	} else if strings.EqualFold(logLevel, "info") {
+	case "info":
 		logrus.SetLevel(logrus.InfoLevel)
-	} else {
-		// Default level
+	default:
 		logrus.SetLevel(logrus.WarnLevel)
 	}
 
@@ -164,7 +166,16 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	if namespace != "" && podName != "" {
 		ctx := context.Background()
-		client, err := k8s.NewAPI(conf.Kubernetes.Kubeconfig, "linkerd-cni-context", "", []string{}, 0)
+
+		configLoadingRules := &clientcmd.ClientConfigLoadingRules{ExplicitPath: conf.Kubernetes.Kubeconfig}
+		configOverrides := &clientcmd.ConfigOverrides{CurrentContext: "linkerd-cni-context"}
+
+		config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(configLoadingRules, configOverrides).ClientConfig()
+		if err != nil {
+			return err
+		}
+
+		client, err := kubernetes.NewForConfig(config)
 		if err != nil {
 			return err
 		}
@@ -176,7 +187,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 		containsLinkerdProxy := false
 		for _, container := range pod.Spec.Containers {
-			if container.Name == k8s.ProxyContainerName {
+			if container.Name == "linkerd-proxy" {
 				containsLinkerdProxy = true
 				break
 			}
@@ -184,7 +195,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 		containsInitContainer := false
 		for _, container := range pod.Spec.InitContainers {
-			if container.Name == k8s.InitContainerName {
+			if container.Name == "linkerd-init" {
 				containsInitContainer = true
 				break
 			}
@@ -207,7 +218,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			// Check if there are any overridden ports to be skipped
-			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, k8s.ProxyIgnoreOutboundPortsAnnotation)
+			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, "config.linkerd.io/skip-outbound-ports")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -218,7 +229,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.OutboundPortsToIgnore = strings.Split(outboundSkipOverride, ",")
 			}
 
-			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, k8s.ProxyIgnoreInboundPortsAnnotation)
+			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, "config.linkerd.io/skip-inbound-ports")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -230,7 +241,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			// Override ProxyUID from annotations.
-			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod, k8s.ProxyUIDAnnotation)
+			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod, "config.linkerd.io/proxy-uid")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -248,7 +259,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.ProxyUserID = parsed
 			}
 
-			if pod.GetLabels()[k8s.ControllerComponentLabel] != "" {
+			if pod.GetLabels()["controller-component"] != "" {
 				// Skip 443 outbound port if its a control plane component
 				logEntry.Debug("linkerd-cni: adding 443 to OutboundPortsToIgnore as its a control plane component")
 				options.OutboundPortsToIgnore = append(options.OutboundPortsToIgnore, "443")
@@ -298,7 +309,7 @@ func cmdDel(args *skel.CmdArgs) error {
 	return nil
 }
 
-func getAnnotationOverride(ctx context.Context, api *k8s.KubernetesAPI, pod *v1.Pod, key string) (string, error) {
+func getAnnotationOverride(ctx context.Context, api *kubernetes.Clientset, pod *v1.Pod, key string) (string, error) {
 	// Check if the annotation is present on the pod
 	if override := pod.GetObjectMeta().GetAnnotations()[key]; override != "" {
 		return override, nil
