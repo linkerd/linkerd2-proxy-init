@@ -1,8 +1,9 @@
-FROM golang:1.18
+FROM golang:1.18-bullseye AS build
 ENV GOCACHE=/tmp/
 WORKDIR /src
 COPY go.mod go.sum .
 COPY cni-plugin cni-plugin
+# TODO(stevej): this gets moved to internal
 COPY pkg pkg
 COPY proxy-init proxy-init
 RUN go mod tidy && go mod download

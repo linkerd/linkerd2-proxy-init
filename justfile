@@ -125,7 +125,7 @@ cni-plugin-test-unit:
 cni-plugin-installer-integration-run: build-cni-plugin-image
     HUB=test.l5d.io/linkerd TAG=test go test -cover -v -mod=readonly ./cni-plugin/test/... -integration-tests
 
-# Build docker image for proxy-init (Development)
+# Build docker image for cni-plugin (Development)
 build-cni-plugin-image *args='--load':
     docker buildx build . \
         --file=Dockerfile-cni-plugin \
@@ -143,7 +143,7 @@ build-cni-plugin-test-image *args='--load':
 cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-image _k3d-ready
     @just-k3d import {{ _cni-plugin-test-image }} {{ cni-plugin-image }}
 
-# Run proxy-init integration tests after preparing dependencies
+# Run cni-plugin integration tests after preparing dependencies
 cni-plugin-test-integration: cni-plugin-test-integration-deps cni-plugin-test-integration-run
 
 # Run integration tests without preparing dependencies
@@ -153,7 +153,7 @@ cni-plugin-test-integration-run:
 
 ##
 ## Test cluster
-##
+## TODO(stevej): these flags aren't being used.
 
 export K3S_DISABLE := "local-storage,traefik,servicelb,metrics-server@server:*"
 export K3D_CREATE_FLAGS := '--no-lb'
