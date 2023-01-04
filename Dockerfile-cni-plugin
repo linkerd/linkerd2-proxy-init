@@ -12,7 +12,7 @@ RUN go mod download
 ## compile cni-plugin utility
 FROM go-deps as golang
 WORKDIR /linkerd-build
-COPY pkg pkg
+COPY internal internal
 # COPY controller controller
 COPY cni-plugin cni-plugin
 ARG TARGETARCH

@@ -30,7 +30,7 @@ import (
 	"github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"github.com/containernetworking/cni/pkg/version"
-	iptables "github.com/linkerd/linkerd2-proxy-init/pkg/linkerd-iptables"
+	"github.com/linkerd/linkerd2-proxy-init/internal/iptables"
 	"github.com/linkerd/linkerd2-proxy-init/proxy-init/cmd"
 
 	"github.com/sirupsen/logrus"
@@ -39,9 +39,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
-
-// TrueAsString the boolean true formatted as a string
-const TrueAsString = "true"
 
 // ProxyInit is the configuration for the proxy-init binary
 type ProxyInit struct {
@@ -188,28 +185,24 @@ func cmdAdd(args *skel.CmdArgs) error {
 			return err
 		}
 
-		k8sProxyContainerName := "linkerd-proxy"
 		containsLinkerdProxy := false
 		for _, container := range pod.Spec.Containers {
-			// TODO(stevej): hardcoded. k8s.ProxyContainerName originates in values.yaml?
-			if container.Name == k8sProxyContainerName {
+			if container.Name == "linkerd-proxy" {
 				containsLinkerdProxy = true
 				break
 			}
 		}
 
-		k8sInitContainerName := "linkerd-init"
 		containsInitContainer := false
 		for _, container := range pod.Spec.InitContainers {
-			// TODO(stevej): hardcoded. k8s.InitContainerName originates in values.yaml?
-			if container.Name == k8sInitContainerName {
+			if container.Name == "linkerd-init" {
 				containsInitContainer = true
 				break
 			}
 		}
 
 		if containsLinkerdProxy && !containsInitContainer {
-			logEntry.Debug("linkerd-cni: setting up iptables firewall")
+			logEntry.Infof("linkerd-cni: setting up iptables firewall for %s/%s", namespace, pod)
 			options := cmd.RootOptions{
 				IncomingProxyPort:     conf.ProxyInit.IncomingProxyPort,
 				OutgoingProxyPort:     conf.ProxyInit.OutgoingProxyPort,
@@ -224,36 +217,31 @@ func cmdAdd(args *skel.CmdArgs) error {
 				FirewallSaveBinPath:   "iptables-save",
 			}
 
-			// TODO(stevej): hardcoded. This originates in values.yaml?
-			k8sProxyIgnoreOutboundPortsAnnotation := TrueAsString
 			// Check if there are any overridden ports to be skipped
-			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, k8sProxyIgnoreOutboundPortsAnnotation)
+			outboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, "config.linkerd.io/skip-outbound-ports")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
 			}
 
 			if outboundSkipOverride != "" {
-				logEntry.Debugf("linkerd-cni: overriding OutboundPortsToIgnore to %s", outboundSkipOverride)
+				logEntry.Infof("linkerd-cni: overriding OutboundPortsToIgnore to %s", outboundSkipOverride)
 				options.OutboundPortsToIgnore = strings.Split(outboundSkipOverride, ",")
 			}
 
-			k8sProxyIgnoreInboundPortsAnnotation := TrueAsString
-			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, k8sProxyIgnoreInboundPortsAnnotation)
+			inboundSkipOverride, err := getAnnotationOverride(ctx, client, pod, "config.linkerd.io/skip-inbound-ports")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
 			}
 
 			if inboundSkipOverride != "" {
-				logEntry.Debugf("linkerd-cni: overriding InboundPortsToIgnore to %s", inboundSkipOverride)
+				logEntry.Infof("linkerd-cni: overriding InboundPortsToIgnore to %s", inboundSkipOverride)
 				options.InboundPortsToIgnore = strings.Split(inboundSkipOverride, ",")
 			}
 
-			// TODO(stevej) hardcoded. This originates in values.yaml?
-			k8sProxyUIDAnnotation := TrueAsString
 			// Override ProxyUID from annotations.
-			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod, k8sProxyUIDAnnotation)
+			proxyUIDOverride, err := getAnnotationOverride(ctx, client, pod, "config.linkerd.io/proxy-uid")
 			if err != nil {
 				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
 				return err
@@ -271,10 +259,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.ProxyUserID = parsed
 			}
 
-			k8sControllerComponentLabel := "controller-component"
-			if pod.GetLabels()[k8sControllerComponentLabel] != "" {
+			if pod.GetLabels()["controller-component"] != "" {
 				// Skip 443 outbound port if its a control plane component
-				logEntry.Debug("linkerd-cni: adding 443 to OutboundPortsToIgnore as its a control plane component")
+				logEntry.Info("linkerd-cni: adding 443 to OutboundPortsToIgnore as it's a control plane component")
 				options.OutboundPortsToIgnore = append(options.OutboundPortsToIgnore, "443")
 			}
 
@@ -306,19 +293,20 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return types.PrintResult(conf.PrevResult, conf.CNIVersion)
 	}
 
+	// TODO(stevej): decode this comment, determine correct log level
 	logrus.Debug("linkerd-cni: no previous result to pass through, assume stand-alone run, send ok")
 
 	return types.PrintResult(&cniv1.Result{CNIVersion: cniv1.ImplementedSpecVersion}, conf.CNIVersion)
 }
 
 func cmdCheck(args *skel.CmdArgs) error {
-	logrus.Debug("linkerd-cni: cmdCheck not implemented")
+	logrus.Info("linkerd-cni: check called but not implemented")
 	return nil
 }
 
 // cmdDel is called for DELETE requests
 func cmdDel(args *skel.CmdArgs) error {
-	logrus.Debug("linkerd-cni: cmdDel not implemented")
+	logrus.Info("linkerd-cni: delete called but not implemented")
 	return nil
 }
 

@@ -1,5 +1,6 @@
 ##
-## Everything below here is generated from the output of:
+## Everything below here is generated from the output `linkerd install-cni`
+## and modified with the test image of the cni-plugin.
 ##
 ## `linkerd install-cni \
 ##    --dest-cni-net-dir "/var/lib/rancher/k3s/agent/etc/cni/net.d/" \
@@ -66,7 +67,7 @@ data:
     {
       "name": "linkerd-cni",
       "type": "linkerd-cni",
-      "log_level": "info",
+      "log_level": "debug",
       "policy": {
           "type": "k8s",
           "k8s_api_root": "https://__KUBERNETES_SERVICE_HOST__:__KUBERNETES_SERVICE_PORT__",
@@ -125,6 +126,7 @@ spec:
       # script copies the files into place and then sleeps so
       # that Kubernetes doesn't keep trying to restart it.
       - name: install-cni
+        #image: test.l5d.io/linkerd/cni-plugin:test
         image: cr.l5d.io/linkerd/cni-plugin:edge-22.12.1
         env:
         - name: DEST_CNI_NET_DIR

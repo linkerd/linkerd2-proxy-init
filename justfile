@@ -14,7 +14,9 @@ docker-arch := "linux/amd64"
 
 default: lint test
 
-lint: sh-lint md-lint rs-clippy proxy-init-lint action-lint action-dev-check
+lint: sh-lint md-lint rs-clippy action-lint action-dev-check
+
+go-lint *flags: (proxy-init-lint flags) (cni-plugin-lint flags)
 
 test: rs-test proxy-init-test-unit proxy-init-test-integration
 
@@ -73,18 +75,26 @@ validator *args:
     {{ just_executable() }} --justfile=validator/.justfile {{ args }}
 
 ##
+## cni-plugin
+##
+
+cni-plugin-lint *flags:
+    golangci-lint run ./cni-plugin/... {{ flags }}
+
+##
 ## proxy-init
 ##
 
 proxy-init-build:
     go build -o target/linkerd2-proxy-init ./proxy-init
 
-proxy-init-lint:
-    golangci-lint run ./proxy-init/...
+proxy-init-lint *flags:
+    golangci-lint run ./proxy-init/... {{ flags }}
 
 # Run proxy-init unit tests
 proxy-init-test-unit:
     go test -v ./proxy-init/...
+    go test -v ./internal/...
 
 # Run proxy-init integration tests after preparing dependencies
 proxy-init-test-integration: proxy-init-test-integration-deps proxy-init-test-integration-run
@@ -114,9 +124,6 @@ build-proxy-init-test-image *args='--load':
 
 cni-plugin-build:
     go build -o target/linkerd2-cni-plugin ./cni-plugin
-
-cni-plugin-lint:
-    golangci-lint run ./cni-plugin/...
 
 cni-plugin-test-unit:
     go test -v ./cni-plugin/...
@@ -156,7 +163,7 @@ cni-plugin-test-integration-run:
 ## TODO(stevej): these flags aren't being used.
 
 export K3S_DISABLE := "local-storage,traefik,servicelb,metrics-server@server:*"
-export K3D_CREATE_FLAGS := '--no-lb'
+export K3D_CREATE_FLAGS := '--no-lb --k3s-arg "--debug@server:*"'
 
 # Creates a k3d cluster that can be used for testing.
 k3d-create:

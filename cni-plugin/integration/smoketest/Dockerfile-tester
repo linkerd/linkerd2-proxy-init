@@ -4,6 +4,8 @@ WORKDIR /src
 COPY go.mod go.sum .
 COPY cni-plugin cni-plugin
 # TODO(stevej): this gets moved to internal
-COPY pkg pkg
+COPY internal internal
 COPY proxy-init proxy-init
 RUN go mod tidy && go mod download
+
+CMD go test -v ./cni-plugin/integration/... -integration-tests

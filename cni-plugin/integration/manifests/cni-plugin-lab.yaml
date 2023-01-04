@@ -17,15 +17,11 @@ spec:
         app: cni-plugin-tester
     spec:
       containers:
+        - name: linkerd-proxy
+          image: test.l5d.io/linkerd/cni-plugin-tester:test
         - name: cni-plugin-tester
           image: test.l5d.io/linkerd/cni-plugin-tester:test
       initContainers:
-        - name: sleep
-          image: ubuntu:latest
-          command:
-            - /bin/sleep
-          args:
-            - "infinity"
         - name: linkerd-network-validator
           image: cr.l5d.io/linkerd/proxy:edge-22.12.1
           imagePullPolicy: IfNotPresent
