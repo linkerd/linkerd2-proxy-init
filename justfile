@@ -6,7 +6,6 @@ proxy-init-image := "test.l5d.io/linkerd/proxy-init:test"
 _test-image := "test.l5d.io/linkerd/iptables-tester:test"
 cni-plugin-image := "test.l5d.io/linkerd/cni-plugin:test"
 _cni-plugin-test-image := "test.l5d.io/linkerd/cni-plugin-tester:test"
-docker-arch := "linux/amd64"
 
 ##
 ## Recipes
@@ -158,10 +157,8 @@ cni-plugin-test-integration-run:
     TEST_CTX="k3d-$(just-k3d --evaluate K3D_CLUSTER_NAME)" ./cni-plugin/integration/run.sh
 
 
-##
-## Test cluster
-## TODO(stevej): these flags aren't being used.
 
+# TODO(stevej): add a k3d-create-debug
 export K3S_DISABLE := "local-storage,traefik,servicelb,metrics-server@server:*"
 export K3D_CREATE_FLAGS := '--no-lb --k3s-arg "--debug@server:*"'
 
