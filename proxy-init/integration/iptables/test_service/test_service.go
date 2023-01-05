@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -30,7 +30,7 @@ func callOtherServiceHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 	} else {
-		body, err := io.ReadAll(downstreamResp.Body)
+		body, err := ioutil.ReadAll(downstreamResp.Body)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 		} else {
