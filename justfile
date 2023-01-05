@@ -11,9 +11,7 @@ _test-image := "test.l5d.io/linkerd/iptables-tester:test"
 
 default: lint test
 
-lint: sh-lint md-lint rs-clippy action-lint action-dev-check
-
-go-lint *flags: (proxy-init-lint flags) (cni-plugin-lint flags)
+lint: sh-lint md-lint rs-clippy proxy-init-lint action-lint action-dev-check
 
 test: rs-test proxy-init-test-unit proxy-init-test-integration
 
@@ -72,26 +70,18 @@ validator *args:
     {{ just_executable() }} --justfile=validator/.justfile {{ args }}
 
 ##
-## cni-plugin
-##
-
-cni-plugin-lint *flags:
-    golangci-lint run ./cni-plugin/... {{ flags }}
-
-##
 ## proxy-init
 ##
 
 proxy-init-build:
     go build -o target/linkerd2-proxy-init ./proxy-init
 
-proxy-init-lint *flags:
-    golangci-lint run ./proxy-init/... {{ flags }}
+proxy-init-lint:
+    golangci-lint run ./proxy-init/...
 
 # Run proxy-init unit tests
 proxy-init-test-unit:
     go test -v ./proxy-init/...
-    go test -v ./internal/...
 
 # Run proxy-init integration tests after preparing dependencies
 proxy-init-test-integration: proxy-init-test-integration-deps proxy-init-test-integration-run

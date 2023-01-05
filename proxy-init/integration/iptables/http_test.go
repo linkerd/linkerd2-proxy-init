@@ -3,7 +3,7 @@ package iptablestest
 import (
 	"flag"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -250,7 +250,7 @@ func expectSuccessfulGetRequest(t *testing.T, url string) string {
 	if err != nil {
 		t.Fatalf("failed to send HTTP GET to %s:\n%v", url, err)
 	}
-	body, err := io.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("failed reading GET response from %s:\n%v", url, err)
 	}
