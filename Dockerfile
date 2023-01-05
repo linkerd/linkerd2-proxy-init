@@ -11,8 +11,6 @@ COPY --link go.mod go.sum .
 COPY --link ./proxy-init ./proxy-init
 COPY --link ./internal ./internal
 RUN go mod download
-COPY ./proxy-init ./proxy-init
-COPY --link ./internal ./internal
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
     go build -o /out/linkerd2-proxy-init -mod=readonly -ldflags "-s -w" -v ./proxy-init

@@ -1,22 +1,22 @@
+# syntax=docker/dockerfile:1.4
+
 ARG BUILDPLATFORM=linux/amd64
 
 # Precompile key slow-to-build dependencies
-FROM --platform=$BUILDPLATFORM golang:1.18-alpine as go-deps
+FROM --platform=$BUILDPLATFORM golang:1.18-alpine as golang
 WORKDIR /linkerd-build
-COPY go.mod .
-COPY go.sum .
-COPY ./cni-plugin ./cni-plugin
-COPY ./proxy-init ./proxy-init
+COPY --link go.mod go.sum .
+COPY --link ./cni-plugin ./cni-plugin
+COPY --link ./proxy-init ./proxy-init
+COPY --link ./internal ./internal
 RUN go mod download
-
-## compile cni-plugin utility
-FROM go-deps as golang
-WORKDIR /linkerd-build
-COPY internal internal
-# COPY controller controller
-COPY cni-plugin cni-plugin
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -o /go/bin/linkerd-cni -v ./cni-plugin/
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
+    go build -o /go/bin/linkerd-cni -mod=readonly -ldflags "-s -w" -v ./cni-plugin/
+
+##
+## Runtime
+##
 
 FROM debian:bullseye-slim
 WORKDIR /linkerd
