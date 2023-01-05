@@ -7,5 +7,3 @@ COPY cni-plugin cni-plugin
 COPY internal internal
 COPY proxy-init proxy-init
 RUN go mod tidy && go mod download
-
-CMD go test -v ./cni-plugin/integration/... -integration-tests

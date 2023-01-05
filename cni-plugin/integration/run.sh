@@ -25,6 +25,8 @@ function create_test_lab() {
 function cleanup() {
     echo '# Cleaning up...'
     #k delete -f manifests/cni-plugin-lab.yaml
+    # TODO(stevej): how do we parameterize the linkerd-cni
+    # container image? we'd like to use releases as well as test
     k delete -f manifests/linkerd-cni.yaml
     k delete serviceaccount linkerd-cni
     k delete ns cni-plugin-test
@@ -55,22 +57,17 @@ if ! k rollout status --timeout=30s daemonset/linkerd-cni -n linkerd-cni; then
   exit $?
 fi
 
-# Why do we roll out cni-plugin-lab and then use `k run`? It's because
-# I want to exercise the network-validator and also see test output. So far
-# running both `k create` and `k run` has been the fastest way to get both
-# but I'd prefer to combine them.
-
+#TODO(stevej): using the cni-plugin-lab as a manifest lets me exercise
+#the linkerd-network-validator but makes seeing the test output impossible.
+#
 #echo "# linkerd-cni is running, starting first cni-plugin test..."
 #k create -f manifests/cni-plugin-lab.yaml
 # Wait for cni-plugin-lab deployment to complete
 #if ! k rollout status --timeout=30s deployment/cni-plugin-tester-deployment -n cni-plugin-test; then
 #    echo "!! cni-plugin-tester-deployment failed, check logs"
-#    sleep infinity
-    #exit $?
+#    exit $?
 #fi
 
-# TODO(stevej): instead of running `go test`, have cni-plugin-tester:test
-# use `go test`` as an entrypoint and run that instead of nginx
 # This needs to use the name linkerd-proxy so that linkerd-cni will run.
 echo '# Running tester...'
 k run linkerd-proxy \
@@ -79,6 +76,6 @@ k run linkerd-proxy \
         --image-pull-policy=Never \
         --namespace=cni-plugin-test \
         --restart=Never \
+        -- \
+        go test -v ./cni-plugin/integration/... -integration-tests
 
-# sleep so we can debug what's up, use Ctrl-C to break out of sleep and execute the cleanup function
-#sleep infinity
