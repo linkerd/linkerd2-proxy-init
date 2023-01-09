@@ -44,7 +44,7 @@ jobs:
       id-token: write # needed for signing the images with GitHub OIDC token
     steps:
       # Build multi-arch docker images for proxy-init:
-      - uses: actions/cache@4723a57e26efda3a62cbde1812113b730952852d
+      - uses: actions/cache@58c146cc91c5b9e778e71775dfe9bf1442ad9a12
         with:
           path: ${{ runner.temp }}/.buildx-cache
           key: proxy-init-${{ needs.meta.outputs.mode }}-${{ needs.meta.outputs.version }}
