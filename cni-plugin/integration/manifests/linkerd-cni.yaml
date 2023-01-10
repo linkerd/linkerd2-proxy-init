@@ -5,7 +5,8 @@
 ## `linkerd install-cni \
 ##    --dest-cni-net-dir "/var/lib/rancher/k3s/agent/etc/cni/net.d/" \
 ##    --dest-cni-bin-dir "/bin"`
-## These flags are meant to enable cni to work properly with k3d/k3s
+## These flags are meant to enable cni to work properly with k3d/k3s.
+## Also the log level is set to debug to simplify development.
 ##
 ## DO NOT hand edit.
 ##
