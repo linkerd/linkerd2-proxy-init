@@ -35,8 +35,8 @@ RUN update-alternatives --set iptables /usr/sbin/iptables-legacy \
 
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
 COPY LICENSE .
-COPY --from=go cni-plugin/deployment/scripts/install-cni.sh .
-COPY --from=go cni-plugin/deployment/linkerd-cni.conf.default .
-COPY --from=go cni-plugin/deployment/scripts/filter.jq .
+COPY --from=go ./cni-plugin/deployment/scripts/install-cni.sh .
+COPY --from=go ./cni-plugin/deployment/linkerd-cni.conf.default .
+COPY --from=go ./cni-plugin/deployment/scripts/filter.jq .
 ENV PATH=/linkerd:/opt/cni/bin:$PATH
 CMD ["install-cni.sh"]
