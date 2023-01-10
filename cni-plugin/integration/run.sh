@@ -68,6 +68,31 @@ k run linkerd-proxy \
         --image-pull-policy=Never \
         --namespace=cni-plugin-test \
         --restart=Never \
-        --rm \
-        -- \
-        go test -v ./cni-plugin/integration/... -integration-tests
+        --overrides='{
+               "apiVersion": "v1",
+               "spec": {
+                  "containers": [
+                     {
+                        "name": "linkerd-proxy",
+                        "image": "test.l5d.io/linkerd/cni-plugin-tester:test",
+                        "command": ["go", "test", "-v", "./cni-plugin/integration/...", "-integration-tests"],
+                        "volumeMounts": [
+                           {
+                              "mountPath": "/var/lib/rancher/k3s/agent/etc/cni/net.d",
+                              "name": "cni-net-dir"
+                           }
+                        ]
+                     }
+                  ],
+                  "volumes": [
+                     {
+                        "name": "cni-net-dir",
+                        "hostPath": {
+                           "path": "/var/lib/rancher/k3s/agent/etc/cni/net.d"
+                        }
+                     }
+                  ]
+               },
+               "status": {}
+            }' \
+        --rm
