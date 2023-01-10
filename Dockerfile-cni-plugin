@@ -1,10 +1,12 @@
 # syntax=docker/dockerfile:1.4
 
-ARG BUILDPLATFORM=linux/amd64
+##
+## Go
+##
 
-# Precompile key slow-to-build dependencies
-FROM --platform=$BUILDPLATFORM golang:1.18-alpine as golang
-WORKDIR /linkerd-build
+# Cross compile from native platform to target arch
+FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v38-go as go
+WORKDIR /build
 COPY --link go.mod go.sum .
 COPY --link ./cni-plugin ./cni-plugin
 COPY --link ./proxy-init ./proxy-init
@@ -31,7 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN update-alternatives --set iptables /usr/sbin/iptables-legacy \
     && update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
 
-COPY --from=golang /go/bin/linkerd-cni /opt/cni/bin/
+COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
 COPY LICENSE .
 COPY cni-plugin/deployment/scripts/install-cni.sh .
 COPY cni-plugin/deployment/linkerd-cni.conf.default .
