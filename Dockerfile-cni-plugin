@@ -1,0 +1,42 @@
+# syntax=docker/dockerfile:1.4
+
+##
+## Go
+##
+
+# Cross compile from native platform to target arch
+FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v38-go as go
+WORKDIR /build
+COPY --link go.mod go.sum .
+COPY --link ./cni-plugin ./cni-plugin
+COPY --link ./proxy-init ./proxy-init
+COPY --link ./internal ./internal
+RUN go mod download
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
+    go build -o /go/bin/linkerd-cni -mod=readonly -ldflags "-s -w" -v ./cni-plugin/
+
+##
+## Runtime
+##
+
+FROM debian:bullseye-slim
+WORKDIR /linkerd
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    iptables \
+    inotify-tools \
+    procps \
+    jq && \
+    rm -rf /var/lib/apt/lists/*
+
+# We still rely on old iptables-legacy syntax.
+RUN update-alternatives --set iptables /usr/sbin/iptables-legacy \
+    && update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+
+COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
+COPY LICENSE .
+COPY cni-plugin/deployment/scripts/install-cni.sh .
+COPY cni-plugin/deployment/linkerd-cni.conf.default .
+COPY cni-plugin/deployment/scripts/filter.jq .
+ENV PATH=/linkerd:/opt/cni/bin:$PATH
+CMD ["install-cni.sh"]
