@@ -77,7 +77,7 @@ func TestLinkerdCNIIsLastPlugin(t *testing.T) {
 		var conflist map[string]any
 		err = json.Unmarshal(conflistFile, &conflist)
 		if err != nil {
-			t.Fatalf("unmarshaling json failed: %e", err)
+			t.Fatalf("unmarshaling conflist json failed: %e", err)
 		}
 
 		if conflist["cniVersion"] != "1.0.0" {
