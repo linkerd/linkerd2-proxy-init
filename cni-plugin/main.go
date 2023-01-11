@@ -225,7 +225,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			if outboundSkipOverride != "" {
-				logEntry.Infof("linkerd-cni: overriding OutboundPortsToIgnore to %s", outboundSkipOverride)
+				logEntry.Debugf("linkerd-cni: overriding OutboundPortsToIgnore to %s", outboundSkipOverride)
 				options.OutboundPortsToIgnore = strings.Split(outboundSkipOverride, ",")
 			}
 
