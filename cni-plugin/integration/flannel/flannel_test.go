@@ -66,7 +66,7 @@ func TestLinkerdCNIIsLastPlugin(t *testing.T) {
 		}
 
 		if !contains(filenames, FlannelConflist) {
-			t.Fatalf("files do not contain 10-flannel.conflist, instead they contain: %s", filenames)
+			t.Fatalf("files do not contain %s, instead they contain: %s", FlannelConflist, filenames)
 		}
 
 		conflistFile, err := os.ReadFile(ConfigDirectory + "/" + FlannelConflist)
