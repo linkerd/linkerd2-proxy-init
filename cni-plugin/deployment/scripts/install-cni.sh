@@ -113,7 +113,7 @@ trap 'echo "SIGINT received, simply exiting..."; cleanup' INT
 trap 'echo "SIGTERM received, simply exiting..."; cleanup' TERM
 trap 'echo "SIGHUP received, simply exiting..."; cleanup' HUP
 
-# Install CNI bin will copy the linkerd-cni binary on the host's filesystem
+# Copy the linkerd-cni binary to a known location where CNI will look.
 install_cni_bin() {
   # Place the new binaries if the mounted directory is writeable.
   dir="${CONTAINER_MOUNT_PREFIX}${DEST_CNI_BIN_DIR}"
