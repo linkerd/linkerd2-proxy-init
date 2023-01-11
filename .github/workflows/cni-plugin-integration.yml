@@ -5,7 +5,7 @@ on:
   pull_request:
     paths:
       - Dockerfile-cni-plugin
-      - cni-plugin/integration/smoketest/Dockerfile-tester
+      - cni-plugin/integration/flannel/Dockerfile-tester
       - cni-plugin/integration/run.sh
       - cni-plugin/**.go
 
