@@ -1,4 +1,4 @@
-package smoketest
+package flannel
 
 import (
 	"encoding/json"
