@@ -202,7 +202,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 
 		if containsLinkerdProxy && !containsInitContainer {
-			logEntry.Infof("linkerd-cni: setting up iptables firewall for %s/%s", namespace, pod)
+			logEntry.Debugf("linkerd-cni: setting up iptables firewall for %s/%s", namespace, pod)
 			options := cmd.RootOptions{
 				IncomingProxyPort:     conf.ProxyInit.IncomingProxyPort,
 				OutgoingProxyPort:     conf.ProxyInit.OutgoingProxyPort,
@@ -236,7 +236,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 
 			if inboundSkipOverride != "" {
-				logEntry.Infof("linkerd-cni: overriding InboundPortsToIgnore to %s", inboundSkipOverride)
+				logEntry.Debugf("linkerd-cni: overriding InboundPortsToIgnore to %s", inboundSkipOverride)
 				options.InboundPortsToIgnore = strings.Split(inboundSkipOverride, ",")
 			}
 
@@ -261,7 +261,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 			if pod.GetLabels()["controller-component"] != "" {
 				// Skip 443 outbound port if its a control plane component
-				logEntry.Info("linkerd-cni: adding 443 to OutboundPortsToIgnore as it's a control plane component")
+				logEntry.Debug("linkerd-cni: adding 443 to OutboundPortsToIgnore as it's a control plane component")
 				options.OutboundPortsToIgnore = append(options.OutboundPortsToIgnore, "443")
 			}
 
@@ -293,7 +293,6 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return types.PrintResult(conf.PrevResult, conf.CNIVersion)
 	}
 
-	// TODO(stevej): decode this comment, determine correct log level
 	logrus.Debug("linkerd-cni: no previous result to pass through, assume stand-alone run, send ok")
 
 	return types.PrintResult(&cniv1.Result{CNIVersion: cniv1.ImplementedSpecVersion}, conf.CNIVersion)
