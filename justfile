@@ -5,10 +5,7 @@
 proxy-init-image := "test.l5d.io/linkerd/proxy-init:test"
 _test-image := "test.l5d.io/linkerd/iptables-tester:test"
 cni-plugin-image := "test.l5d.io/linkerd/cni-plugin:test"
-<<<<<<< HEAD
 _cni-plugin-test-image := "test.l5d.io/linkerd/cni-plugin-tester:test"
-=======
->>>>>>> main
 
 ##
 ## Recipes
