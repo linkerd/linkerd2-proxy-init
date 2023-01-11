@@ -1,10 +1,16 @@
 package smoketest
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"testing"
+)
+
+const (
+	ConfigDirectory = "/var/lib/rancher/k3s/agent/etc/cni/net.d"
+	FlannelConflist = "10-flannel.conflist"
 )
 
 func ls(dir string, t *testing.T) []string {
@@ -41,35 +47,47 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestPodShouldSucced(t *testing.T) {
+func TestLinkerdCNIIsLastPlugin(t *testing.T) {
 	t.Parallel()
 
-	t.Run("success in all in your mind", func(t *testing.T) {
-		fmt.Println("we did it!")
-	})
-}
+	t.Run("succeeds when linkerd-cni is the last plugin", func(t *testing.T) {
+		if _, err := os.Stat(ConfigDirectory); os.IsNotExist(err) {
+			t.Fatalf("Directory does not exist. Check if volume mount exists: %s", ConfigDirectory)
+		}
 
-func TestPodShouldSkip(t *testing.T) {
-	t.Parallel()
+		filenames := ls(ConfigDirectory, t)
 
-	t.Run("succeeds connecting to pod directly through container's exposed port", func(t *testing.T) {
-		t.Skip("skipping because it's not ready yet.")
-	})
-}
-
-func TestCanReadConfigFiles(t *testing.T) {
-	t.Parallel()
-
-	directory := "/var/lib/rancher/k3s/agent/etc/cni/net.d"
-
-	t.Run("succeeds when we are able to read the linkerd-cni config file", func(t *testing.T) {
-		filenames := ls(directory, t)
 		if len(filenames) == 0 {
-			t.Fatalf("no files found in %s", directory)
-		}
-		if !contains(filenames, "ZZZ-linkerd-cni-kubeconfig") {
-			t.Fatalf("files do not contain ZZZ-linkerd-cni-kubeconfig, instead they contain: %s", filenames)
+			t.Fatalf("no files found in %s", ConfigDirectory)
 		}
 
+		if len(filenames) > 2 {
+			t.Fatalf("too many files found in %s: %s ", ConfigDirectory, filenames)
+		}
+
+		if !contains(filenames, FlannelConflist) {
+			t.Fatalf("files do not contain 10-flannel.conflist, instead they contain: %s", filenames)
+		}
+
+		conflistFile, err := os.ReadFile(ConfigDirectory + "/" + FlannelConflist)
+		if err != nil {
+			t.Fatalf("could not read %s: %e", FlannelConflist, err)
+		}
+
+		var conflist map[string]any
+		err = json.Unmarshal(conflistFile, &conflist)
+		if err != nil {
+			t.Fatalf("unmarshaling json failed: %e", err)
+		}
+
+		if conflist["cniVersion"] != "1.0.0" {
+			t.Fatalf("expected cniVersion 1.0.0, instead saw %s", conflistFile)
+		}
+
+		plugins := conflist["plugins"].([]interface{})
+		lastPlugin := plugins[len(plugins)-1].(map[string]any)
+		if lastPlugin["name"] != "linkerd-cni" {
+			t.Fatalf("linkerd-cni was not last in the plugins list")
+		}
 	})
 }
