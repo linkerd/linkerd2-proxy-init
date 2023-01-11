@@ -141,7 +141,7 @@ build-cni-plugin-image *args='--load':
 # Build docker image for cni-plugin-tester (Development)
 build-cni-plugin-test-image *args='--load':
     docker buildx build . \
-        --file=cni-plugin/integration/smoketest/Dockerfile-tester \
+        --file=cni-plugin/integration/flannel/Dockerfile-tester \
         --tag={{ _cni-plugin-test-image }} \
         {{ args }}
 
