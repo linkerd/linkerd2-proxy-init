@@ -36,9 +36,9 @@ import (
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // ProxyInit is the configuration for the proxy-init binary
@@ -263,7 +263,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			if pod.GetLabels()["controller-component"] != "" {
 				// Skip k8s api server ports on the outbound side if pod is a
 				// control plane component
-				skippedPorts, err := getApiServerPorts(ctx, client)
+				skippedPorts, err := getAPIServerPorts(ctx, client)
 				if err != nil {
 					// If we cannot retrieve the 'kubernetes' service's ports (for
 					// whatever reason), skip default ports: 443, 6443
@@ -319,7 +319,7 @@ func cmdDel(args *skel.CmdArgs) error {
 	return nil
 }
 
-func getApiServerPorts(ctx context.Context, api *kubernetes.Clientset) ([]string, error) {
+func getAPIServerPorts(ctx context.Context, api *kubernetes.Clientset) ([]string, error) {
 	service, err := api.CoreV1().Services("default").Get(ctx, "kubernetes", metav1.GetOptions{})
 	if err != nil {
 		return []string{}, err
