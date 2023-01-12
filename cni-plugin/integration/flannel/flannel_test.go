@@ -13,26 +13,19 @@ const (
 	FlannelConflist = "10-flannel.conflist"
 )
 
-func ls(dir string, t *testing.T) []string {
-	files, err := os.ReadDir(dir)
+// Given a directory, return a map of filename->struct{}
+func files(directory string) (map[string]struct{}, error) {
+	files, err := os.ReadDir(directory)
 	if err != nil {
-		t.Fatalf("failed to list files: %v", err)
-	}
-	fileNames := make([]string, len(files))
-	for i, f := range files {
-		fileNames[i] = f.Name()
-	}
-	return fileNames
-}
-
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
+		return nil, err
 	}
 
-	return false
+	fileNames := make(map[string]struct{}, len(files))
+	for _, f := range files {
+		fileNames[f.Name()] = struct{}{}
+	}
+
+	return fileNames, nil
 }
 
 func TestMain(m *testing.M) {
@@ -47,7 +40,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestLinkerdCNIIsLastPlugin(t *testing.T) {
+// TODO(stevej): this could be a test helper as we want it to be true for every CNI integration
+func TestLinkerdIsLastCNIPlugin(t *testing.T) {
 	t.Parallel()
 
 	t.Run("succeeds when linkerd-cni is the last plugin", func(t *testing.T) {
@@ -55,7 +49,11 @@ func TestLinkerdCNIIsLastPlugin(t *testing.T) {
 			t.Fatalf("Directory does not exist. Check if volume mount exists: %s", ConfigDirectory)
 		}
 
-		filenames := ls(ConfigDirectory, t)
+		filenames, err := files(ConfigDirectory)
+
+		if err != nil {
+			t.Fatalf("unable to read files from directory %s due to error: %e", ConfigDirectory, err)
+		}
 
 		if len(filenames) == 0 {
 			t.Fatalf("no files found in %s", ConfigDirectory)
@@ -65,8 +63,8 @@ func TestLinkerdCNIIsLastPlugin(t *testing.T) {
 			t.Fatalf("too many files found in %s: %s ", ConfigDirectory, filenames)
 		}
 
-		if !contains(filenames, FlannelConflist) {
-			t.Fatalf("files do not contain %s, instead they contain: %s", FlannelConflist, filenames)
+		if _, ok := filenames[FlannelConflist]; !ok {
+			t.Fatalf("filenames does not contain %s, instead it contains: %s", FlannelConflist, filenames)
 		}
 
 		conflistFile, err := os.ReadFile(ConfigDirectory + "/" + FlannelConflist)
