@@ -7,8 +7,7 @@ on:
       - Dockerfile-cni-plugin
       - cni-plugin/integration/flannel/Dockerfile-tester
       - cni-plugin/integration/run.sh
-      - cni-plugin/**.go
-
+      - cni-plugin/**
 
 jobs:
   integration:
