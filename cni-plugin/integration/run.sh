@@ -57,7 +57,10 @@ k run linkerd-proxy \
     --restart=Never \
     --rm \
     -- \
-    /usr/lib/linkerd/linkerd2-network-validator --log-format plain --log-level debug --connect-addr 1.1.1.1:20001 --listen-addr 0.0.0.0:4140 --timeout 10s
+    /usr/lib/linkerd/linkerd2-network-validator --log-format plain \
+      --log-level debug --connect-addr 1.1.1.1:20001 \
+      --listen-addr 0.0.0.0:4140 --timeout 10s
+
 echo 'PASS: Network Validator'
 
 # the integration tests to run. pass in as an environment variable.
