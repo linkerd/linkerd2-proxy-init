@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -euxo pipefail
 
 cd "${BASH_SOURCE[0]%/*}"
 
@@ -60,6 +60,10 @@ k run linkerd-proxy \
     /usr/lib/linkerd/linkerd2-network-validator --log-format plain --log-level debug --connect-addr 1.1.1.1:20001 --listen-addr 0.0.0.0:4140 --timeout 10s
 echo 'PASS: Network Validator'
 
+# the integration tests to run. pass in as an environment variable.
+# defaults to the tests in the flannel subdirectory
+SUBDIRECTORY=${SUBDIRECTORY-flannel}
+
 # This needs to use the name linkerd-proxy so that linkerd-cni will run.
 echo '# Running tester...'
 k run linkerd-proxy \
@@ -68,31 +72,31 @@ k run linkerd-proxy \
         --image-pull-policy=Never \
         --namespace=cni-plugin-test \
         --restart=Never \
-        --overrides='{
-               "apiVersion": "v1",
-               "spec": {
-                  "containers": [
+        --overrides="{
+               \"apiVersion\": \"v1\",
+               \"spec\": {
+                  \"containers\": [
                      {
-                        "name": "linkerd-proxy",
-                        "image": "test.l5d.io/linkerd/cni-plugin-tester:test",
-                        "command": ["go", "test", "-v", "./cni-plugin/integration/...", "-integration-tests"],
-                        "volumeMounts": [
+                        \"name\": \"linkerd-proxy\",
+                        \"image\": \"test.l5d.io/linkerd/cni-plugin-tester:test\",
+                        \"command\": [\"go\", \"test\", \"-v\", \"./cni-plugin/integration/${SUBDIRECTORY}...\", \"-integration-tests\"],
+                        \"volumeMounts\": [
                            {
-                              "mountPath": "/var/lib/rancher/k3s/agent/etc/cni/net.d",
-                              "name": "cni-net-dir"
+                              \"mountPath\": \"/var/lib/rancher/k3s/agent/etc/cni/net.d\",
+                              \"name\": \"cni-net-dir\"
                            }
                         ]
                      }
                   ],
-                  "volumes": [
+                  \"volumes\": [
                      {
-                        "name": "cni-net-dir",
-                        "hostPath": {
-                           "path": "/var/lib/rancher/k3s/agent/etc/cni/net.d"
+                        \"name\": \"cni-net-dir\",
+                        \"hostPath\": {
+                           \"path\": \"/var/lib/rancher/k3s/agent/etc/cni/net.d\"
                         }
                      }
                   ]
                },
-               "status": {}
-            }' \
+               \"status\": {}
+            }" \
         --rm

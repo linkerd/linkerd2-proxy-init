@@ -141,7 +141,7 @@ build-cni-plugin-image *args='--load':
 # Build docker image for cni-plugin-tester (Development)
 build-cni-plugin-test-image *args='--load':
     docker buildx build . \
-        --file=cni-plugin/integration/flannel/Dockerfile-tester \
+        --file=cni-plugin/integration/Dockerfile-tester \
         --tag={{ _cni-plugin-test-image }} \
         {{ args }}
 
@@ -152,9 +152,9 @@ cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-i
 # Run cni-plugin integration tests after preparing dependencies
 cni-plugin-test-integration: cni-plugin-test-integration-deps cni-plugin-test-integration-run
 
-# Run integration tests without preparing dependencies
+# Run flannel integration tests without preparing dependencies
 cni-plugin-test-integration-run:
-    TEST_CTX="k3d-$(just-k3d --evaluate K3D_CLUSTER_NAME)" ./cni-plugin/integration/run.sh
+    SUBDIRECTORY=flannel TEST_CTX="k3d-$(just-k3d --evaluate K3D_CLUSTER_NAME)" ./cni-plugin/integration/run.sh
 
 
 

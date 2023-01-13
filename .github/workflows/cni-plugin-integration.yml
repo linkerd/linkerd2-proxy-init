@@ -8,6 +8,7 @@ on:
       - cni-plugin/integration/flannel/Dockerfile-tester
       - cni-plugin/integration/run.sh
       - cni-plugin/**
+      - internal/**
 
 jobs:
   integration:
