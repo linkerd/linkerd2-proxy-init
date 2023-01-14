@@ -65,7 +65,7 @@ echo 'PASS: Network Validator'
 
 # the integration tests to run. pass in as an environment variable.
 # defaults to the tests in the flannel subdirectory
-SUBDIRECTORY=${SUBDIRECTORY-flannel}
+SCENARIO=${SCENARIO-flannel}
 
 # This needs to use the name linkerd-proxy so that linkerd-cni will run.
 echo '# Running tester...'
@@ -82,7 +82,7 @@ k run linkerd-proxy \
                      {
                         \"name\": \"linkerd-proxy\",
                         \"image\": \"test.l5d.io/linkerd/cni-plugin-tester:test\",
-                        \"command\": [\"go\", \"test\", \"-v\", \"./cni-plugin/integration/${SUBDIRECTORY}...\", \"-integration-tests\"],
+                        \"command\": [\"go\", \"test\", \"-v\", \"./cni-plugin/integration/${SCENARIO}...\", \"-integration-tests\"],
                         \"volumeMounts\": [
                            {
                               \"mountPath\": \"/var/lib/rancher/k3s/agent/etc/cni/net.d\",

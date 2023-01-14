@@ -150,11 +150,12 @@ cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-i
     @just-k3d import {{ _cni-plugin-test-image }} {{ cni-plugin-image }}
 
 # Run cni-plugin integration tests after preparing dependencies
-cni-plugin-test-integration: cni-plugin-test-integration-deps cni-plugin-test-integration-run
+# For new scenarios, add them after cni-plugin-test-integration-deps
+cni-plugin-test-integration: cni-plugin-test-integration-deps cni-plugin-test-integration-flannel
 
 # Run flannel integration tests without preparing dependencies
-cni-plugin-test-integration-run:
-    SUBDIRECTORY=flannel TEST_CTX="k3d-$(just-k3d --evaluate K3D_CLUSTER_NAME)" ./cni-plugin/integration/run.sh
+cni-plugin-test-integration-flannel:
+    SCENARIO=flannel TEST_CTX="k3d-$(just-k3d --evaluate K3D_CLUSTER_NAME)" ./cni-plugin/integration/run.sh
 
 
 
