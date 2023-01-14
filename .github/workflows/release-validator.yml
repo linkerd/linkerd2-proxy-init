@@ -70,7 +70,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
+      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
           path: ${{ runner.temp }}/artifacts
       - run: find "$RUNNER_TEMP"/artifacts -type f -ls
