@@ -24,9 +24,9 @@ function create_test_lab() {
 
 function cleanup() {
     echo '# Cleaning up...'
-    k delete -f manifests/linkerd-cni.yaml
-    k delete serviceaccount linkerd-cni
-    k delete ns cni-plugin-test
+    k delete -f manifests/linkerd-cni.yaml || echo "could not delete -f manifests/linkerd-cni.yaml"
+    k delete serviceaccount linkerd-cni || echo "could not delete serviceaccount linkerd-cni"
+    k delete ns cni-plugin-test || echo "could not delete namespace cni-plugin-test"
 }
 
 trap cleanup EXIT
@@ -40,7 +40,9 @@ create_test_lab
 
 # Wait for linkerd-cni daemonset to complete
 if ! k rollout status --timeout=30s daemonset/linkerd-cni -n linkerd-cni; then
-  echo "!! linkerd-cni didn't rollout properly, check logs";
+  echo "!! linkerd-cni didn't rollout properly, printing logs";
+  k describe ds linkerd-cni
+  k logs linkerd-cni -n linkerd-cni
   exit $?
 fi
 
