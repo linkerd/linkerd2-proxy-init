@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1.4
+#
+# A single container holds all of the test code and it must be
+# specified in `run.sh` which tests you want to run.
+#
+# There's no ENTRYPOINT as integration test runners will require
+# two things:
+#  1) a specific k3d cluster configured with CNI
+#  2) a test suite (e.g. `flannel.go`) runs with a configured CNI plugin.
+
+FROM golang:1.18-alpine AS build
+ENV GOCACHE=/tmp/
+WORKDIR /src
+COPY --link go.mod go.sum .
+COPY --link cni-plugin cni-plugin
+COPY --link internal internal
+COPY --link proxy-init proxy-init
+RUN go mod tidy && go mod download
