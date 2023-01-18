@@ -44,5 +44,5 @@ the tag you created both locally and remotely.
 `git push origin :refs/tags/$TAGNAME`
 
 **Note:** If the release was successful then a docker image was also pushed
-for `proxy-init` and `cni-plugin`. If you think this needs to be deleted, consult with your
-peers.
+for `proxy-init` and `cni-plugin`. If you think this needs to be deleted, consult
+with your peers.
