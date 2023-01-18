@@ -41,8 +41,8 @@ create_test_lab
 # Wait for linkerd-cni daemonset to complete
 if ! k rollout status --timeout=30s daemonset/linkerd-cni -n linkerd-cni; then
   echo "!! linkerd-cni didn't rollout properly, printing logs";
-  k describe ds linkerd-cni
-  k logs linkerd-cni -n linkerd-cni
+  k describe ds linkerd-cni || echo "daemonset linkerd-cni not found"
+  k logs linkerd-cni -n linkerd-cni || echo "logs not found for linkerd-cni"
   exit $?
 fi
 
