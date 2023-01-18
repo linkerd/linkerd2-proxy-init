@@ -8,6 +8,7 @@ The Tag identifier format is:
 
     * proxy-init -> `proxy-init/vX.Y.Z`
     * validator -> `validator/vX.Y.Z`
+    * cni-plugin -> `cni-plugin/vX.Y.Z`
 
 ## Step 1: Prepare an appropriate log message for the release
 
@@ -43,5 +44,5 @@ the tag you created both locally and remotely.
 `git push origin :refs/tags/$TAGNAME`
 
 **Note:** If the release was successful then a docker image was also pushed
-for `proxy-init`. If you think this needs to be deleted, consult with your
+for `proxy-init` and `cni-plugin`. If you think this needs to be deleted, consult with your
 peers.

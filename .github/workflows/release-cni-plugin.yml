@@ -1,0 +1,97 @@
+name: cni-plugin release
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/release-cni-plugin.yml
+  push:
+    tags: ["cni-plugin/v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  meta:
+    timeout-minutes: 3
+    runs-on: ubuntu-latest
+    steps:
+      - id: meta
+        shell: bash
+        run: |
+          set -eu
+          shopt -s extglob
+          ref='${{ github.ref }}'
+          if [[ "$ref" == refs/tags/cni-plugin/v+([0-9]).+([0-9]).+([0-9])?(-+([a-z0-9-])) ]]; then
+            ( echo version="${ref##refs/tags/cni-plugin/}"
+              echo mode=release
+            ) >> "$GITHUB_OUTPUT"
+          else
+            sha='${{ github.sha }}'
+            ( echo version="test-${sha:0:7}"
+              echo mode=test
+            ) >> "$GITHUB_OUTPUT"
+          fi
+    outputs:
+      repo: ghcr.io/${{ github.repository_owner }}/cni-plugin
+      mode: ${{ steps.meta.outputs.mode }}
+      version: ${{ steps.meta.outputs.version }}
+
+  docker-publish:
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write # needed for signing the images with GitHub OIDC token
+    steps:
+      # Build multi-arch docker images for cni-plugin:
+      - uses: actions/cache@58c146cc91c5b9e778e71775dfe9bf1442ad9a12
+        with:
+          path: ${{ runner.temp }}/.buildx-cache
+          key: cni-plugin-${{ needs.meta.outputs.mode }}-${{ needs.meta.outputs.version }}
+          restore-keys: cni-plugin-${{ needs.meta.outputs.mode }}-
+
+      - uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18
+      - uses: linkerd/dev/actions/setup-tools@v38
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+      - run: |
+          just cni-plugin-image='${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}' \
+                build-cni-plugin-image \
+                  --cache-from type=local,src="$RUNNER_TEMP/.buildx-cache" \
+                  --cache-to type=local,dest="$RUNNER_TEMP/.buildx-cache",mode=max \
+                  --platform linux/amd64,linux/arm64,linux/arm/v7
+      - run: just-dev prune-action-cache "$RUNNER_TEMP/.buildx-cache"
+
+      # Only publish images on release
+      - if: needs.meta.outputs.mode == 'release'
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.DOCKER_GHCR_USERNAME }}
+          password: ${{ secrets.DOCKER_GHCR_PAT }}
+      - if: needs.meta.outputs.mode == 'release'
+        run: |
+          just cni-plugin-image='${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}' \
+                build-cni-plugin-image \
+                  --cache-from type=local,src="$RUNNER_TEMP/.buildx-cache" \
+                  --cache-to type=local,dest="$RUNNER_TEMP/.buildx-cache",mode=max \
+                  --platform linux/amd64,linux/arm64,linux/arm/v7 \
+                  --output type=registry
+      - if: needs.meta.outputs.mode == 'release'
+        uses: sigstore/cosign-installer@9becc617647dfa20ae7b1151972e9b3a2c338a2b
+      - if: needs.meta.outputs.mode == 'release'
+        run: cosign sign "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+  github:
+    needs: [meta, docker-publish]
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+      - if: needs.meta.outputs.mode == 'release'
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        with:
+          name: cni-plugin ${{ needs.meta.outputs.version }}
