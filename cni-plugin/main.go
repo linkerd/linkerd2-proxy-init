@@ -203,7 +203,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		}
 
 		if containsLinkerdProxy && !containsInitContainer {
-			logEntry.Debug("linkerd-cni: setting up iptables firewall")
+			logEntry.Debugf("linkerd-cni: setting up iptables firewall for %s/%s", namespace, pod)
 			options := cmd.RootOptions{
 				IncomingProxyPort:     conf.ProxyInit.IncomingProxyPort,
 				OutgoingProxyPort:     conf.ProxyInit.OutgoingProxyPort,
@@ -309,13 +309,13 @@ func cmdAdd(args *skel.CmdArgs) error {
 }
 
 func cmdCheck(args *skel.CmdArgs) error {
-	logrus.Debug("linkerd-cni: cmdCheck not implemented")
+	logrus.Info("linkerd-cni: check called but not implemented")
 	return nil
 }
 
 // cmdDel is called for DELETE requests
 func cmdDel(args *skel.CmdArgs) error {
-	logrus.Debug("linkerd-cni: cmdDel not implemented")
+	logrus.Info("linkerd-cni: delete called but not implemented")
 	return nil
 }
 
