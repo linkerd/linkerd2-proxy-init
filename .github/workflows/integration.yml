@@ -22,3 +22,6 @@ jobs:
       - run: just build-proxy-init-test-image
       - run: just proxy-init-test-integration-deps
       - run: just proxy-init-test-integration-run
+      - run: just build-cni-plugin-image
+      - run: just build-cni-plugin-test-image
+      - run: just cni-plugin-test-integration
