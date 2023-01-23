@@ -15,10 +15,13 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-20.04
     steps:
-      - uses: linkerd/dev/actions/setup-tools@v38
+      - uses: linkerd/dev/actions/setup-tools@v39
       - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
       - run: just k3d-create
       - run: just build-proxy-init-image
       - run: just build-proxy-init-test-image
       - run: just proxy-init-test-integration-deps
       - run: just proxy-init-test-integration-run
+      - run: just build-cni-plugin-image
+      - run: just build-cni-plugin-test-image
+      - run: just cni-plugin-test-integration

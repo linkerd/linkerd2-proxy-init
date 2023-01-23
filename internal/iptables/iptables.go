@@ -1,9 +1,7 @@
 package iptables
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -39,7 +37,10 @@ var (
 	// ExecutionTraceID provides a unique identifier for this script's execution.
 	ExecutionTraceID = strconv.Itoa(int(time.Now().Unix()))
 
-	chainRegex = regexp.MustCompile(`-A (PROXY_INIT_OUTPUT|PROXY_INIT_REDIRECT).*`)
+	preroutingRuleRegex = regexp.MustCompile(`(?m)^-A PREROUTING (.+ )?-j PROXY_INIT_REDIRECT`)
+	outputRuleRegex     = regexp.MustCompile(`(?m)^-A OUTPUT (.+ )?-j PROXY_INIT_OUTPUT`)
+	redirectChainRegex  = regexp.MustCompile(`(?m)^:PROXY_INIT_REDIRECT `)
+	outputChainRegex    = regexp.MustCompile(`(?m)^:PROXY_INIT_OUTPUT `)
 )
 
 // FirewallConfiguration specifies how to configure a pod's iptables.
@@ -67,24 +68,17 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	log.Debugf("using '%s' to set-up firewall rules", firewallConfiguration.BinPath)
 	log.Debugf("using '%s' to list all available rules", firewallConfiguration.SaveBinPath)
 
-	b := bytes.Buffer{}
-	if err := executeCommand(firewallConfiguration, firewallConfiguration.makeShowAllRules(), &b); err != nil {
+	existingRules, err := executeCommand(firewallConfiguration, firewallConfiguration.makeShowAllRules())
+	if err != nil {
 		log.Error("aborting firewall configuration")
 		return err
 	}
 
 	commands := make([]*exec.Cmd, 0)
 
-	matches := chainRegex.FindAllString(b.String(), 1)
-	if len(matches) > 0 {
-		log.Infof("skipping iptables setup: found %d existing chains", len(matches))
-		log.Infof("matching chains: %v", matches)
-		return nil
-	}
+	commands = firewallConfiguration.addIncomingTrafficRules(existingRules, commands)
 
-	commands = firewallConfiguration.addIncomingTrafficRules(commands)
-
-	commands = firewallConfiguration.addOutgoingTrafficRules(commands)
+	commands = firewallConfiguration.addOutgoingTrafficRules(existingRules, commands)
 
 	if firewallConfiguration.UseWaitFlag {
 		log.Debug("'useWaitFlag' set: iptables will wait for xtables to become available")
@@ -95,12 +89,12 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 			cmd.Args = append(cmd.Args, "-w")
 		}
 
-		if err := executeCommand(firewallConfiguration, cmd, nil); err != nil {
+		if _, err := executeCommand(firewallConfiguration, cmd); err != nil {
 			return err
 		}
 	}
 
-	_ = executeCommand(firewallConfiguration, firewallConfiguration.makeShowAllRules(), nil)
+	_, _ = executeCommand(firewallConfiguration, firewallConfiguration.makeShowAllRules())
 
 	return nil
 }
@@ -111,8 +105,12 @@ func formatComment(text string) string {
 	return fmt.Sprintf("proxy-init/%s/%s", text, ExecutionTraceID)
 }
 
-func (fc FirewallConfiguration) addOutgoingTrafficRules(commands []*exec.Cmd) []*exec.Cmd {
-	commands = append(commands, fc.makeCreateNewChain(outputChainName, "redirect-common-chain"))
+func (fc FirewallConfiguration) addOutgoingTrafficRules(existingRules []byte, commands []*exec.Cmd) []*exec.Cmd {
+	if outputChainRegex.Find(existingRules) == nil {
+		commands = append(commands, fc.makeCreateNewChain(outputChainName))
+	} else {
+		commands = append(commands, fc.makeFlushChain(outputChainName))
+	}
 
 	// Ignore traffic from the proxy
 	if fc.ProxyUID > 0 {
@@ -126,32 +124,40 @@ func (fc FirewallConfiguration) addOutgoingTrafficRules(commands []*exec.Cmd) []
 
 	commands = append(commands, fc.makeRedirectChainToPort(outputChainName, fc.ProxyOutgoingPort, "redirect-all-outgoing-to-proxy-port"))
 
-	// Redirect all remaining outbound traffic to the proxy.
-	commands = append(
-		commands,
-		fc.makeJumpFromChainToAnotherForAllProtocols(
-			IptablesOutputChainName,
-			outputChainName,
-			"install-proxy-init-output",
-			false))
+	if outputRuleRegex.Find(existingRules) == nil {
+		// Redirect all remaining outbound traffic to the proxy.
+		commands = append(
+			commands,
+			fc.makeJumpFromChainToAnotherForAllProtocols(
+				IptablesOutputChainName,
+				outputChainName,
+				"install-proxy-init-output",
+				false))
+	}
 
 	return commands
 }
 
-func (fc FirewallConfiguration) addIncomingTrafficRules(commands []*exec.Cmd) []*exec.Cmd {
-	commands = append(commands, fc.makeCreateNewChain(redirectChainName, "redirect-common-chain"))
+func (fc FirewallConfiguration) addIncomingTrafficRules(existingRules []byte, commands []*exec.Cmd) []*exec.Cmd {
+	if redirectChainRegex.Find(existingRules) == nil {
+		commands = append(commands, fc.makeCreateNewChain(redirectChainName))
+	} else {
+		commands = append(commands, fc.makeFlushChain(redirectChainName))
+	}
 	commands = fc.addRulesForIgnoredPorts(fc.InboundPortsToIgnore, redirectChainName, commands)
 	commands = fc.addRulesForIgnoredSubnets(redirectChainName, commands)
 	commands = fc.addRulesForInboundPortRedirect(redirectChainName, commands)
 
-	// Redirect all remaining inbound traffic to the proxy.
-	commands = append(
-		commands,
-		fc.makeJumpFromChainToAnotherForAllProtocols(
-			IptablesPreroutingChainName,
-			redirectChainName,
-			"install-proxy-init-prerouting",
-			false))
+	if preroutingRuleRegex.Find(existingRules) == nil {
+		// Redirect all remaining inbound traffic to the proxy.
+		commands = append(
+			commands,
+			fc.makeJumpFromChainToAnotherForAllProtocols(
+				IptablesPreroutingChainName,
+				redirectChainName,
+				"install-proxy-init-prerouting",
+				false))
+	}
 
 	return commands
 }
@@ -222,7 +228,7 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 	return append(destinationSlices, destinations)
 }
 
-func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, cmdOut io.Writer) error {
+func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) ([]byte, error) {
 	if firewallConfiguration.NetNs != "" {
 		// BusyBox's `nsenter` needs `--` to separate nsenter arguments from the
 		// command.
@@ -234,7 +240,7 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, 
 	log.Info(cmd.String())
 
 	if firewallConfiguration.SimulateOnly {
-		return nil
+		return nil, nil
 	}
 
 	out, err := cmd.CombinedOutput()
@@ -243,20 +249,7 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd, 
 		log.Infof("%s", out)
 	}
 
-	if err != nil {
-		return err
-	}
-
-	if cmdOut == nil {
-		return nil
-	}
-
-	_, err = io.WriteString(cmdOut, string(out))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return out, err
 }
 
 func (fc FirewallConfiguration) makeIgnoreUserID(chainName string, uid int, comment string) *exec.Cmd {
@@ -270,12 +263,16 @@ func (fc FirewallConfiguration) makeIgnoreUserID(chainName string, uid int, comm
 		"--comment", formatComment(comment))
 }
 
-func (fc FirewallConfiguration) makeCreateNewChain(name string, comment string) *exec.Cmd {
+func (fc FirewallConfiguration) makeFlushChain(name string) *exec.Cmd {
 	return exec.Command(fc.BinPath,
 		"-t", "nat",
-		"-N", name,
-		"-m", "comment",
-		"--comment", formatComment(comment))
+		"-F", name)
+}
+
+func (fc FirewallConfiguration) makeCreateNewChain(name string) *exec.Cmd {
+	return exec.Command(fc.BinPath,
+		"-t", "nat",
+		"-N", name)
 }
 
 func (fc FirewallConfiguration) makeRedirectChainToPort(chainName string, portToRedirect int, comment string) *exec.Cmd {
