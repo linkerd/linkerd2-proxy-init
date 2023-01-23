@@ -1,4 +1,4 @@
-FROM ghcr.io/linkerd/dev:v38-go
+FROM ghcr.io/linkerd/dev:v39-go
 ENV GOCACHE=/tmp/
 WORKDIR /src
 COPY go.mod go.sum .
