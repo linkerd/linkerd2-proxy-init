@@ -128,6 +128,7 @@ spec:
       # that Kubernetes doesn't keep trying to restart it.
       - name: install-cni
         image: test.l5d.io/linkerd/cni-plugin:test
+        #image: cr.l5d.io/linkerd/cni-plugin:edge-22.12.1
         env:
         - name: DEST_CNI_NET_DIR
           valueFrom:
