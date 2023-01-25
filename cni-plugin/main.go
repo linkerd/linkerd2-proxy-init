@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -97,6 +98,16 @@ func configureLogging(logLevel string) {
 
 	// Must log to Stderr because the CNI runtime uses Stdout as its state
 	logrus.SetOutput(os.Stderr)
+}
+
+// Called when the environment variable LINKERD_DEBUG_LOGFILE is passed in
+func logToFile(filename string) {
+	f, err := os.OpenFile("/var/log/linkerd-cni", os.O_WRONLY|os.O_CREATE, 0755) //nolint:gosec
+	if err != nil {
+		panic("failed to create file")
+	}
+	logw := io.MultiWriter(os.Stderr, f)
+	logrus.SetOutput(logw)
 }
 
 // parseConfig parses the supplied configuration (and prevResult) from stdin.
