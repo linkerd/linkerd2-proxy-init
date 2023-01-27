@@ -234,9 +234,8 @@ func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) 
 		// command.
 		//
 		// See https://github.com/rancher/k3s/issues/1434#issuecomment-629315909
-		args := []string{fmt.Sprintf("--net=%s", firewallConfiguration.NetNs)}
-		args = append(args, "--")
-		args = append(args, cmd.Args...)
+		nsArgs := fmt.Sprintf("--net=%s", firewallConfiguration.NetNs)
+		args := append([]string{nsArgs, "--"}, cmd.Args...)
 		cmd = exec.Command("nsenter", args...)
 	}
 	log.Info(cmd.String())

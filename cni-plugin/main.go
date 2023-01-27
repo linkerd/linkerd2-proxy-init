@@ -130,7 +130,6 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 
 // cmdAdd is called by the CNI runtime for ADD requests
 func cmdAdd(args *skel.CmdArgs) error {
-	logrus.Debug("linkerd-cni: cmdAdd, parsing config")
 	conf, err := parseConfig(args.StdinData)
 	if err != nil {
 		logrus.Errorf("error parsing config: %e", err)
