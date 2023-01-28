@@ -102,9 +102,9 @@ func configureLogging(logLevel string) {
 
 // Called when the environment variable LINKERD_DEBUG_LOGFILE is passed in
 func logToFile(filename string) {
-	f, err := os.OpenFile("/var/log/linkerd-cni", os.O_WRONLY|os.O_CREATE, 0755) //nolint:gosec
+	f, err := os.OpenFile("/var/log/linkerd-cni", os.O_WRONLY|os.O_CREATE, 0644) //nolint:gosec
 	if err != nil {
-		panic("failed to create file")
+		panic(fmt.Sprintf("failed to create debug log file at %s with err %e", filename, err))
 	}
 	logw := io.MultiWriter(os.Stderr, f)
 	logrus.SetOutput(logw)
