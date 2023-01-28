@@ -99,6 +99,11 @@ func configureLoggingLevel(logLevel string) {
 	}
 }
 
+// A debug log is only intended for development of linkerd-cni.
+//
+// Linkerd-cni does not manage log rotation of this file, administrators
+// who choose to enable this for production use SHOULD provide log rotation.
+//
 // Use a MultiWriter to write both to stderr and to a logfile if
 // the environment variable LINKERD_CNI_DEBUG_LOGFILE is passed in.
 func setupDebugLog() {
