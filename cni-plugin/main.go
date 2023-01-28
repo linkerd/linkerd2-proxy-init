@@ -99,14 +99,19 @@ func configureLoggingLevel(logLevel string) {
 	}
 }
 
-// Called when the environment variable LINKERD_DEBUG_LOGFILE is passed in
-func logToFile(filename string) {
-	f, err := os.OpenFile("/var/log/linkerd-cni", os.O_WRONLY|os.O_CREATE, 0644) //nolint:gosec
-	if err != nil {
-		panic(fmt.Sprintf("failed to create debug log file at %s with err %e", filename, err))
+// Use a MultiWriter to write both to stderr and to a logfile if
+// the environment variable LINKERD_CNI_DEBUG_LOGFILE is passed in.
+func setupDebugLog() {
+	if filename, ok := os.LookupEnv("LINKERD_CNI_DEBUG_LOGFILE"); ok {
+		if filename != "" {
+			f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0644) //nolint:gosec
+			if err != nil {
+				panic(fmt.Sprintf("failed to create debug log file at %s with err %e", filename, err))
+			}
+			logw := io.MultiWriter(os.Stderr, f)
+			logrus.SetOutput(logw)
+		}
 	}
-	logw := io.MultiWriter(os.Stderr, f)
-	logrus.SetOutput(logw)
 }
 
 // parseConfig parses the supplied configuration (and prevResult) from stdin.
@@ -158,6 +163,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			"version": conf.CNIVersion,
 		}).Debug("linkerd-cni: cmdAdd, config parsed")
 	}
+	setupDebugLog()
 
 	// Determine if running under k8s by checking the CNI args
 	k8sArgs := K8sArgs{}
