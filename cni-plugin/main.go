@@ -82,10 +82,12 @@ type PluginConf struct {
 }
 
 func main() {
+	// Must log to Stderr because the CNI runtime uses Stdout as its state
+	logrus.SetOutput(os.Stderr)
 	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, "")
 }
 
-func configureLogging(logLevel string) {
+func configureLoggingLevel(logLevel string) {
 	switch strings.ToLower(logLevel) {
 	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
@@ -94,9 +96,6 @@ func configureLogging(logLevel string) {
 	default:
 		logrus.SetLevel(logrus.WarnLevel)
 	}
-
-	// Must log to Stderr because the CNI runtime uses Stdout as its state
-	logrus.SetOutput(os.Stderr)
 }
 
 // parseConfig parses the supplied configuration (and prevResult) from stdin.
@@ -131,12 +130,12 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 
 // cmdAdd is called by the CNI runtime for ADD requests
 func cmdAdd(args *skel.CmdArgs) error {
-	logrus.Debug("linkerd-cni: cmdAdd, parsing config")
 	conf, err := parseConfig(args.StdinData)
 	if err != nil {
+		logrus.Errorf("error parsing config: %e", err)
 		return err
 	}
-	configureLogging(conf.LogLevel)
+	configureLoggingLevel(conf.LogLevel)
 
 	if conf.PrevResult != nil {
 		logrus.WithFields(logrus.Fields{
@@ -154,6 +153,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	args.Args = strings.Replace(args.Args, "K8S_POD_NAMESPACE", "K8sPodNamespace", 1)
 	args.Args = strings.Replace(args.Args, "K8S_POD_NAME", "K8sPodName", 1)
 	if err := types.LoadArgs(args.Args, &k8sArgs); err != nil {
+		logrus.Errorf("error loading args %e", err)
 		return err
 	}
 
@@ -173,16 +173,19 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 		config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(configLoadingRules, configOverrides).ClientConfig()
 		if err != nil {
+			logrus.Errorf("linkerd-cni client err with NewNonInteractiveDeferredLoadingClientConfig: %e", err)
 			return err
 		}
 
 		client, err := kubernetes.NewForConfig(config)
 		if err != nil {
+			logrus.Errorf("linkerd-cni client err with NewForConfig: %e", err)
 			return err
 		}
 
 		pod, err := client.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
+			logrus.Errorf("linkerd-cni client err in client.Pods().Get(): %e", err)
 			return err
 		}
 
