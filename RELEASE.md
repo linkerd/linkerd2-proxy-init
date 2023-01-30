@@ -13,16 +13,21 @@ The Tag identifier format is:
 ## Step 1: Prepare an appropriate log message for the release
 
 Take a look at the changes from the last release to now within the project
-subdirectory you're going to release from.
+subdirectory you're going to release from as well as `internal` if the project
+relies on code living there.
 
-`git log v2.0.0..HEAD -p proxy-init`
+`git log proxy-init/v2.1.0..HEAD -p proxy-init`
+`git log proxy-init/v2.1.0..HEAD -p internal`
 
 Prepare a commit message. For each meaningful commit since the last tag, add
 a single line. Use `git show` on another release tag to see the format we use.
 
+Note: currently `validator` doesn't rely on `internal`, while `cni-plugin` and
+`proxy-init` do.
+
 ## Step 2: Tag the release
 
-`git tag -a proxy-init/v2.1.0`
+`git tag -a proxy-init/v2.2.0`
 
 For the commit message, use what you created in Step 1.
 
@@ -30,7 +35,7 @@ For the commit message, use what you created in Step 1.
 
 By default in git, tags are local so we'll need to push the tag to `origin`.
 
-`git push origin proxy-init/v2.1.0`
+`git push origin proxy-init/v2.2.0`
 
 There you go, a release should be running in github, you can check the Actions
 page.
