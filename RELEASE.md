@@ -29,7 +29,7 @@ Note: currently `validator` doesn't rely on `internal`, while `cni-plugin` and
 
 First, find the current latest version tag for the subproject
 
-`git tag -l '<proxy-init | cni-plugin | validator>/*' --sort=-"v:refname" | head -n 1`
+`git tag -l 'proxy-init/*' --sort=-"v:refname" | head -n 1`
 
 Increase the version with a major, minor, or patch according to the changes made
 
