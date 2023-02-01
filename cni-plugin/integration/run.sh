@@ -29,6 +29,12 @@ function cleanup() {
     k delete ns cni-plugin-test || echo "could not delete namespace cni-plugin-test"
 }
 
+function install_calico() {
+  echo '# Installing Calico...'
+  local yaml="https://k3d.io/v5.3.0/usage/advanced/calico.yaml"
+  k apply -f $yaml || echo "could not apply $yaml"
+}
+
 trap cleanup EXIT
 
 if k get ns/cni-plugin-test >/dev/null 2>&1 ; then
@@ -46,6 +52,12 @@ if ! k rollout status --timeout=30s daemonset/linkerd-cni -n linkerd-cni; then
   exit $?
 fi
 
+# the integration tests to run. pass in as an environment variable.
+# defaults to the tests in the flannel subdirectory
+SCENARIO=${SCENARIO-flannel}
+if [ "$SCENARIO" == "calico" ]; then
+  install_calico
+fi
 # TODO(stevej): we don't want to rely on a linkerd build in this repo, we
 # can package network-validator separately.
 echo '# Run the network validator...'
@@ -58,16 +70,11 @@ k run linkerd-proxy \
     --namespace=cni-plugin-test \
     --restart=Never \
     --rm \
-    -- \
-    /usr/lib/linkerd/linkerd2-network-validator --log-format plain \
+    -- f
       --log-level debug --connect-addr 1.1.1.1:20001 \
       --listen-addr 0.0.0.0:4140 --timeout 10s
 
 echo 'PASS: Network Validator'
-
-# the integration tests to run. pass in as an environment variable.
-# defaults to the tests in the flannel subdirectory
-SCENARIO=${SCENARIO-flannel}
 
 # This needs to use the name linkerd-proxy so that linkerd-cni will run.
 echo '# Running tester...'
