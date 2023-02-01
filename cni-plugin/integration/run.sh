@@ -70,7 +70,7 @@ k run linkerd-proxy \
     --namespace=cni-plugin-test \
     --restart=Never \
     --rm \
-    -- f
+    -- \
       --log-level debug --connect-addr 1.1.1.1:20001 \
       --listen-addr 0.0.0.0:4140 --timeout 10s
 
