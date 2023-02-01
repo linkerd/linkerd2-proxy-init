@@ -20,14 +20,20 @@ relies on code living there.
 `git log proxy-init/v2.1.0..HEAD -p internal`
 
 Prepare a commit message. For each meaningful commit since the last tag, add
-a single line. Use `git show` on another release tag to see the format we use.
+a single line. See `git show proxy-init/v2.2.0` as an example the format we use.
 
 Note: currently `validator` doesn't rely on `internal`, while `cni-plugin` and
 `proxy-init` do.
 
 ## Step 2: Tag the release
 
-`git tag -a proxy-init/v2.2.0`
+First, find the current latest version tag for the subproject
+
+`git tag -l '<proxy-init | cni-plugin | validator>/*' --sort=-"v:refname" | head -n 1`
+
+Increase the version with a major, minor, or patch according to the changes made
+
+`git tag -a proxy-init/v2.x.x`
 
 For the commit message, use what you created in Step 1.
 
