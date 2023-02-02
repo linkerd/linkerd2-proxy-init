@@ -15,7 +15,8 @@ _print_summary() {
 }
 
 # Make CLI opts, exit if scenario not specified
-# TODO (matei): add a 'skip-cleanup' flag?
+# TODO (matei): add a 'skip-cleanup' flag, should be useful to retain resources
+# locally when something goes wrong
 _mk_opts() {
   export SCENARIO=''
 
@@ -82,6 +83,19 @@ function install_calico() {
   k apply -f "$_CALICO_YAML" || echo "could not apply $_CALICO_YAML"
 }
 
+function wait_rollout() {
+  local name="$1"
+  local ns="$2"
+  local timeout="$3"
+
+  if ! k rollout status --timeout="$timeout" "$name" -n "$ns"; then
+    echo "!! $name didn't rollout properly, printing logs";
+    k describe "$name" -n "$ns"|| echo "$name not found"
+    k logs "$name" -n "$ns" || echo "logs not found for $name"
+    exit $?
+  fi
+}
+
 _mk_opts "$@"
 
 trap cleanup EXIT
@@ -93,16 +107,15 @@ fi
 
 if [ "$SCENARIO" == "calico" ]; then
   install_calico
+  wait_rollout "deploy/calico-kube-controllers" "kube-system" "2m"
+  wait_rollout "daemonset/calico-node" "kube-system" "2m"
+
 fi
+
 create_test_lab
 
 # Wait for linkerd-cni daemonset to complete
-if ! k rollout status --timeout=30s daemonset/linkerd-cni -n linkerd-cni; then
-  echo "!! linkerd-cni didn't rollout properly, printing logs";
-  k describe ds linkerd-cni || echo "daemonset linkerd-cni not found"
-  k logs linkerd-cni -n linkerd-cni || echo "logs not found for linkerd-cni"
-  exit $?
-fi
+wait_rollout "daemonset/linkerd-cni" "linkerd-cni" "30s"
 
 # TODO(stevej): we don't want to rely on a linkerd build in this repo, we
 # can package network-validator separately.
@@ -119,7 +132,7 @@ k run linkerd-proxy \
     -- \
     /usr/lib/linkerd/linkerd2-network-validator --log-format plain \
     --log-level debug --connect-addr 1.1.1.1:20001 \
-    --listen-addr 0.0.0.0:4140 --timeout 10s
+    --listen-addr 0.0.0.0:4140 --timeout 2m
 
 echo 'PASS: Network Validator'
 
