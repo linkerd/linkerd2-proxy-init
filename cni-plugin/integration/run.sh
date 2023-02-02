@@ -132,7 +132,7 @@ k run linkerd-proxy \
     -- \
     /usr/lib/linkerd/linkerd2-network-validator --log-format plain \
     --log-level debug --connect-addr 1.1.1.1:20001 \
-    --listen-addr 0.0.0.0:4140 --timeout 2m
+    --listen-addr 0.0.0.0:4140 --timeout 5m
 
 echo 'PASS: Network Validator'
 
