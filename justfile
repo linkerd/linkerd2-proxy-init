@@ -145,23 +145,54 @@ build-cni-plugin-test-image *args='--load':
         --tag={{ _cni-plugin-test-image }} \
         {{ args }}
 
+##
+## CNI plugin integration
+## 
+
+# Scenario to use for integration tests
+cni-integration-scenario := "flannel"
+
+# Run cni-plugin integration tests after preparing dependencies By default,
+# runs "flannel" scenario, behavior can be overridden through
+# `cni-integration-scenario` variable
+# To run all scenarios concurrently, see: `cni-plugin-test-integration-all`
+cni-plugin-test-integration: _cni-plugin-test-integration-deps _cni-plugin-test-integration
+
+# Run all integration test scenarios, in different environments
+cni-plugin-test-integration-all: cni-plugin-test-integration-flannel cni-plugin-test-integration-calico
+
 # Build and load images for cni-plugin
-cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-image _k3d-ready
+_cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-image k3d-cni-create
     @just-k3d import {{ _cni-plugin-test-image }} {{ cni-plugin-image }}
 
-# Run cni-plugin integration tests after preparing dependencies
-# For new scenarios, add them after cni-plugin-test-integration-deps
-cni-plugin-test-integration: cni-plugin-test-integration-deps cni-plugin-test-integration-flannel
+# Run an integration test without preparing any dependencies
+_cni-plugin-test-integration: 
+    TEST_CTX="k3d-$(just-k3d --evaluate K3D_CLUSTER_NAME)" ./cni-plugin/integration/run.sh --scenario '{{ cni-integration-scenario }}'
 
-# Run flannel integration tests without preparing dependencies
+# Run cni-plugin integration tests using calico, in a dedicated k3d environment
+# NOTE: we have to rely on a different set of dependencies here; specifically
+# `k3d-create` instead of `_k3d-ready`, since without a CNI DNS pods won't
+# start
+cni-plugin-test-integration-calico:
+   @{{ just_executable() }} \
+     K3D_CLUSTER_NAME='l5d-calico-test' \
+     K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI }}' \
+     cni-integration-scenario='calico' \
+     cni-plugin-test-integration
+
+# Run cni-plugin integration tests using flannel, in a dedicated k3d
+# environment
 cni-plugin-test-integration-flannel:
-    SCENARIO=flannel TEST_CTX="k3d-$(just-k3d --evaluate K3D_CLUSTER_NAME)" ./cni-plugin/integration/run.sh
-
-
+  @{{ just_executable() }} \
+    K3D_CLUSTER_NAME='l5d-flannel-test' \
+    cni-integration-scenario='flannel' \
+    cni-plugin-test-integration
 
 # TODO(stevej): add a k3d-create-debug
+export K3D_CLUSTER_NAME := env_var_or_default("K3D_CLUSTER_NAME", "l5d")
 export K3S_DISABLE := "local-storage,traefik,servicelb,metrics-server@server:*"
 export K3D_CREATE_FLAGS := '--no-lb --k3s-arg "--debug@server:*"'
+_K3D_CREATE_FLAGS_NO_CNI := '--no-lb --k3s-arg --debug@server:* --k3s-arg --flannel-backend=none@server:*'
 
 # Creates a k3d cluster that can be used for testing.
 k3d-create:
@@ -195,3 +226,26 @@ md-lint:
 # Lints all shell scripts in the repo.
 sh-lint:
     @just-sh lint
+
+
+# The name of the docker network to use (i.e., for multicluster testing).
+export K3D_NETWORK_NAME := env_var_or_default("K3D_NETWORK_NAME", K3D_CLUSTER_NAME)
+
+# The kubernetes version to use for the cluster. e.g. 'v1.24', 'latest', etc.
+export K3S_CHANNEL := env_var_or_default("K3S_CHANNEL", "latest")
+#export K3S_IMAGES_JSON := env_var("K3S_IMAGES_JSON")
+
+# The number of worker nodes to create in the cluster.
+export K3D_AGENTS := env_var_or_default("K3D_AGENTS", "0")
+
+# The number of server nodes to create in the cluster.
+export K3D_SERVERS := env_var_or_default("K3D_SERVERS", "1")
+k3d-cni-create:
+  k3d cluster create '{{ K3D_CLUSTER_NAME }}' \
+      --agents='{{ K3D_AGENTS }}' \
+      --servers='{{ K3D_SERVERS }}' \
+      --network='{{ K3D_NETWORK_NAME }}' \
+      {{ if K3S_DISABLE != '' { '--k3s-arg=--disable=' + K3S_DISABLE } else { '' } }} \
+      --kubeconfig-update-default \
+      --kubeconfig-switch-context=false \
+      {{ K3D_CREATE_FLAGS }}
