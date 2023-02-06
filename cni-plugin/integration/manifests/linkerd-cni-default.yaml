@@ -2,11 +2,7 @@
 ## Everything below here is generated from the output `linkerd install-cni`
 ## and modified with the test image of the cni-plugin.
 ##
-## `linkerd install-cni \
-##    --dest-cni-net-dir "/var/lib/rancher/k3s/agent/etc/cni/net.d/" \
-##    --dest-cni-bin-dir "/bin"`
-## These flags are meant to enable cni to work properly with k3d/k3s.
-## Also the log level is set to debug to simplify development.
+## Log level is set to debug to simplify development.
 ##
 ## DO NOT hand edit.
 ##
@@ -61,7 +57,7 @@ metadata:
     linkerd.io/cni-resource: "true"
 data:
   dest_cni_net_dir: "/etc/cni/net.d"
-  dest_cni_bin_dir: "/bin"
+  dest_cni_bin_dir: "/opt/cni/bin"
   # The CNI network configuration to install on each node. The special
   # values in this config will be automatically populated.
   cni_network_config: |-
@@ -157,7 +153,7 @@ spec:
               - -c
               - kill -15 1; sleep 15s
         volumeMounts:
-        - mountPath: /host/bin
+        - mountPath: /host/opt/cni/bin
           name: cni-bin-dir
         - mountPath: /host/etc/cni/net.d
           name: cni-net-dir
@@ -169,7 +165,7 @@ spec:
       volumes:
       - name: cni-bin-dir
         hostPath:
-          path: /bin
+          path: /opt/cni/bin
       - name: cni-net-dir
         hostPath:
           path: /etc/cni/net.d

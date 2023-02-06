@@ -146,7 +146,7 @@ calico_overrides="{
                         \"command\": [\"go\", \"test\", \"-v\", \"./cni-plugin/integration/${SCENARIO}...\", \"-integration-tests\"],
                         \"volumeMounts\": [
                            {
-                              \"mountPath\": \"/var/lib/rancher/k3s/agent/etc/cni/net.d\",
+                              \"mountPath\": \"/host/etc/cni/net.d\",
                               \"name\": \"cni-net-dir\"
                            }
                         ]
@@ -192,7 +192,7 @@ flannel_overrides="{
             }"
 # This needs to use the name linkerd-proxy so that linkerd-cni will run.
 echo '# Running tester...'
-if [ "$SCENARIO" == "calico"]; then
+if [ "$SCENARIO" == "calico" ]; then
   k run linkerd-proxy \
           --attach \
           --image="test.l5d.io/linkerd/cni-plugin-tester:test" \
