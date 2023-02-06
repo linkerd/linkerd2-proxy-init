@@ -39,9 +39,9 @@ func (r *TestRunner) walkConfDir() (map[string]struct{}, error) {
 	return fileNames, nil
 }
 
-// Based on a configuration directory path, and a CNI conflist file name,
-// determine whether 'linkerd-cni' has appended itself to the existing plugin,
-// and if it has been configured properly
+// CheckCNIPluginIsLast will, based on a configuration directory path, and a CNI
+// conflist file name, determine whether 'linkerd-cni' has appended itself to
+// the existing plugin, and if it has been configured properly
 func (r *TestRunner) CheckCNIPluginIsLast() error {
 	if _, err := os.Stat(r.confDir); os.IsNotExist(err) {
 		return fmt.Errorf("Directory does not exist. Check if volume mount exists: %s", r.confDir)
