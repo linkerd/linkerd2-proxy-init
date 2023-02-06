@@ -39,6 +39,9 @@ func (r *TestRunner) walkConfDir() (map[string]struct{}, error) {
 	return fileNames, nil
 }
 
+// Based on a configuration directory path, and a CNI conflist file name,
+// determine whether 'linkerd-cni' has appended itself to the existing plugin,
+// and if it has been configured properly
 func (r *TestRunner) CheckCNIPluginIsLast() error {
 	if _, err := os.Stat(r.confDir); os.IsNotExist(err) {
 		return fmt.Errorf("Directory does not exist. Check if volume mount exists: %s", r.confDir)
@@ -47,7 +50,7 @@ func (r *TestRunner) CheckCNIPluginIsLast() error {
 	filenames, err := r.walkConfDir()
 
 	if err != nil {
-		return fmt.Errorf("unable to read files from directory %s due to error: %e", r.confDir, err)
+		return fmt.Errorf("unable to read files from directory %s due to error: %w", r.confDir, err)
 	}
 
 	if len(filenames) == 0 {
@@ -64,18 +67,18 @@ func (r *TestRunner) CheckCNIPluginIsLast() error {
 
 	conflistFile, err := os.ReadFile(r.confDir + "/" + r.confFile)
 	if err != nil {
-		return fmt.Errorf("could not read %s: %e", r.confFile, err)
+		return fmt.Errorf("could not read %s: %w", r.confFile, err)
 	}
 
 	var conflist map[string]any
 	err = json.Unmarshal(conflistFile, &conflist)
 	if err != nil {
-		return fmt.Errorf("unmarshaling conflist json failed: %e", err)
+		return fmt.Errorf("unmarshaling conflist json failed: %w", err)
 	}
 
-	if conflist["cniVersion"] != "1.0.0" {
-		//return fmt.Errorf("expected cniVersion 1.0.0, instead saw %s", conflistFile)
-	}
+	// if conflist["cniVersion"] != "1.0.0" {
+	// return fmt.Errorf("expected cniVersion 1.0.0, instead saw %s", conflistFile)
+	// }
 
 	plugins := conflist["plugins"].([]interface{})
 	lastPlugin := plugins[len(plugins)-1].(map[string]any)
