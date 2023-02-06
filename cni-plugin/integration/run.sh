@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -euxo pipefail
 
 cd "${BASH_SOURCE[0]%/*}"
 
 # Integration tests to run. Scenario is passed in as an environment variable.
 # Default is 'flannel'
 SCENARIO=${CNI_TEST_SCENARIO:-flannel}
-echo "SCENARIO: $SCENARIO"
 
 # Run kubectl with the correct context.
 function k() {
@@ -37,12 +36,15 @@ function cleanup() {
     k delete serviceaccount linkerd-cni || echo "could not delete serviceaccount linkerd-cni"
     k delete ns cni-plugin-test || echo "could not delete namespace cni-plugin-test"
 
-    # Collect other files that are not related to linkerd-cni. This may include
-    # CNI config files or install manifests
-    local files="$(ls "manifests/$SCENARIO/" | grep -v "linkerd")"
-    if [ -z "$files" ]; then
-      k delete -f "$files" || echo "could not delete test resources"
-    fi
+    # Collect other files that are not related to linkerd-cni and clean them up.
+    # This may include CNI config files or install manifests
+    for f in "manifests/$SCENARIO"
+    do
+      case $f in
+        linkerd-cni.yaml) true;; # ignore if linkerd-cni since it has already been deleted
+        *) k delete -f "manifests/$SCENARIO/$f" || echo "could not delete test resource '$f'";;
+      esac
+    done
 }
 
 function wait_rollout() {
