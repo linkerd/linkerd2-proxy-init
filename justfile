@@ -160,7 +160,7 @@ cni-plugin-test-integration: _cni-plugin-test-integration-deps _cni-plugin-test-
 cni-plugin-test-integration-all: cni-plugin-test-integration-flannel cni-plugin-test-integration-calico
 
 # Build and load images for cni-plugin
-_cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-image k3d-cni-create
+_cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-image _k3d-cni-create
     @just-k3d import {{ _cni-plugin-test-image }} {{ cni-plugin-image }}
 
 # Run an integration test without preparing any dependencies
@@ -172,18 +172,18 @@ _cni-plugin-test-integration:
 # `k3d-create` instead of `_k3d-ready`, since without a CNI DNS pods won't
 # start
 cni-plugin-test-integration-calico:
-   @{{ just_executable() }} \
-     CNI_TEST_SCENARIO='calico' \
-     K3D_CLUSTER_NAME='l5d-calico-test' \
-     K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI }}' \
-     cni-plugin-test-integration
+    @{{ just_executable() }} \
+        CNI_TEST_SCENARIO='calico' \
+        K3D_CLUSTER_NAME='l5d-calico-test' \
+        K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI }}' \
+        cni-plugin-test-integration
 
 # Run cni-plugin integration tests using flannel, in a dedicated k3d
 # environment
 cni-plugin-test-integration-flannel:
-  @{{ just_executable() }} \
-    K3D_CLUSTER_NAME='l5d-flannel-test' \
-    cni-plugin-test-integration
+    @{{ just_executable() }} \
+        K3D_CLUSTER_NAME='l5d-flannel-test' \
+        cni-plugin-test-integration
 
 # TODO(stevej): add a k3d-create-debug
 export K3D_CLUSTER_NAME := env_var_or_default("K3D_CLUSTER_NAME", "l5d")
@@ -243,11 +243,11 @@ export K3D_AGENTS := env_var_or_default("K3D_AGENTS", "0")
 # so that a k3d cluster doesn't get created when one exists
 export K3D_SERVERS := env_var_or_default("K3D_SERVERS", "1")
 _k3d-cni-create:
-  k3d cluster create '{{ K3D_CLUSTER_NAME }}' \
-      --agents='{{ K3D_AGENTS }}' \
-      --servers='{{ K3D_SERVERS }}' \
-      --network='{{ K3D_NETWORK_NAME }}' \
-      {{ if K3S_DISABLE != '' { '--k3s-arg=--disable=' + K3S_DISABLE } else { '' } }} \
-      --kubeconfig-update-default \
-      --kubeconfig-switch-context=false \
-      {{ K3D_CREATE_FLAGS }}
+    k3d cluster create '{{ K3D_CLUSTER_NAME }}' \
+        --agents='{{ K3D_AGENTS }}' \
+        --servers='{{ K3D_SERVERS }}' \
+        --network='{{ K3D_NETWORK_NAME }}' \
+        {{ if K3S_DISABLE != '' { '--k3s-arg=--disable=' + K3S_DISABLE } else { '' } }} \
+        --kubeconfig-update-default \
+        --kubeconfig-switch-context=false \
+        {{ K3D_CREATE_FLAGS }}
