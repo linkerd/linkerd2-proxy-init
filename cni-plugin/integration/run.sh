@@ -3,47 +3,11 @@
 set -euo pipefail
 
 cd "${BASH_SOURCE[0]%/*}"
-_CALICO_YAML="https://k3d.io/v5.3.0/usage/advanced/calico.yaml"
 
-# Help summary for test harness
-_print_summary() {
-  local name="${0##*/}"
-  printf "Run integration tests for Linkerd's CNI plugin\n\nUsage:\n %2s ${name} --scenario [calico | flannel]\n\n"
-  printf "Examples:\n"
-  printf "%2s#Run integration tests using flannel as base CNI\n%2s${name} --scenario flannel\n\n"
-  printf "%2s#Run integration tests using calico as base CNI\n%2s${name} --scenario calico\n\n"
-}
-
-# Make CLI opts, exit if scenario not specified
-# TODO (matei): add a 'skip-cleanup' flag, should be useful to retain resources
-# locally when something goes wrong
-_mk_opts() {
-  export SCENARIO=''
-
-  if [ $# -eq 0 ]; then
-    _print_summary "$0"
-    exit 0
-  fi
-
-  while [ $# -ne 0 ]; do
-    case $1 in
-      -h|--help)
-        _print_summary "$0"
-        exit 0
-        ;;
-      -s|--scenario)
-        SCENARIO="$2"
-        if [ -z "$SCENARIO" ]; then
-          echo "Error: argument for --scenario not specified" >&2
-          exit 64
-        fi
-        shift
-        shift
-        ;;
-      *)
-    esac
-  done
-}
+# Integration tests to run. Scenario is passed in as an environment variable.
+# Default is 'flannel'
+SCENARIO=${CNI_TEST_SCENARIO:-flannel}
+echo "SCENARIO: $SCENARIO"
 
 # Run kubectl with the correct context.
 function k() {
@@ -60,27 +24,25 @@ function create_test_lab() {
     k create serviceaccount linkerd-cni
     # TODO(stevej): how can we parameterize this manifest with `version` so we
     # can enable a testing matrix?
-    if [ "$SCENARIO" == "calico" ]; then
-      k create -f manifests/linkerd-cni-default.yaml 
-    else
-      k create -f manifests/linkerd-cni.yaml
-    fi
+    # Apply all files in scenario directory. For non-flannel CNIs, this will
+    # include the CNI manifest itself.
+    k apply -f "manifests/$SCENARIO/"
 }
 
+# TODO (matei): skip this based on env var? Useful when running locally to see
+# err messages
 function cleanup() {
     echo '# Cleaning up...'
-    k delete -f manifests/linkerd-cni.yaml || echo "could not delete -f manifests/linkerd-cni.yaml"
+    k delete -f "manifests/$SCENARIO/linkerd-cni.yaml" || echo "could not delete -f manifests/linkerd-cni.yaml"
     k delete serviceaccount linkerd-cni || echo "could not delete serviceaccount linkerd-cni"
     k delete ns cni-plugin-test || echo "could not delete namespace cni-plugin-test"
 
-    if [ "$SCENARIO" == "calico" ]; then
-       k delete -f "$_CALICO_YAML" || echo "could not delete Calico resources"
+    # Collect other files that are not related to linkerd-cni. This may include
+    # CNI config files or install manifests
+    local files="$(ls "manifests/$SCENARIO/" | grep -v "linkerd")"
+    if [ -z "$files" ]; then
+      k delete -f "$files" || echo "could not delete test resources"
     fi
-}
-
-function install_calico() {
-  echo '# Installing Calico...'
-  k apply -f "$_CALICO_YAML" || echo "could not apply $_CALICO_YAML"
 }
 
 function wait_rollout() {
@@ -96,8 +58,6 @@ function wait_rollout() {
   fi
 }
 
-_mk_opts "$@"
-
 trap cleanup EXIT
 
 if k get ns/cni-plugin-test >/dev/null 2>&1 ; then
@@ -105,14 +65,15 @@ if k get ns/cni-plugin-test >/dev/null 2>&1 ; then
   exit 1
 fi
 
-if [ "$SCENARIO" == "calico" ]; then
-  install_calico
+create_test_lab
+
+# If installing Calico, need to wait for it to roll first, otherwise pods will
+# be blocked (e.g pods for linkerd-cni)
+if [ "$SCENARIO" != "calico" ]; then
   wait_rollout "deploy/calico-kube-controllers" "kube-system" "2m"
   wait_rollout "daemonset/calico-node" "kube-system" "2m"
 
 fi
-
-create_test_lab
 
 # Wait for linkerd-cni daemonset to complete
 wait_rollout "daemonset/linkerd-cni" "linkerd-cni" "30s"
@@ -143,7 +104,7 @@ calico_overrides="{
                      {
                         \"name\": \"linkerd-proxy\",
                         \"image\": \"test.l5d.io/linkerd/cni-plugin-tester:test\",
-                        \"command\": [\"go\", \"test\", \"-v\", \"./cni-plugin/integration/${SCENARIO}...\", \"-integration-tests\"],
+                        \"command\": [\"go\", \"test\", \"-v\", \"./cni-plugin/integration/tests/${SCENARIO}/...\"],
                         \"volumeMounts\": [
                            {
                               \"mountPath\": \"/host/etc/cni/net.d\",
@@ -170,7 +131,7 @@ flannel_overrides="{
                      {
                         \"name\": \"linkerd-proxy\",
                         \"image\": \"test.l5d.io/linkerd/cni-plugin-tester:test\",
-                        \"command\": [\"go\", \"test\", \"-v\", \"./cni-plugin/integration/${SCENARIO}...\", \"-integration-tests\"],
+                        \"command\": [\"go\", \"test\", \"-v\", \"./cni-plugin/integration/tests/${SCENARIO}/...\"],
                         \"volumeMounts\": [
                            {
                               \"mountPath\": \"/var/lib/rancher/k3s/agent/etc/cni/net.d\",
