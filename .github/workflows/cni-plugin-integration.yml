@@ -10,13 +10,21 @@ on:
       - cni-plugin/**
 
 jobs:
-  integration:
+  cni-flannel-test:
+    continue-on-error: true
     timeout-minutes: 15
     runs-on: ubuntu-20.04
     steps:
       - uses: linkerd/dev/actions/setup-tools@v39
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b
-      - run: just k3d-create
-      - run: just build-cni-plugin-image
-      - run: just build-cni-plugin-test-image
-      - run: just cni-plugin-test-integration
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+      - name: Run CNI integration tests
+        run: just cni-plugin-test-integration-flannel
+  cni-calico-test:
+    continue-on-error: true
+    timeout-minutes: 15
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: linkerd/dev/actions/setup-tools@v39
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+      - name: Run CNI integration tests
+        run: just cni-plugin-test-integration-calico
