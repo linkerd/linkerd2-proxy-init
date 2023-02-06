@@ -38,7 +38,7 @@ function cleanup() {
 
     # Collect other files that are not related to linkerd-cni and clean them up.
     # This may include CNI config files or install manifests
-    for f in "$(ls "manifests/$SCENARIO")"
+    for f in $(ls "manifests/$SCENARIO")
     do
       case $f in
         linkerd-cni.yaml) true;; # ignore if linkerd-cni since it has already been deleted
@@ -71,7 +71,7 @@ create_test_lab
 
 # If installing Calico, need to wait for it to roll first, otherwise pods will
 # be blocked (e.g pods for linkerd-cni)
-if [ "$SCENARIO" != "calico" ]; then
+if [ "$SCENARIO" == "calico" ]; then
   wait_rollout "deploy/calico-kube-controllers" "kube-system" "2m"
   wait_rollout "daemonset/calico-node" "kube-system" "2m"
 
