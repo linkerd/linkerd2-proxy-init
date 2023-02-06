@@ -38,11 +38,11 @@ function cleanup() {
 
     # Collect other files that are not related to linkerd-cni and clean them up.
     # This may include CNI config files or install manifests
-    for f in ./manifests/"$SCENARIO"/*
+    for f in ./manifests/"$SCENARIO"/*.yaml
     do
       case $f in
         linkerd-cni.yaml) true;; # ignore if linkerd-cni since it has already been deleted
-        *) k delete -f "manifests/$SCENARIO/$f" || echo "could not delete test resource '$f'";;
+        *) k delete -f "$f" || echo "could not delete test resource '$f'";;
       esac
     done
 }
