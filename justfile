@@ -209,6 +209,8 @@ k3d-info:
 _k3d-ready:
     @just-k3d ready
 
+_k3d-cni-create:
+    @just-k3d _create
 ##
 ## CI utilities
 ##
@@ -226,28 +228,3 @@ md-lint:
 # Lints all shell scripts in the repo.
 sh-lint:
     @just-sh lint
-
-
-# The name of the docker network to use (i.e., for multicluster testing).
-export K3D_NETWORK_NAME := env_var_or_default("K3D_NETWORK_NAME", K3D_CLUSTER_NAME)
-
-# The kubernetes version to use for the cluster. e.g. 'v1.24', 'latest', etc.
-export K3S_CHANNEL := env_var_or_default("K3S_CHANNEL", "latest")
-#export K3S_IMAGES_JSON := env_var("K3S_IMAGES_JSON")
-
-# The number of worker nodes to create in the cluster.
-export K3D_AGENTS := env_var_or_default("K3D_AGENTS", "0")
-
-# The number of server nodes to create in the cluster.
-# TODO: PR upstream to remove this, or add something similar to 'ready'
-# so that a k3d cluster doesn't get created when one exists
-export K3D_SERVERS := env_var_or_default("K3D_SERVERS", "1")
-_k3d-cni-create:
-    k3d cluster create '{{ K3D_CLUSTER_NAME }}' \
-        --agents='{{ K3D_AGENTS }}' \
-        --servers='{{ K3D_SERVERS }}' \
-        --network='{{ K3D_NETWORK_NAME }}' \
-        {{ if K3S_DISABLE != '' { '--k3s-arg=--disable=' + K3S_DISABLE } else { '' } }} \
-        --kubeconfig-update-default \
-        --kubeconfig-switch-context=false \
-        {{ K3D_CREATE_FLAGS }}
