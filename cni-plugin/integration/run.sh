@@ -28,8 +28,6 @@ function create_test_lab() {
     k apply -f "manifests/$SCENARIO/"
 }
 
-# TODO (matei): skip this based on env var? Useful when running locally to see
-# err messages
 function cleanup() {
     echo '# Cleaning up...'
     k delete -f "manifests/$SCENARIO/linkerd-cni.yaml" || echo "could not delete -f manifests/linkerd-cni.yaml"
@@ -41,7 +39,7 @@ function cleanup() {
     for f in ./manifests/"$SCENARIO"/*.yaml
     do
       case $f in
-        linkerd-cni.yaml) true;; # ignore if linkerd-cni since it has already been deleted
+        */linkerd-cni.yaml) true;; # ignore if linkerd-cni since it has already been deleted
         *) k delete -f "$f" || echo "could not delete test resource '$f'";;
       esac
     done
