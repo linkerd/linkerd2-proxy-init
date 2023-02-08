@@ -152,8 +152,8 @@ build-cni-plugin-test-image *args='--load':
 
 # Run cni-plugin integration tests after preparing dependencies By default,
 # runs "flannel" scenario, behavior can be overridden through
-# `cni-integration-scenario` variable
-# To run all scenarios concurrently, see: `cni-plugin-test-integration-all`
+# `CNI_TEST_SCENARIO` env variable
+# To run all scenarios see: `cni-plugin-test-integration-all`
 cni-plugin-test-integration: _cni-plugin-test-integration-deps _cni-plugin-test-integration
 
 # Run all integration test scenarios, in different environments
