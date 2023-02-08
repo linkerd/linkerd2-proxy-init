@@ -76,10 +76,6 @@ func (r *TestRunner) CheckCNIPluginIsLast() error {
 		return fmt.Errorf("unmarshaling conflist json failed: %w", err)
 	}
 
-	// if conflist["cniVersion"] != "1.0.0" {
-	// return fmt.Errorf("expected cniVersion 1.0.0, instead saw %s", conflistFile)
-	// }
-
 	plugins := conflist["plugins"].([]interface{})
 	lastPlugin := plugins[len(plugins)-1].(map[string]any)
 	if lastPlugin["name"] != "linkerd-cni" {
