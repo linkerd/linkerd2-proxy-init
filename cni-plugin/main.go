@@ -285,7 +285,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.ProxyUserID = parsed
 			}
 
-			if pod.GetLabels()["controller-component"] != "" {
+			if pod.GetLabels()["linkerd.io/control-plane-component"] != "" {
 				// Skip k8s api server ports on the outbound side if pod is a
 				// control plane component
 				skippedPorts, err := getAPIServerPorts(ctx, client)
