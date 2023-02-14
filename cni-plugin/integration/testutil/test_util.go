@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 // TestRunner is a helper struct used for cni-plugin integration test
@@ -37,6 +38,70 @@ func (r *TestRunner) walkConfDir() (map[string]struct{}, error) {
 	}
 
 	return fileNames, nil
+}
+
+// Checks that the embedded linkerd config is of the expected form
+// and contains the right values:
+//
+//	"linkerd": {
+//	   "incoming-proxy-port": 4143,
+//	   "outgoing-proxy-port": 4140,
+//	   "proxy-uid": 2102,
+//	   "ports-to-redirect": [],
+//	   "inbound-ports-to-ignore": ["4191","4190"],
+//	   "simulate": false,
+//	   "use-wait-flag": false
+//	 }
+func checkLinkerdCniConf(wrapperConf map[string]any) error {
+	var conf = wrapperConf["linkerd"].(map[string]any)
+
+	var incomingProxyPort = conf["incoming-proxy-port"].(float64)
+	if incomingProxyPort != 4143 {
+		return fmt.Errorf("incoming-proxy-port has wrong value: expected: %v, found: %v",
+			4143, incomingProxyPort)
+	}
+
+	var outgoingProxyPort = conf["outgoing-proxy-port"].(float64)
+	if outgoingProxyPort != 4140 {
+		return fmt.Errorf("outgoing-proxy-port has wrong value, expected: %v, found: %v",
+			4140, outgoingProxyPort)
+	}
+
+	var proxyUID = conf["proxy-uid"].(float64)
+	if proxyUID != 2102 {
+		return fmt.Errorf("proxy-uid has wrong value, expected: %v, found: %v", 2102, proxyUID)
+	}
+
+	var simulate = conf["simulate"].(bool)
+	if simulate {
+		return fmt.Errorf("simulate has wrong value, expected: %v, found: %v", false, simulate)
+	}
+
+	var useWaitFlag = conf["use-wait-flag"].(bool)
+	if useWaitFlag {
+		return fmt.Errorf("use-wait-flag has wrong value, expected: %v, found: %v",
+			false, useWaitFlag)
+	}
+
+	if len(conf["ports-to-redirect"].([]any)) > 0 {
+		return fmt.Errorf("ports-to-redirect contains items and should not")
+	}
+
+	var inboundPortsToIgnoreAny = conf["inbound-ports-to-ignore"].([]interface{})
+	var inboundPortsToIgnore = make([]float64, len(inboundPortsToIgnoreAny))
+	for i, d := range inboundPortsToIgnoreAny {
+		if num, err := strconv.ParseFloat(d.(string), 64); err == nil {
+			inboundPortsToIgnore[i] = num
+		}
+	}
+	var expectedInboundPortsToIgnore = [2]float64{4191, 4190}
+	if inboundPortsToIgnore[0] != expectedInboundPortsToIgnore[0] ||
+		inboundPortsToIgnore[1] != expectedInboundPortsToIgnore[1] {
+		return fmt.Errorf("inbound-ports-to-ignore has wrong elements: found: %v, expected %v",
+			inboundPortsToIgnore, expectedInboundPortsToIgnore)
+	}
+
+	return nil
 }
 
 // CheckCNIPluginIsLast will, based on a configuration directory path, and a CNI
@@ -78,6 +143,10 @@ func (r *TestRunner) CheckCNIPluginIsLast() error {
 
 	plugins := conflist["plugins"].([]interface{})
 	lastPlugin := plugins[len(plugins)-1].(map[string]any)
+	err = checkLinkerdCniConf(lastPlugin)
+	if err != nil {
+		return err
+	}
 	if lastPlugin["name"] != "linkerd-cni" {
 		return fmt.Errorf("linkerd-cni was not last in the plugins list")
 	}
