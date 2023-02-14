@@ -144,7 +144,7 @@ func (r *TestRunner) CheckCNIPluginIsLast() error {
 	plugins := conflist["plugins"].([]interface{})
 	lastPlugin := plugins[len(plugins)-1].(map[string]any)
 	if err = checkLinkerdCniConf(lastPlugin); err != nil {
-		return fmt.Errorf("Configuration contains erroneous value\n%s", err)
+		return fmt.Errorf("Configuration contains erroneous value\n%w", err)
 	}
 	if lastPlugin["name"] != "linkerd-cni" {
 		return fmt.Errorf("linkerd-cni was not last in the plugins list")
