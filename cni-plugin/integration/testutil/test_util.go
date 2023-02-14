@@ -57,7 +57,7 @@ func checkLinkerdCniConf(wrapperConf map[string]any) error {
 
 	var incomingProxyPort = conf["incoming-proxy-port"].(float64)
 	if incomingProxyPort != 4143 {
-		return fmt.Errorf("incoming-proxy-port has wrong value: expected: %v, found: %v",
+		return fmt.Errorf("incoming-proxy-port has wrong value, expected: %v, found: %v",
 			4143, incomingProxyPort)
 	}
 
