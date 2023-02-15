@@ -102,7 +102,7 @@ calico_overrides="{
                \"metadata\": {
                 \"annotations\": {
                     \"LINKERD_CNI_DEBUG_LOGFILE\": \"/var/log/linkerd-cni.log\",
-                }
+                },
                },
                \"spec\": {
                   \"containers\": [
