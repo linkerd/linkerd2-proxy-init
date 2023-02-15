@@ -99,6 +99,11 @@ echo 'PASS: Network Validator'
 
 calico_overrides="{
                \"apiVersion\": \"v1\",
+               \"metadata\": {
+                \"annotations\": {
+                    \"LINKERD_CNI_DEBUG_LOGFILE\": \"/var/log/linkerd-cni.log\",
+                }
+               },
                \"spec\": {
                   \"containers\": [
                      {
