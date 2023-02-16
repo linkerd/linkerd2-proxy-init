@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 // TestRunner is a helper struct used for cni-plugin integration test
@@ -40,6 +42,18 @@ func (r *TestRunner) walkConfDir() (map[string]struct{}, error) {
 	return fileNames, nil
 }
 
+// ProxyInit is the configuration for the proxy-init binary
+type ProxyInit struct {
+	IncomingProxyPort     int      `json:"incoming-proxy-port"`
+	OutgoingProxyPort     int      `json:"outgoing-proxy-port"`
+	ProxyUID              int      `json:"proxy-uid"`
+	PortsToRedirect       []int    `json:"ports-to-redirect"`
+	InboundPortsToIgnore  []string `json:"inbound-ports-to-ignore"`
+	OutboundPortsToIgnore []string `json:"outbound-ports-to-ignore"`
+	Simulate              bool     `json:"simulate"`
+	UseWaitFlag           bool     `json:"use-wait-flag"`
+}
+
 // Checks that the embedded linkerd config is of the expected form
 // and contains the right values:
 //
@@ -53,48 +67,53 @@ func (r *TestRunner) walkConfDir() (map[string]struct{}, error) {
 //	   "use-wait-flag": false
 //	 }
 func checkLinkerdCniConf(wrapperConf map[string]any) error {
+	proxyInit := &ProxyInit{}
 	conf := wrapperConf["linkerd"].(map[string]any)
+	if err := mapstructure.Decode(conf, proxyInit); err != nil {
+		return err
+	}
 
-	incomingProxyPort := conf["incoming-proxy-port"].(float64)
+	incomingProxyPort := proxyInit.IncomingProxyPort
 	if incomingProxyPort != 4143 {
 		return fmt.Errorf("incoming-proxy-port has wrong value, expected: %v, found: %v",
 			4143, incomingProxyPort)
 	}
 
-	outgoingProxyPort := conf["outgoing-proxy-port"].(float64)
+	outgoingProxyPort := proxyInit.OutgoingProxyPort
 	if outgoingProxyPort != 4140 {
 		return fmt.Errorf("outgoing-proxy-port has wrong value, expected: %v, found: %v",
 			4140, outgoingProxyPort)
 	}
 
-	proxyUID := conf["proxy-uid"].(float64)
+	proxyUID := proxyInit.ProxyUID
 	if proxyUID != 2102 {
 		return fmt.Errorf("proxy-uid has wrong value, expected: %v, found: %v", 2102, proxyUID)
 	}
 
-	simulate := conf["simulate"].(bool)
+	simulate := proxyInit.Simulate
 	if simulate {
 		return fmt.Errorf("simulate has wrong value, expected: %v, found: %v", false, simulate)
 	}
 
-	useWaitFlag := conf["use-wait-flag"].(bool)
+	useWaitFlag := proxyInit.UseWaitFlag
 	if useWaitFlag {
 		return fmt.Errorf("use-wait-flag has wrong value, expected: %v, found: %v",
 			false, useWaitFlag)
 	}
 
-	if len(conf["ports-to-redirect"].([]any)) > 0 {
+	if len(proxyInit.PortsToRedirect) > 0 {
 		return fmt.Errorf("ports-to-redirect contains items and should not")
 	}
 
-	inboundPortsToIgnoreAny := conf["inbound-ports-to-ignore"].([]interface{})
-	inboundPortsToIgnore := make([]float64, len(inboundPortsToIgnoreAny))
+	inboundPortsToIgnoreAny := proxyInit.InboundPortsToIgnore
+	inboundPortsToIgnore := make([]int, len(inboundPortsToIgnoreAny))
 	for i, d := range inboundPortsToIgnoreAny {
-		if num, err := strconv.ParseFloat(d.(string), 64); err == nil {
-			inboundPortsToIgnore[i] = num
+		if n, err := strconv.Atoi(d); err != nil {
+			inboundPortsToIgnore[i] = n
 		}
 	}
-	expectedInboundPortsToIgnore := [2]float64{4191, 4190}
+
+	expectedInboundPortsToIgnore := [2]int{4191, 4190}
 	if inboundPortsToIgnore[0] != expectedInboundPortsToIgnore[0] ||
 		inboundPortsToIgnore[1] != expectedInboundPortsToIgnore[1] {
 		return fmt.Errorf("inbound-ports-to-ignore has wrong elements: found: %v, expected %v",
