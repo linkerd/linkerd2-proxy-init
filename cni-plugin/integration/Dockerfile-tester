@@ -9,6 +9,7 @@
 #  2) a test suite (e.g. `flannel.go`) runs with a configured CNI plugin.
 
 FROM golang:1.18-alpine AS build
+RUN apk add build-base
 ENV GOCACHE=/tmp/
 WORKDIR /src
 COPY --link go.mod go.sum .
