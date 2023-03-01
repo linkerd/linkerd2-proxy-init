@@ -56,6 +56,9 @@ HOST_CNI_NET="${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}"
 # Default path for when linkerd runs as a standalone CNI plugin
 DEFAULT_CNI_CONF_PATH="${HOST_CNI_NET}/01-linkerd-cni.conf"
 KUBECONFIG_FILE_NAME=${KUBECONFIG_FILE_NAME:-ZZZ-linkerd-cni-kubeconfig}
+# Mode to install plugin in
+# Unless overridden, we install linkerd-cni in 'chain' mode
+PLUGIN_INSTALL_MODE=${PLUGIN_INSTALL_MODE:-"chained"}
 
 ############################
 ### Function definitions ###
@@ -73,23 +76,23 @@ cleanup() {
   fi
 
   echo 'Removing linkerd-cni artifacts.'
-
-  # Find all conflist files and print them out using a NULL separator instead of
-  # writing each file in a new line. We will subsequently read each string and
-  # attempt to rm linkerd config from it using jq helper.
-  local cni_data=''
-  find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' \) -print0 |
-    while read -r -d $'\0' file; do
-      echo "Removing linkerd-cni config from $file"
-      cni_data=$(jq 'del( .plugins[]? | select( .type == "linkerd-cni" ))' "$file")
-      # TODO (matei): we should write this out to a temp file and then do a `mv`
-      # to be atomic. 
-      echo "$cni_data" > "$file"
-    done
-
-  # Check whether configuration file has been created by our own cni plugin
-  # and if so, rm it.
-  if [ -e "${DEFAULT_CNI_CONF_PATH}" ]; then
+  # Check whether configuration file has been created by us, or if we chained
+  # to a conflist 
+  if [ "${PLUGIN_INSTALL_MODE}" == "chained" ]; then
+    # Find all conflist files and print them out using a NULL separator instead of
+    # writing each file in a new line. We will subsequently read each string and
+    # attempt to rm linkerd config from it using jq helper.
+    local cni_data=''
+    find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' \) -print0 |
+      while read -r -d $'\0' file; do
+        echo "Removing linkerd-cni config from $file"
+        cni_data=$(jq 'del( .plugins[]? | select( .type == "linkerd-cni" ))' "$file")
+        # TODO (matei): we should write this out to a temp file and then do a `mv`
+        # to be atomic. 
+        echo "$cni_data" > "$file"
+      done
+  else
+    # Must be running in "standalone", so delete the file we created
     echo "Cleaning up ${DEFAULT_CNI_CONF_PATH}"
     rm -f "${DEFAULT_CNI_CONF_PATH}"
   fi
@@ -323,22 +326,31 @@ monitor() {
 ### CNI Plugin Install Logic ###
 ################################
 
+echo "Installing linkerd-cni in \"${PLUGIN_INSTALL_MODE}\""
 install_cni_bin
-
-# Install CNI configuration. If we have an existing CNI configuration file (*.conflist or *.conf) that is not linkerd's,
-# then append our configuration to that file. Otherwise, if no CNI config files
-# are present, install our stand-alone config file.
-config_file_count=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | grep -v linkerd | sort | wc -l)
-if [ "$config_file_count" -eq 0 ]; then
-  echo "No active CNI configuration files found; installing in \"interface\" mode in ${DEFAULT_CNI_CONF_PATH}"
+# If in standalone mode, install our file and loop to prevent from completing
+if [ "${PLUGIN_INSTALL_MODE}" == "standalone" ]; then
   install_cni_conf "${DEFAULT_CNI_CONF_PATH}"
-else
-  find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
-    while read -r -d $'\0' file; do
-      echo "Installing CNI configuration in \"chained\" mode for $file"
-      install_cni_conf "$file"
-    done
+  while true; do
+    sleep infinity &
+    wait $!
+  done
 fi
+
+# Spin until we find a CNI configuration file to append to (*.conflist | *.conf
+# type)
+config_file_count=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | grep -v linkerd | sort | wc -l)
+while [ "$config_file_count" -eq 0 ]; do
+  echo "Waiting for a *conf* file to become available..."
+  config_file_count=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | grep -v linkerd | sort | wc -l)
+done
+
+# For every conf | conflist, append
+find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
+while read -r -d $'\0' file; do
+  echo "Installing CNI configuration in \"chained\" mode for $file"
+  install_cni_conf "$file"
+done
 
 # Compute SHA for first config file found; this will be updated after every iteration.
 # First config file is likely to be chosen as the de facto CNI config by the
