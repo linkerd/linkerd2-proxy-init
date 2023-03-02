@@ -6,9 +6,9 @@ require (
 	github.com/containernetworking/cni v1.1.2
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
-	k8s.io/api v0.26.1
+	k8s.io/api v0.26.2
 	k8s.io/apimachinery v0.26.2
-	k8s.io/client-go v0.26.1
+	k8s.io/client-go v0.26.2
 )
 
 require (
