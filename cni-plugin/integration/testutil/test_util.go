@@ -77,12 +77,10 @@ type LinkerdPlugin struct {
 //	 }
 func checkLinkerdCniConf(plugin map[string]any) error {
 	linkerdPlugin := &LinkerdPlugin{}
-	var md mapstructure.Metadata
 	config := &mapstructure.DecoderConfig{
-		Metadata: &md,
-		TagName: "json",
-		Result: linkerdPlugin,
-		WeaklyTypedInput: true,
+		TagName:     "json",
+		Result:      linkerdPlugin,
+		ErrorUnused: true, // will fail if there are unparsed map elements
 	}
 
 	decoder, err := mapstructure.NewDecoder(config)
@@ -93,8 +91,8 @@ func checkLinkerdCniConf(plugin map[string]any) error {
 	if err := decoder.Decode(plugin); err != nil {
 		return err
 	}
-	proxyInit := linkerdPlugin.ProxyInit
 
+	proxyInit := linkerdPlugin.ProxyInit
 	incomingProxyPort := proxyInit.IncomingProxyPort
 	if incomingProxyPort != 4143 {
 		return fmt.Errorf("incoming-proxy-port has wrong value, expected: %v, found: %v",
