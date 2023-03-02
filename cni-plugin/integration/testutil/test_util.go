@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -54,6 +53,16 @@ type ProxyInit struct {
 	UseWaitFlag           bool     `json:"use-wait-flag"`
 }
 
+// LinkerdPlugin is what we use for CNI configuration in the plugins section
+type LinkerdPlugin struct {
+	Name       string         `json:"name"`
+	Type       string         `json:"type"`
+	LogLevel   string         `json:"log_level"`
+	Policy     map[string]any `json:"policy"`
+	Kubernetes map[string]any `json:"kubernetes"`
+	ProxyInit  ProxyInit      `json:"linkerd"`
+}
+
 // Checks that the embedded linkerd config is of the expected form
 // and contains the right values:
 //
@@ -66,12 +75,25 @@ type ProxyInit struct {
 //	   "simulate": false,
 //	   "use-wait-flag": false
 //	 }
-func checkLinkerdCniConf(wrapperConf map[string]any) error {
-	proxyInit := &ProxyInit{}
-	conf := wrapperConf["linkerd"].(map[string]any)
-	if err := mapstructure.Decode(conf, proxyInit); err != nil {
+func checkLinkerdCniConf(plugin map[string]any) error {
+	linkerdPlugin := &LinkerdPlugin{}
+	var md mapstructure.Metadata
+	config := &mapstructure.DecoderConfig{
+		Metadata: &md,
+		TagName: "json",
+		Result: linkerdPlugin,
+		WeaklyTypedInput: true,
+	}
+
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
 		return err
 	}
+
+	if err := decoder.Decode(plugin); err != nil {
+		return err
+	}
+	proxyInit := linkerdPlugin.ProxyInit
 
 	incomingProxyPort := proxyInit.IncomingProxyPort
 	if incomingProxyPort != 4143 {
@@ -105,15 +127,9 @@ func checkLinkerdCniConf(wrapperConf map[string]any) error {
 		return fmt.Errorf("ports-to-redirect contains items and should not")
 	}
 
-	inboundPortsToIgnoreAny := proxyInit.InboundPortsToIgnore
-	inboundPortsToIgnore := make([]int, len(inboundPortsToIgnoreAny))
-	for i, d := range inboundPortsToIgnoreAny {
-		if n, err := strconv.Atoi(d); err != nil {
-			inboundPortsToIgnore[i] = n
-		}
-	}
+	inboundPortsToIgnore := proxyInit.InboundPortsToIgnore
 
-	expectedInboundPortsToIgnore := [2]int{4191, 4190}
+	expectedInboundPortsToIgnore := [2]string{"4191", "4190"}
 	if inboundPortsToIgnore[0] != expectedInboundPortsToIgnore[0] ||
 		inboundPortsToIgnore[1] != expectedInboundPortsToIgnore[1] {
 		return fmt.Errorf("inbound-ports-to-ignore has wrong elements: found: %v, expected %v",
@@ -161,12 +177,13 @@ func (r *TestRunner) CheckCNIPluginIsLast() error {
 	}
 
 	plugins := conflist["plugins"].([]interface{})
-	lastPlugin := plugins[len(plugins)-1].(map[string]any)
-	if err = checkLinkerdCniConf(lastPlugin); err != nil {
-		return fmt.Errorf("Configuration contains erroneous value\n%w", err)
-	}
-	if lastPlugin["name"] != "linkerd-cni" {
+	linkerdPlugin := plugins[len(plugins)-1].(map[string]any)
+	if linkerdPlugin["name"] != "linkerd-cni" {
 		return fmt.Errorf("linkerd-cni was not last in the plugins list")
+	}
+
+	if err = checkLinkerdCniConf(linkerdPlugin); err != nil {
+		return fmt.Errorf("Configuration contains bad values: %w", err)
 	}
 
 	return nil
