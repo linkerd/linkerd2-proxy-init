@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -115,11 +116,15 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		return nil, fmt.Errorf("--outgoing-proxy-port must be a valid TCP port number")
 	}
 
+	sanitizedSubnets := []string{}
 	for _, subnet := range options.SubnetsToIgnore {
+		subnet := strings.TrimSpace(subnet)
 		_, _, err := net.ParseCIDR(subnet)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid CIDR address", subnet)
 		}
+
+		sanitizedSubnets = append(sanitizedSubnets, subnet)
 	}
 
 	firewallConfiguration := &iptables.FirewallConfiguration{
@@ -129,7 +134,7 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		PortsToRedirectInbound: options.PortsToRedirect,
 		InboundPortsToIgnore:   options.InboundPortsToIgnore,
 		OutboundPortsToIgnore:  options.OutboundPortsToIgnore,
-		SubnetsToIgnore:        options.SubnetsToIgnore,
+		SubnetsToIgnore:        sanitizedSubnets,
 		SimulateOnly:           options.SimulateOnly,
 		NetNs:                  options.NetNs,
 		UseWaitFlag:            options.UseWaitFlag,
