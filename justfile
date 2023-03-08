@@ -210,7 +210,6 @@ _cni-plugin-setup-cilium:
         --set bpf.masquerade=false \
         --set image.pullPolicy=IfNotPresent \
         --set ipam.mode=kubernetes
-    docker exec k3d-l5d-cilium-test-server-0 mount --make-shared /run/cilium/cgroupv2
     echo "cilium has been installed"
 
 # Run cni-plugin integration tests using flannel, in a dedicated k3d
