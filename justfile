@@ -193,11 +193,11 @@ cni-plugin-test-integration-cilium:
 _cni-plugin-setup-cilium:
     #!/usr/bin/env bash
     set -euxo pipefail
-    docker exec -it k3d-l5d-cilium-test-server-0 mount bpffs /sys/fs/bpf -t bpf
-    docker exec -it k3d-l5d-cilium-test-server-0 mount --make-shared /sys/fs/bpf
-    docker exec -it k3d-l5d-cilium-test-server-0 mkdir -p /run/cilium/cgroupv2
-    docker exec -it k3d-l5d-cilium-test-server-0 mount -t cgroup2 none /run/cilium/cgroupv2
-    docker exec -it k3d-l5d-cilium-test-server-0 mount --make-shared /run/cilium/cgroupv2/
+    docker exec k3d-l5d-cilium-test-server-0 mount bpffs /sys/fs/bpf -t bpf
+    docker exec k3d-l5d-cilium-test-server-0 mount --make-shared /sys/fs/bpf
+    docker exec k3d-l5d-cilium-test-server-0 mkdir -p /run/cilium/cgroupv2
+    docker exec k3d-l5d-cilium-test-server-0 mount -t cgroup2 none /run/cilium/cgroupv2
+    docker exec k3d-l5d-cilium-test-server-0 mount --make-shared /run/cilium/cgroupv2/
     echo "Mounted /sys/fs/bpf to cilium-test-server cluster"
     helm repo add cilium https://helm.cilium.io/
     helm install cilium cilium/cilium --version 1.13.0 \
@@ -210,7 +210,7 @@ _cni-plugin-setup-cilium:
         --set bpf.masquerade=false \
         --set image.pullPolicy=IfNotPresent \
         --set ipam.mode=kubernetes
-    docker exec -it k3d-l5d-cilium-test-server-0 mount --make-shared /run/cilium/cgroupv2
+    docker exec k3d-l5d-cilium-test-server-0 mount --make-shared /run/cilium/cgroupv2
     echo "cilium has been installed"
 
 # Run cni-plugin integration tests using flannel, in a dedicated k3d
