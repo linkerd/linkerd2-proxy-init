@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	// ConfigDirectory = "/var/lib/rancher/k3s/agent/etc/cni/net.d"
 	ConfigDirectory = "/host/etc/cni/net.d"
 	CiliumConflist  = "05-cilium.conflist"
 )
