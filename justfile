@@ -156,7 +156,7 @@ build-cni-plugin-test-image *args='--load':
 # To run all scenarios see: `cni-plugin-test-integration-all`
 cni-plugin-test-integration: _cni-plugin-test-integration-deps _cni-plugin-test-integration
 
-# An alternate path is needed here so we can insert the cilium-specific setup
+# An alternate target is needed here so we can insert cilium-specific setup
 cni-plugin-test-integration-with-cilium: _cni-plugin-test-integration-deps _cni-plugin-setup-cilium _cni-plugin-test-integration
 
 # Run all integration test scenarios, in different environments
@@ -188,8 +188,6 @@ cni-plugin-test-integration-cilium:
         K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI_NO_POLICY_ENFORCER }}' \
         cni-plugin-test-integration-with-cilium
 
-# This relies on a new cluster being setup as the default cluster as we'll be installing
-# things into kube-system
 _cni-plugin-setup-cilium:
     #!/usr/bin/env bash
     set -euxo pipefail
