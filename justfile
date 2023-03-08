@@ -156,6 +156,9 @@ build-cni-plugin-test-image *args='--load':
 # To run all scenarios see: `cni-plugin-test-integration-all`
 cni-plugin-test-integration: _cni-plugin-test-integration-deps _cni-plugin-test-integration
 
+# An alternate path is needed here so we can insert the cilium-specific setup
+cni-plugin-test-integration-with-cilium: _cni-plugin-test-integration-deps _cni-plugin-setup-cilium _cni-plugin-test-integration
+
 # Run all integration test scenarios, in different environments
 cni-plugin-test-integration-all: cni-plugin-test-integration-flannel cni-plugin-test-integration-calico
 
@@ -164,7 +167,7 @@ _cni-plugin-test-integration-deps: build-cni-plugin-image build-cni-plugin-test-
     @just-k3d import {{ _cni-plugin-test-image }} {{ cni-plugin-image }}
 
 # Run an integration test without preparing any dependencies
-_cni-plugin-test-integration: 
+_cni-plugin-test-integration:
     TEST_CTX="k3d-$(just-k3d --evaluate K3D_CLUSTER_NAME)" ./cni-plugin/integration/run.sh
 
 # Run cni-plugin integration tests using calico, in a dedicated k3d environment
@@ -177,6 +180,38 @@ cni-plugin-test-integration-calico:
         K3D_CLUSTER_NAME='l5d-calico-test' \
         K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI }}' \
         cni-plugin-test-integration
+
+cni-plugin-test-integration-cilium:
+    @{{ just_executable() }} \
+        CNI_TEST_SCENARIO='cilium' \
+        K3D_CLUSTER_NAME='l5d-cilium-test' \
+        K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI_NO_POLICY_ENFORCER }}' \
+        cni-plugin-test-integration-with-cilium
+
+# This relies on a new cluster being setup as the default cluster as we'll be installing
+# things into kube-system
+_cni-plugin-setup-cilium:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    docker exec -it k3d-l5d-cilium-test-server-0 mount bpffs /sys/fs/bpf -t bpf
+    docker exec -it k3d-l5d-cilium-test-server-0 mount --make-shared /sys/fs/bpf
+    docker exec -it k3d-l5d-cilium-test-server-0 mkdir -p /run/cilium/cgroupv2
+    docker exec -it k3d-l5d-cilium-test-server-0 mount -t cgroup2 none /run/cilium/cgroupv2
+    docker exec -it k3d-l5d-cilium-test-server-0 mount --make-shared /run/cilium/cgroupv2/
+    echo "Mounted /sys/fs/bpf to cilium-test-server cluster"
+    helm repo add cilium https://helm.cilium.io/
+    helm install cilium cilium/cilium --version 1.13.0 \
+        --namespace kube-system \
+        --set kubeProxyReplacement=partial \
+        --set hostServices.enabled=false \
+        --set externalIPs.enabled=true \
+        --set nodePort.enabled=true \
+        --set hostPort.enabled=true \
+        --set bpf.masquerade=false \
+        --set image.pullPolicy=IfNotPresent \
+        --set ipam.mode=kubernetes
+    docker exec -it k3d-l5d-cilium-test-server-0 mount --make-shared /run/cilium/cgroupv2
+    echo "cilium has been installed"
 
 # Run cni-plugin integration tests using flannel, in a dedicated k3d
 # environment
@@ -193,6 +228,7 @@ export K3D_CREATE_FLAGS := '--no-lb --k3s-arg "--debug@server:*"'
 # Scenario to use for integration tests
 export CNI_TEST_SCENARIO := env_var_or_default("CNI_TEST_SCENARIO", "flannel")
 _K3D_CREATE_FLAGS_NO_CNI := '--no-lb --k3s-arg --debug@server:* --k3s-arg --flannel-backend=none@server:*'
+_K3D_CREATE_FLAGS_NO_CNI_NO_POLICY_ENFORCER := '--no-lb --k3s-arg --debug@server:* --k3s-arg --flannel-backend=none@server:* --k3s-arg --disable-network-policy'
 
 # Creates a k3d cluster that can be used for testing.
 k3d-create:

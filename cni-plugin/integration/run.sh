@@ -72,7 +72,6 @@ create_test_lab
 if [ "$SCENARIO" == "calico" ]; then
   wait_rollout "deploy/calico-kube-controllers" "kube-system" "2m"
   wait_rollout "daemonset/calico-node" "kube-system" "2m"
-
 fi
 
 # Wait for linkerd-cni daemonset to complete
@@ -152,8 +151,9 @@ flannel_overrides="{
                \"status\": {}
             }"
 # This needs to use the name linkerd-proxy so that linkerd-cni will run.
+# We use the calico overrides for cilium to avoid duplication.
 echo '# Running tester...'
-if [ "$SCENARIO" == "calico" ]; then
+if [ "$SCENARIO" == "calico" ] || [ "$SCENARIO" == "cilium" ]; then
   k run linkerd-proxy \
           --attach \
           --image="test.l5d.io/linkerd/cni-plugin-tester:test" \
