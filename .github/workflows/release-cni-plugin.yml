@@ -44,7 +44,7 @@ jobs:
       id-token: write # needed for signing the images with GitHub OIDC token
     steps:
       # Build multi-arch docker images for cni-plugin:
-      - uses: actions/cache@69d9d449aced6a2ede0bc19182fadc3a0a42d2b0
+      - uses: actions/cache@940f3d7cf195ba83374c77632d1e2cbb2f24ae68
         with:
           path: ${{ runner.temp }}/.buildx-cache
           key: cni-plugin-${{ needs.meta.outputs.mode }}-${{ needs.meta.outputs.version }}
