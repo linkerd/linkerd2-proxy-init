@@ -175,6 +175,7 @@ func (r *TestRunner) CheckCNIPluginIsLast() error {
 	}
 
 	plugins := conflist["plugins"].([]interface{})
+	// check that the last plugin is linkerd
 	linkerdPlugin := plugins[len(plugins)-1].(map[string]any)
 	if linkerdPlugin["name"] != "linkerd-cni" {
 		return fmt.Errorf("linkerd-cni was not last in the plugins list")
