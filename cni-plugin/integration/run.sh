@@ -96,7 +96,7 @@ k run linkerd-proxy \
 
 echo 'PASS: Network Validator'
 
-calico_overrides="{
+generic_config_mount="{
                \"apiVersion\": \"v1\",
                \"spec\": {
                   \"containers\": [
@@ -123,7 +123,7 @@ calico_overrides="{
                },
                \"status\": {}
             }"
-flannel_overrides="{
+flannel_config_mount="{
                \"apiVersion\": \"v1\",
                \"spec\": {
                   \"containers\": [
@@ -151,7 +151,6 @@ flannel_overrides="{
                \"status\": {}
             }"
 # This needs to use the name linkerd-proxy so that linkerd-cni will run.
-# We use the calico overrides for cilium to avoid duplication.
 echo '# Running tester...'
 if [ "$SCENARIO" == "calico" ] || [ "$SCENARIO" == "cilium" ]; then
   k run linkerd-proxy \
@@ -160,7 +159,7 @@ if [ "$SCENARIO" == "calico" ] || [ "$SCENARIO" == "cilium" ]; then
           --image-pull-policy=Never \
           --namespace=cni-plugin-test \
           --restart=Never \
-          --overrides="$calico_overrides" \
+          --overrides="$generic_config_mount" \
           --rm
 else
   k run linkerd-proxy \
@@ -169,6 +168,6 @@ else
           --image-pull-policy=Never \
           --namespace=cni-plugin-test \
           --restart=Never \
-          --overrides="$flannel_overrides" \
+          --overrides="$flannel_config_mount" \
           --rm
 fi
