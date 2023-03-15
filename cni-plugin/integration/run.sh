@@ -72,7 +72,6 @@ create_test_lab
 if [ "$SCENARIO" == "calico" ]; then
   wait_rollout "deploy/calico-kube-controllers" "kube-system" "2m"
   wait_rollout "daemonset/calico-node" "kube-system" "2m"
-
 fi
 
 # Wait for linkerd-cni daemonset to complete
@@ -97,7 +96,7 @@ k run linkerd-proxy \
 
 echo 'PASS: Network Validator'
 
-calico_overrides="{
+generic_config_mount="{
                \"apiVersion\": \"v1\",
                \"spec\": {
                   \"containers\": [
@@ -124,7 +123,7 @@ calico_overrides="{
                },
                \"status\": {}
             }"
-flannel_overrides="{
+flannel_config_mount="{
                \"apiVersion\": \"v1\",
                \"spec\": {
                   \"containers\": [
@@ -153,14 +152,14 @@ flannel_overrides="{
             }"
 # This needs to use the name linkerd-proxy so that linkerd-cni will run.
 echo '# Running tester...'
-if [ "$SCENARIO" == "calico" ]; then
+if [ "$SCENARIO" == "calico" ] || [ "$SCENARIO" == "cilium" ]; then
   k run linkerd-proxy \
           --attach \
           --image="test.l5d.io/linkerd/cni-plugin-tester:test" \
           --image-pull-policy=Never \
           --namespace=cni-plugin-test \
           --restart=Never \
-          --overrides="$calico_overrides" \
+          --overrides="$generic_config_mount" \
           --rm
 else
   k run linkerd-proxy \
@@ -169,6 +168,6 @@ else
           --image-pull-policy=Never \
           --namespace=cni-plugin-test \
           --restart=Never \
-          --overrides="$flannel_overrides" \
+          --overrides="$flannel_config_mount" \
           --rm
 fi
