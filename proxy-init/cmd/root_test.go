@@ -92,4 +92,24 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("Overrides handled properly", func(t *testing.T) {
+		for _, tt := range []struct {
+			options      *RootOptions
+			errorMessage string
+		}{
+			{
+				// Tests that subnets are parsed properly and trimmed of excess whitespace
+				options: &RootOptions{
+					SubnetsToIgnore: []string{"1.1.1.1/24 "},
+				},
+				errorMessage: "",
+			},
+		} {
+			_, err := BuildFirewallConfiguration(tt.options)
+			if err != nil {
+				t.Fatalf("Got error error for config [%v]", tt.options)
+			}
+		}
+	})
 }
