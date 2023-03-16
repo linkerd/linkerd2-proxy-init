@@ -52,7 +52,7 @@ jobs:
 
       - uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18
       - uses: linkerd/dev/actions/setup-tools@v39
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f
       - run: |
           just cni-plugin-image='${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}' \
                 build-cni-plugin-image \
@@ -90,7 +90,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f
       - if: needs.meta.outputs.mode == 'release'
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
         with:
