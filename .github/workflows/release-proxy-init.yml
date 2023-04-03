@@ -79,7 +79,7 @@ jobs:
       - if: needs.meta.outputs.mode == 'release'
         uses: sigstore/cosign-installer@c3667d99424e7e6047999fb6246c0da843953c65
       - if: needs.meta.outputs.mode == 'release'
-        run: cosign sign "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
+        run: cosign sign -y "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
         env:
           COSIGN_EXPERIMENTAL: 1
 
