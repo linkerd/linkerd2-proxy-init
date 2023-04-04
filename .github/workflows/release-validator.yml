@@ -39,7 +39,7 @@ jobs:
         run: |
           version=$(just validator --evaluate version)
           # shellcheck disable=SC2193
-          if [[ "v${version}" != '${{ steps.meta.outputs.version }}' ]]; then
+          if [[ "${version}" != '${{ steps.meta.outputs.version }}' ]]; then
             echo "::error ::Crate version v${version} does not match tag ${{ steps.meta.outputs.version }}"
             exit 1
           fi
