@@ -256,8 +256,8 @@ install_cni_conf() {
 
 # Sync() is responsible for reacting to file system changes. It is used in
 # conjunction with inotify events; sync() is called with the name of the file that
-# has changed, the event type (which can be either 'CREATE' or 'DELETE'), and
-# the previously observed SHA of the configuration file.
+# has changed, the event type (which can be either 'CREATE', 'DELETE' or
+# 'MOVED_TO'), and the previously observed SHA of the configuration file.
 #
 # Based on the changed file and event type, sync() might re-install the CNI
 # plugin's configuration file.
@@ -279,10 +279,10 @@ sync() {
       echo "No active CNI configuration file found after $ev event; re-installing in \"interface\" mode"
       install_cni_conf "${DEFAULT_CNI_CONF_PATH}"
     fi
-  elif [ "$ev" = 'CREATE' ]; then
-    # When the event type is 'CREATE', we check the previously observed SHA (updated
-    # with each file watch) and compare it against the new file's SHA. If they
-    # differ, it means something has changed.
+  elif [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ]; then
+    # When the event type is 'CREATE' or 'MOVED_TO', we check the previously
+    # observed SHA (updated with each file watch) and compare it against the
+    # new file's SHA. If they differ, it means something has changed.
     new_sha=$(sha256sum "${filepath}" | while read -r s _; do echo "$s"; done)
     if [ "$new_sha" != "$prev_sha" ]; then
       # Create but don't rm old one since we don't know if this will be configured
@@ -299,13 +299,9 @@ sync() {
   fi
 }
 
-# Monitor will start a watch on host's CNI config directory. Although files are
-# mostly `mv'd`, because they are moved from the container's filesystem, the
-# events logged will typically be a DELETED followed by a CREATE. When we are on
-# the same system partition, `mv` simply renames, however, that won't be the
-# case so we don't watch any "moved_to" or "moved_from" events.
+# Monitor will start a watch on host's CNI config directory
 monitor() {
-  inotifywait -m "${HOST_CNI_NET}" -e create,delete |
+  inotifywait -m "${HOST_CNI_NET}" -e create,delete,moved_to |
     while read -r directory action filename; do
       if [[ "$filename" =~ .*.(conflist|conf)$ ]]; then 
         echo "Detected change in $directory: $action $filename"
