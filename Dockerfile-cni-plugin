@@ -7,7 +7,7 @@
 # Cross compile from native platform to target arch
 FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v39-go as go
 WORKDIR /build
-COPY --link go.mod go.sum .
+COPY --link go.mod go.sum ./
 COPY --link ./cni-plugin ./cni-plugin
 COPY --link ./proxy-init ./proxy-init
 COPY --link ./internal ./internal
@@ -20,7 +20,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
 ## Runtime
 ##
 
-FROM debian:bullseye-slim
+FROM debian:bullseye-slim as deps
 WORKDIR /linkerd
 RUN apt-get update && apt-get install -y --no-install-recommends \
     iptables \
@@ -30,9 +30,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # We still rely on old iptables-legacy syntax.
-RUN update-alternatives --set iptables /usr/sbin/iptables-legacy \
-    && update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
-
+FROM scratch as runtime
+COPY --from=deps /usr/bin/inotifywait /usr/bin/inotifywait
+COPY --from=deps /usr/bin/pgrep /usr/bin/pgrep
+COPY --from=deps /usr/bin/jq /usr/bin/jq
+COPY --from=deps /usr/sbin/iptables-legacy /usr/sbin/iptables
+COPY --from=deps /usr/sbin/ip6tables-legacy /usr/sbin/ip6tables
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
 COPY LICENSE .
 COPY cni-plugin/deployment/scripts/install-cni.sh .
