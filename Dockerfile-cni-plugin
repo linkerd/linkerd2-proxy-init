@@ -17,25 +17,25 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
     go build -o /go/bin/linkerd-cni -mod=readonly -ldflags "-s -w" -v ./cni-plugin/
 
 ##
-## Runtime
+## Runtime dependencies
 ##
 
 FROM debian:bullseye-slim as deps
 WORKDIR /linkerd
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    iptables \
     inotify-tools \
     procps \
     jq && \
     rm -rf /var/lib/apt/lists/*
 
-# We still rely on old iptables-legacy syntax.
+##
+## Runtime
+##
+
 FROM scratch as runtime
 COPY --from=deps /usr/bin/inotifywait /usr/bin/inotifywait
 COPY --from=deps /usr/bin/pgrep /usr/bin/pgrep
 COPY --from=deps /usr/bin/jq /usr/bin/jq
-COPY --from=deps /usr/sbin/iptables-legacy /usr/sbin/iptables
-COPY --from=deps /usr/sbin/ip6tables-legacy /usr/sbin/ip6tables
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
 COPY LICENSE .
 COPY cni-plugin/deployment/scripts/install-cni.sh .
