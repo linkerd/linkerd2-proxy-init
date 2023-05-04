@@ -27,6 +27,7 @@ RUN apk add \
     inotify-tools \
     # For pgrep
     procps \
+    bash \
     jq
 
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
