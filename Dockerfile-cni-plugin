@@ -17,25 +17,19 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
     go build -o /go/bin/linkerd-cni -mod=readonly -ldflags "-s -w" -v ./cni-plugin/
 
 ##
-## Runtime dependencies
-##
-
-FROM debian:bullseye-slim as deps
-WORKDIR /linkerd
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    inotify-tools \
-    procps \
-    jq && \
-    rm -rf /var/lib/apt/lists/*
-
-##
 ## Runtime
 ##
 
-FROM scratch as runtime
-COPY --from=deps /usr/bin/inotifywait /usr/bin/inotifywait
-COPY --from=deps /usr/bin/pgrep /usr/bin/pgrep
-COPY --from=deps /usr/bin/jq /usr/bin/jq
+FROM --platform=$TARGETPLATFORM alpine:3.17.3 as runtime
+WORKDIR /linkerd
+RUN apk add \
+    # For inotifywait
+    inotify-tools \
+    # For pgrep
+    procps \
+    bash \
+    jq
+
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
 COPY LICENSE .
 COPY cni-plugin/deployment/scripts/install-cni.sh .
