@@ -20,7 +20,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
 ## Runtime
 ##
 
-FROM --platform=$TARGETPLATFORM alpine:3.17.3 as runtime
+FROM --platform=$TARGETPLATFORM alpine:3.18.0 as runtime
 WORKDIR /linkerd
 RUN apk add \
     # For inotifywait
