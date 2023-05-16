@@ -31,7 +31,7 @@ set -u -e
 # Usage:
 # some_command || exit_with_error "some_command_failed: maybe try..."
 exit_with_error() {
-  echo "${1}"
+  log "${1}"
   exit 1
 }
 
@@ -53,7 +53,7 @@ CONTAINER_MOUNT_PREFIX=${CONTAINER_MOUNT_PREFIX:-/host}
 CONTAINER_CNI_BIN_DIR=${CONTAINER_CNI_BIN_DIR:-/opt/cni/bin}
 # Directory path where CNI configuration should live on the host
 HOST_CNI_NET="${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}"
-# Default path for when linkerd runs as a standalone CNI plugin
+# Location of legacy "interface mode" file, to be automatically deleted
 DEFAULT_CNI_CONF_PATH="${HOST_CNI_NET}/01-linkerd-cni.conf"
 KUBECONFIG_FILE_NAME=${KUBECONFIG_FILE_NAME:-ZZZ-linkerd-cni-kubeconfig}
 
@@ -63,16 +63,15 @@ KUBECONFIG_FILE_NAME=${KUBECONFIG_FILE_NAME:-ZZZ-linkerd-cni-kubeconfig}
 
 # Cleanup will remove any installed configuration from the host If there are any
 # *conflist files, then linkerd-cni configuration parameters will be removed
-# from them; otherwise, if linkerd-cni is the only plugin, the configuration
-# file will be removed.
+# from them.
 cleanup() {
   # First, kill 'inotifywait' so we don't process any DELETE/CREATE events
   if [ "$(pgrep inotifywait)" ]; then
-    echo 'Sending SIGKILL to inotifywait'
+    log 'Sending SIGKILL to inotifywait'
     kill -s KILL "$(pgrep inotifywait)"
   fi
 
-  echo 'Removing linkerd-cni artifacts.'
+  log 'Removing linkerd-cni artifacts.'
 
   # Find all conflist files and print them out using a NULL separator instead of
   # writing each file in a new line. We will subsequently read each string and
@@ -80,38 +79,31 @@ cleanup() {
   local cni_data=''
   find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' \) -print0 |
     while read -r -d $'\0' file; do
-      echo "Removing linkerd-cni config from $file"
+      log "Removing linkerd-cni config from $file"
       cni_data=$(jq 'del( .plugins[]? | select( .type == "linkerd-cni" ))' "$file")
       # TODO (matei): we should write this out to a temp file and then do a `mv`
       # to be atomic. 
       echo "$cni_data" > "$file"
     done
 
-  # Check whether configuration file has been created by our own cni plugin
-  # and if so, rm it.
-  if [ -e "${DEFAULT_CNI_CONF_PATH}" ]; then
-    echo "Cleaning up ${DEFAULT_CNI_CONF_PATH}"
-    rm -f "${DEFAULT_CNI_CONF_PATH}"
-  fi
-
   # Remove binary and kubeconfig file
   if [ -e "${HOST_CNI_NET}/${KUBECONFIG_FILE_NAME}" ]; then
-    echo "Removing linkerd-cni kubeconfig: ${HOST_CNI_NET}/${KUBECONFIG_FILE_NAME}"
+    log "Removing linkerd-cni kubeconfig: ${HOST_CNI_NET}/${KUBECONFIG_FILE_NAME}"
     rm -f "${HOST_CNI_NET}/${KUBECONFIG_FILE_NAME}"
   fi
   if [ -e "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_BIN_DIR}"/linkerd-cni ]; then
-    echo "Removing linkerd-cni binary: ${CONTAINER_MOUNT_PREFIX}${DEST_CNI_BIN_DIR}/linkerd-cni"
+    log "Removing linkerd-cni binary: ${CONTAINER_MOUNT_PREFIX}${DEST_CNI_BIN_DIR}/linkerd-cni"
     rm -f "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_BIN_DIR}/linkerd-cni"
   fi
 
-  echo 'Exiting.'
+  log 'Exiting.'
   exit 0
 }
 
 # Capture the usual signals and exit from the script
-trap 'echo "SIGINT received, simply exiting..."; cleanup' INT
-trap 'echo "SIGTERM received, simply exiting..."; cleanup' TERM
-trap 'echo "SIGHUP received, simply exiting..."; cleanup' HUP
+trap 'log "SIGINT received, simply exiting..."; cleanup' INT
+trap 'log "SIGTERM received, simply exiting..."; cleanup' TERM
+trap 'log "SIGHUP received, simply exiting..."; cleanup' HUP
 
 # Copy the linkerd-cni binary to a known location where CNI will look.
 install_cni_bin() {
@@ -124,7 +116,7 @@ install_cni_bin() {
     cp "${path}" "${dir}"/ || exit_with_error "Failed to copy ${path} to ${dir}."
   done
 
-  echo "Wrote linkerd CNI binaries to ${dir}"
+  log "Wrote linkerd CNI binaries to ${dir}"
 }
 
 create_cni_conf() {
@@ -137,10 +129,10 @@ create_cni_conf() {
 
   # If the CNI Network Config has been overwritten, then use template from file
   if [ -e "${CNI_NETWORK_CONFIG_FILE}" ]; then
-    echo "Using CNI config template from ${CNI_NETWORK_CONFIG_FILE}."
+    log "Using CNI config template from ${CNI_NETWORK_CONFIG_FILE}."
     cp "${CNI_NETWORK_CONFIG_FILE}" "${TMP_CONF}"
   elif [ "${CNI_NETWORK_CONFIG}" ]; then
-    echo 'Using CNI config template from CNI_NETWORK_CONFIG environment variable.'
+    log 'Using CNI config template from CNI_NETWORK_CONFIG environment variable.'
     cat >"${TMP_CONF}" <<EOF
 ${CNI_NETWORK_CONFIG}
 EOF
@@ -158,10 +150,10 @@ EOF
     # We're running as a k8d pod - expect some variables.
     # If the variables are null, exit
     if [ -z "${KUBERNETES_SERVICE_HOST}" ]; then
-      echo 'KUBERNETES_SERVICE_HOST not set'; exit 1;
+      log 'KUBERNETES_SERVICE_HOST not set'; exit 1;
     fi
     if [ -z "${KUBERNETES_SERVICE_PORT}" ]; then
-      echo 'KUBERNETES_SERVICE_PORT not set'; exit 1;
+      log 'KUBERNETES_SERVICE_PORT not set'; exit 1;
     fi
 
     if [ "${SKIP_TLS_VERIFY}" = 'true' ]; then
@@ -210,10 +202,9 @@ EOF
   # Use alternative command character "~", since these include a "/".
   sed -i s~__KUBECONFIG_FILEPATH__~"${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}"~g ${TMP_CONF}
 
-
   # Log the config file before inserting service account token.
   # This way auth token is not visible in the logs.
-  echo "CNI config: $(cat ${TMP_CONF})"
+  log "CNI config: $(cat ${TMP_CONF})"
 
   sed -i s/__SERVICEACCOUNT_TOKEN__/"${SERVICEACCOUNT_TOKEN:-}"/g ${TMP_CONF}
 }
@@ -238,20 +229,15 @@ install_cni_conf() {
   old_file_path=
   if [ "${filename}" != '01-linkerd-cni.conf' ] && [ "${extension}" = 'conf' ]; then
    old_file_path=${cni_conf_path}
-   echo "Renaming ${cni_conf_path} extension to .conflist"
+   log "Renaming ${cni_conf_path} extension to .conflist"
    cni_conf_path="${cni_conf_path}list"
-  fi
-
-  if [ -e "${DEFAULT_CNI_CONF_PATH}" ] && [ "$cni_conf_path" != "${DEFAULT_CNI_CONF_PATH}" ]; then
-   echo "Removing Linkerd's configuration file: ${DEFAULT_CNI_CONF_PATH}"
-   rm -f "${DEFAULT_CNI_CONF_PATH}"
   fi
 
   # Move the temporary CNI config into place.
   mv "${TMP_CONF}" "${cni_conf_path}" || exit_with_error 'Failed to mv files.'
-  [ -n "$old_file_path" ] && rm -f "${old_file_path}" && echo "Removing unwanted .conf file"
+  [ -n "$old_file_path" ] && rm -f "${old_file_path}" && log "Removing unwanted .conf file"
 
-  echo "Created CNI config ${cni_conf_path}"
+  log "Created CNI config ${cni_conf_path}"
 }
 
 # Sync() is responsible for reacting to file system changes. It is used in
@@ -272,12 +258,10 @@ sync() {
   local new_sha
   if [ "$ev" = 'DELETE' ]; then
     # When the event type is 'DELETE', we check to see if there are any `*conf` or `*conflist`
-    # files on the host's filesystem. If none are present, we install in
-    # 'interface' mode, using our own CNI config file.
+    # files on the host's filesystem.
     config_file_count=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | sort | wc -l)
     if [ "$config_file_count" -eq 0 ]; then
-      echo "No active CNI configuration file found after $ev event; re-installing in \"interface\" mode"
-      install_cni_conf "${DEFAULT_CNI_CONF_PATH}"
+      log "No active CNI configuration file found after $ev event"
     fi
   elif [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ]; then
     # When the event type is 'CREATE' or 'MOVED_TO', we check the previously
@@ -287,14 +271,14 @@ sync() {
     if [ "$new_sha" != "$prev_sha" ]; then
       # Create but don't rm old one since we don't know if this will be configured
       # to run as _the_ cni plugin.
-      echo "New file [$filename] detected; re-installing in \"chained\" mode"
+      log "New file [$filename] detected; re-installing"
       install_cni_conf "$filepath"
     else
       # If the SHA hasn't changed or we get an unrecognised event, ignore it.
       # When the SHA is the same, we can get into infinite loops whereby a file has
       # been created and after re-install the watch keeps triggering CREATE events
       # that never end.
-      echo "Ignoring event: $ev $filepath; no real changes detected"
+      log "Ignoring event: $ev $filepath; no real changes detected"
     fi
   fi
 }
@@ -304,7 +288,7 @@ monitor() {
   inotifywait -m "${HOST_CNI_NET}" -e create,delete,moved_to |
     while read -r directory action filename; do
       if [[ "$filename" =~ .*.(conflist|conf)$ ]]; then 
-        echo "Detected change in $directory: $action $filename"
+        log "Detected change in $directory: $action $filename"
         sync "$filename" "$action" "$cni_conf_sha"
         # When file exists (i.e we didn't deal with a DELETE ev)
         # then calculate its sha to be used the next turn.
@@ -315,23 +299,27 @@ monitor() {
     done
 }
 
+log() {
+  printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1"
+}
+
 ################################
 ### CNI Plugin Install Logic ###
 ################################
 
+# Delete old "interface mode" file
+rm -f "${DEFAULT_CNI_CONF_PATH}"
+
 install_cni_bin
 
-# Install CNI configuration. If we have an existing CNI configuration file (*.conflist or *.conf) that is not linkerd's,
-# then append our configuration to that file. Otherwise, if no CNI config files
-# are present, install our stand-alone config file.
+# Append our config to any existing config file (*.conflist or *.conf)
 config_file_count=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | grep -v linkerd | sort | wc -l)
 if [ "$config_file_count" -eq 0 ]; then
-  echo "No active CNI configuration files found; installing in \"interface\" mode in ${DEFAULT_CNI_CONF_PATH}"
-  install_cni_conf "${DEFAULT_CNI_CONF_PATH}"
+  log "No active CNI configuration files found"
 else
   find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
     while read -r -d $'\0' file; do
-      echo "Installing CNI configuration in \"chained\" mode for $file"
+      log "Installing CNI configuration for $file"
       install_cni_conf "$file"
     done
 fi
@@ -339,7 +327,11 @@ fi
 # Compute SHA for first config file found; this will be updated after every iteration.
 # First config file is likely to be chosen as the de facto CNI config by the
 # host.
-cni_conf_sha="$(sha256sum "$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | sort | head -n 1)" | while read -r s _; do echo "$s"; done)"
+conf="$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | sort | head -n 1)"
+cni_conf_sha=""
+if [[ -n "$conf" ]]; then
+  cni_conf_sha="$(sha256sum "$conf" | while read -r s _; do echo "$s"; done)"
+fi
 
 # Watch in bg so we can receive interrupt signals through 'trap'. From 'man
 # bash': 
