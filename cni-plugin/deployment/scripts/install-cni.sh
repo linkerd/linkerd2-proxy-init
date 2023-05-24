@@ -307,7 +307,8 @@ log() {
 ### CNI Plugin Install Logic ###
 ################################
 
-# Delete old "interface mode" file
+# Delete old "interface mode" file, possibly left over from previous versions
+# TODO(alpeb): remove this on stable-2.15
 rm -f "${DEFAULT_CNI_CONF_PATH}"
 
 install_cni_bin
