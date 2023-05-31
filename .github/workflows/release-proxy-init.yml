@@ -51,7 +51,7 @@ jobs:
           restore-keys: proxy-init-${{ needs.meta.outputs.mode }}-
 
       - uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18
-      - uses: linkerd/dev/actions/setup-tools@v40
+      - uses: linkerd/dev/actions/setup-tools@v41
       - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
       - run: |
           just proxy-init-image='${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}' \
