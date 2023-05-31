@@ -5,7 +5,7 @@
 ##
 
 # Cross compile from native platform to target arch
-FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v40-go as go
+FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v41-go as go
 WORKDIR /build
 COPY --link go.mod go.sum ./
 COPY --link ./cni-plugin ./cni-plugin
