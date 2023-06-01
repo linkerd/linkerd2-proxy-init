@@ -184,6 +184,14 @@ cni-plugin-test-integration-cilium:
         K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI_NO_POLICY_ENFORCER }}' \
         cni-plugin-test-integration-with-cilium
 
+cni-plugin-test-ordering: build-cni-plugin-image
+    @{{ just_executable() }} K3D_CLUSTER_NAME='l5d-calico-ordering-test' _cni-plugin-test-ordering-run
+
+_cni-plugin-test-ordering-run:
+    @{{ just_executable() }} K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI }}' _k3d-cni-create
+    @just-k3d import {{ cni-plugin-image }}
+    ./cni-plugin/integration/run-ordering.sh
+
 _cni-plugin-setup-cilium:
     #!/usr/bin/env bash
     set -euxo pipefail
