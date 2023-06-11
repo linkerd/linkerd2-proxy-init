@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/containernetworking/cni v1.1.2
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/sirupsen/logrus v1.9.2
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	k8s.io/api v0.27.2
 	k8s.io/apimachinery v0.27.2
