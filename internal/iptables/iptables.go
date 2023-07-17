@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	ns "github.com/containernetworking/plugins/pkg/ns"
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/linkerd/linkerd2-proxy-init/internal/util"
@@ -229,28 +230,59 @@ func makeMultiportDestinations(portsToIgnore []string) [][]string {
 }
 
 func executeCommand(firewallConfiguration FirewallConfiguration, cmd *exec.Cmd) ([]byte, error) {
-	if firewallConfiguration.NetNs != "" {
-		// BusyBox's `nsenter` needs `--` to separate nsenter arguments from the
-		// command.
-		//
-		// See https://github.com/rancher/k3s/issues/1434#issuecomment-629315909
-		nsArgs := fmt.Sprintf("--net=%s", firewallConfiguration.NetNs)
-		args := append([]string{nsArgs, "--"}, cmd.Args...)
-		cmd = exec.Command("nsenter", args...)
-	}
+	// Always log the command to apply for tracing purposes
 	log.Info(cmd.String())
 
+	// Short out early if we are just simulating the network
 	if firewallConfiguration.SimulateOnly {
 		return nil, nil
 	}
 
-	out, err := cmd.CombinedOutput()
+	// Helper for reusing code when actually calling out to the command
+	doCommand := func() ([]byte, error) {
+		out, err := cmd.CombinedOutput()
 
-	if len(out) > 0 {
-		log.Infof("%s", out)
+		// Log out the output, if any
+		if len(out) > 0 {
+			log.Infof("%s", out)
+		}
+
+		return out, err
 	}
 
-	return out, err
+	// If we need to run within a target network namespace, then wrap the command
+	// in that namespace.
+	//
+	// Note: Network namespace switching is very volatile in Go. Care should be taken
+	// to ensure that all namespaced commands be wrapped in `targetNamespace.Do`, as explained in
+	// the link below.
+	//
+	// See: https://pkg.go.dev/github.com/containernetworking/plugins/pkg/ns#readme-do-the-recommended-thing
+	if firewallConfiguration.NetNs != "" {
+		// Fetch the target net namespace, ensuring that it exists
+		netNs, err := ns.GetNS(firewallConfiguration.NetNs)
+		if err != nil {
+			log.Errorf("could not switch to target network namespace \"%s\": %s", firewallConfiguration.NetNs, err.Error())
+			return nil, err
+		}
+
+		// Actually run the command in the namespace
+		// Note: Try to keep this code short! Goroutine switches might cause the
+		// namespace to change...
+		//
+		// Note: Result needs to be defined here since `netNs.Do` only returns
+		// an error.
+		result := make([]byte, 0)
+		err = netNs.Do(func(_ ns.NetNS) error {
+			result, err = doCommand()
+
+			return err
+		})
+
+		return result, err
+	} else {
+		return doCommand()
+	}
 }
 
 func (fc FirewallConfiguration) makeIgnoreUserID(chainName string, uid int, comment string) *exec.Cmd {
