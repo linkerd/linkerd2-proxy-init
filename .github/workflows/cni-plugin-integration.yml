@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: linkerd/dev/actions/setup-tools@v41
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
       - name: Run CNI integration tests
         run: just cni-plugin-test-integration-flannel
   cni-calico-test:
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: linkerd/dev/actions/setup-tools@v41
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
       - name: Run CNI integration tests
         run: just cni-plugin-test-integration-calico
   cni-cilium-test:
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: linkerd/dev/actions/setup-tools@v41
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
       - name: Run CNI integration tests
         run: just cni-plugin-test-integration-cilium
   ordering-test:
@@ -43,6 +43,6 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: linkerd/dev/actions/setup-tools@v41
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
       - name: Run CNI ordering tests
         run: just cni-plugin-test-ordering
