@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   meta:
-    timeout-minutes: 3
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     container: ghcr.io/linkerd/dev:v39-rust
     steps:
