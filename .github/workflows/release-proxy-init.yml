@@ -50,7 +50,7 @@ jobs:
           key: proxy-init-${{ needs.meta.outputs.mode }}-${{ needs.meta.outputs.version }}
           restore-keys: proxy-init-${{ needs.meta.outputs.mode }}-
 
-      - uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7
+      - uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3
       - uses: linkerd/dev/actions/setup-tools@v41
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
       - run: |
