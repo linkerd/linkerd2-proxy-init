@@ -13,7 +13,7 @@ jobs:
   cni-flannel-test:
     continue-on-error: true
     timeout-minutes: 15
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: linkerd/dev/actions/setup-tools@v41
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
@@ -22,7 +22,7 @@ jobs:
   cni-calico-test:
     continue-on-error: true
     timeout-minutes: 15
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: linkerd/dev/actions/setup-tools@v41
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
@@ -31,7 +31,7 @@ jobs:
   cni-cilium-test:
     continue-on-error: true
     timeout-minutes: 15
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: linkerd/dev/actions/setup-tools@v41
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
@@ -40,7 +40,7 @@ jobs:
   ordering-test:
     continue-on-error: true
     timeout-minutes: 15
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: linkerd/dev/actions/setup-tools@v41
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac

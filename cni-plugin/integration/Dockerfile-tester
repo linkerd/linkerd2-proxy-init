@@ -8,7 +8,7 @@
 #  1) a specific k3d cluster configured with CNI
 #  2) a test suite (e.g. `flannel.go`) runs with a configured CNI plugin.
 
-FROM golang:1.18-alpine AS build
+FROM golang:1.21-alpine as build
 RUN apk add build-base
 ENV GOCACHE=/tmp/
 WORKDIR /src
