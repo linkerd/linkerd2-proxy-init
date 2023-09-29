@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
 ## Runtime
 ##
 
-FROM --platform=$TARGETPLATFORM alpine:3.18.3 as runtime
+FROM --platform=$TARGETPLATFORM alpine:3.18.4 as runtime
 RUN apk add iptables libcap && \
     touch /run/xtables.lock && \
     chmod 0666 /run/xtables.lock
