@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/containernetworking/cni v1.1.2
+	github.com/containernetworking/plugins v1.3.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
