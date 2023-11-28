@@ -1,9 +1,5 @@
 # syntax=docker/dockerfile:1.4
 
-##
-## Go
-##
-
 # Cross compile from native platform to target arch
 FROM --platform=$BUILDPLATFORM golang:1.21-alpine as go
 WORKDIR /build
@@ -16,9 +12,13 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
     go build -o /go/bin/linkerd-cni -mod=readonly -ldflags "-s -w" -v ./cni-plugin/
 
-##
-## Runtime
-##
+
+FROM --platform=$BUILDPLATFORM curlimages/curl:7.86.0 as fetch
+WORKDIR /build
+ARG LINKERD_REINITIALIZE_PODS_VERSION=v0.0.1
+#RUN bin/scurl -O https://github.com/linkerd/linkerd2-proxy-init/releases/download/reinitialize-pods%2F${LINKERD_REINITIALIZE_PODS_VERSION}/linkerd-reinitialize-pods-${LINKERD_REINITIALIZE_PODS_VERSION}-${TARGETARCH}.tgz
+#RUN tar -zxvf linkerd-reinitialize-pods-${LINKERD_REINITIALIZE_PODS}-${TARGETARCH}.tgz && mv linkerd-reinitialize-pods-${LINKERD_REINITIALIZE_PODS}-${TARGETARCH}/linkerd-reinitialize-pods .
+COPY --link ./linkerd-reinitialize-pods .
 
 FROM --platform=$TARGETPLATFORM alpine:3.18.3 as runtime
 WORKDIR /linkerd
@@ -31,6 +31,7 @@ RUN apk add \
     jq
 
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
+COPY --from=fetch /build/linkerd-reinitialize-pods /usr/lib/linkerd/
 COPY LICENSE .
 COPY cni-plugin/deployment/scripts/install-cni.sh .
 COPY cni-plugin/deployment/linkerd-cni.conf.default .

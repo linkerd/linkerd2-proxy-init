@@ -1,0 +1,82 @@
+name: reinitialize-pods release
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/release-reinitialize-pods.yml
+  push:
+    tags: ["reinitialize-pods/v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  meta:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    container: ghcr.io/linkerd/dev:v42-rust
+    steps:
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+      - id: meta
+        shell: bash
+        run: |
+          set -eu
+          shopt -s extglob
+          ref="${{ github.ref }}"
+          if [[ "$ref" == refs/tags/reinitialize-pods/v+([0-9]).+([0-9]).+([0-9])?(-+([a-z0-9-])) ]]; then
+            ( echo version="${ref##refs/tags/reinitialize-pods/}"
+              echo mode=release
+            ) >> "$GITHUB_OUTPUT"
+          else
+            sha="${{ github.sha }}"
+            ( echo version="$(just reinitialize-pods --evaluate version)-${sha:0:7}"
+              echo mode=test
+            ) >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.meta.outputs.mode == 'release'
+        name: Check that reinitialize-pods version matches release version
+        shell: bash
+        run: |
+          version=$(just reinitialize-pods --evaluate version)
+          # shellcheck disable=SC2193
+          if [[ "${version}" != '${{ steps.meta.outputs.version }}' ]]; then
+            echo "::error ::Crate version v${version} does not match tag ${{ steps.meta.outputs.version }}"
+            exit 1
+          fi
+    outputs:
+      mode: ${{ steps.meta.outputs.mode }}
+      version: ${{ steps.meta.outputs.version }}
+
+  package:
+    needs: meta
+    strategy:
+      matrix:
+        arch: [amd64, arm64, arm]
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    container: ghcr.io/linkerd/dev:v42-rust-musl
+    steps:
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+      - run: just reinitialize-pods arch=${{ matrix.arch }} profile=release version=${{ needs.meta.outputs.version }} package
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.arch }}-artifacts
+          path: target/package/
+
+  publish:
+    needs: [meta, package]
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
+        with:
+          path: ${{ runner.temp }}/artifacts
+      - run: find "$RUNNER_TEMP"/artifacts -type f -ls
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+      - if: needs.meta.outputs.mode == 'release'
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        with:
+          name: reinitialize-pods ${{ needs.meta.outputs.version }}
+          files: ${{ runner.temp }}/artifacts/**/*

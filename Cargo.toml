@@ -1,5 +1,5 @@
 [workspace]
-members = ["validator"]
+members = ["reinitialize-pods", "validator"]
 
 [profile.release]
 lto = true

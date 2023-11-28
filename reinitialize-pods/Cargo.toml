@@ -1,0 +1,36 @@
+[package]
+name = "linkerd-reinitialize-pods"
+version = "0.1.0"
+authors = ["Linkerd Authors <cncf-linkerd-dev@lists.cncf.io>"]
+edition = "2018"
+license = "Apache-2.0"
+publish = false
+
+[features]
+default = ["openssl-tls", "openssl-vendored"]
+openssl-tls = ["kube/openssl-tls"]
+# Vendor openssl to statically link lib
+openssl-vendored = ["openssl/vendored"]
+rustls-tls = ["kube/rustls-tls"]
+
+[dependencies]
+anyhow = "1"
+futures-util = "0.3"
+k8s-openapi = { version = "0.19", features = ["v1_21"] }
+kube = { version = "0.85", features = ["runtime"] }
+openssl = { version = "0.10.60", optional = true }
+tracing = "0.1"
+
+[dependencies.clap]
+version = "4"
+default-features = false
+features = ["derive", "env", "help", "std"]
+
+[dependencies.kubert]
+version = "0.19.0"
+default-features = false
+features = ["clap", "runtime"]
+
+[dependencies.tokio]
+version = "1"
+features = ["macros", "parking_lot", "rt", "rt-multi-thread"]

@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use bytes::{Bytes, BytesMut};
 use clap::Parser;
+use linkerd_reinitialize_pods::UNSUCCESSFUL_EXIT_CODE;
 use rand::distributions::{Alphanumeric, DistString};
 use std::{net::SocketAddr, process::exit, time};
 use tokio::{
@@ -33,7 +34,7 @@ struct Args {
     )]
     log_format: kubert::LogFormat,
 
-    #[clap(parse(try_from_str = parse_timeout), long, default_value = "10s")]
+    #[clap(value_parser = parse_timeout, long, default_value = "10s")]
     timeout: std::time::Duration,
 
     /// Address to which connections are supposed to be redirected by the
@@ -45,9 +46,6 @@ struct Args {
     #[clap(long, default_value = "192.0.2.2:1404")]
     connect_addr: SocketAddr,
 }
-
-// ERRNO 95: Operation not supported
-const UNSUCCESSFUL_EXIT_CODE: i32 = 95;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -134,12 +132,12 @@ async fn validate(listen_addr: SocketAddr, connect_addr: SocketAddr) -> Result<(
                         rules are rewriting traffic as expected");
         error
     })?;
-    debug!(data = ?String::from_utf8_lossy(&*data), size = data.len());
+    debug!(data = ?String::from_utf8_lossy(&data), size = data.len());
     ensure!(
         data == token,
         "expected client to receive {:?}; got {:?} instead",
-        String::from_utf8_lossy(&*token),
-        String::from_utf8_lossy(&*data),
+        String::from_utf8_lossy(&token),
+        String::from_utf8_lossy(&data),
     );
     Ok(())
 }
@@ -159,7 +157,7 @@ async fn serve(listener: TcpListener, token: Bytes) {
                 debug!("Accepted");
                 // We expect this write to complete instantaneously, so a timeout is not needed
                 // here.
-                match socket.write_all(&*token).await {
+                match socket.write_all(&token).await {
                     Ok(()) => debug!(bytes = token.len(), "Wrote message to client"),
                     Err(error) => error!(%error, "Failed to write bytes to client"),
                 }
