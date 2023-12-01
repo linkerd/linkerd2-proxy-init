@@ -325,13 +325,13 @@ func cmdAdd(args *skel.CmdArgs) error {
 	return types.PrintResult(&cniv1.Result{CNIVersion: cniv1.ImplementedSpecVersion}, conf.CNIVersion)
 }
 
-func cmdCheck(args *skel.CmdArgs) error {
+func cmdCheck(_ *skel.CmdArgs) error {
 	logrus.Info("linkerd-cni: check called but not implemented")
 	return nil
 }
 
 // cmdDel is called for DELETE requests
-func cmdDel(args *skel.CmdArgs) error {
+func cmdDel(_ *skel.CmdArgs) error {
 	logrus.Info("linkerd-cni: delete called but not implemented")
 	return nil
 }

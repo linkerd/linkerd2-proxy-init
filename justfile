@@ -55,7 +55,7 @@ rs-audit-deps:
 
 # Build Rust unit and integration tests
 rs-test-build:
-    {{ _cargo }} test-build --workspace --no-run
+    {{ _cargo }} test-build --workspace
 
 # Run unit tests in whole Rust workspace
 rs-test *flags:

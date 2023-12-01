@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: linkerd/dev/actions/setup-tools@v41
+      - uses: linkerd/dev/actions/setup-tools@v42
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
       - name: Run proxy-init integration tests
         run: just proxy-init-test-integration
