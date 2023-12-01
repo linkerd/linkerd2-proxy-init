@@ -71,7 +71,8 @@ rs-check-dir dir *flags:
 ##
 
 validator *args:
-    {{ just_executable() }} --justfile=validator/.justfile {{ args }}
+    TARGETCRATE=linkerd-network-validator \
+      {{ just_executable() }} --justfile=justfile-rust {{ args }}
 
 ##
 ## cni-plugin
