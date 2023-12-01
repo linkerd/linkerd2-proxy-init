@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use bytes::{Bytes, BytesMut};
 use clap::Parser;
+use linkerd_reinitialize_pods::UNSUCCESSFUL_EXIT_CODE;
 use rand::distributions::{Alphanumeric, DistString};
 use std::{net::SocketAddr, process::exit, time};
 use tokio::{
@@ -45,9 +46,6 @@ struct Args {
     #[clap(long, default_value = "192.0.2.2:1404")]
     connect_addr: SocketAddr,
 }
-
-// ERRNO 95: Operation not supported
-const UNSUCCESSFUL_EXIT_CODE: i32 = 95;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
