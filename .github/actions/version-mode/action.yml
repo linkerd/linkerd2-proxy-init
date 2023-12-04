@@ -1,0 +1,49 @@
+name: Version and mode
+description: Declare package version and mode
+
+inputs:
+  package:
+    required: true
+  check:
+    required: false
+    default: false
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+    - id: meta
+      shell: bash
+      run: |
+        set -eu
+        shopt -s extglob
+        ref="${{ github.ref }}"
+        if [[ "$ref" == refs/tags/${{ inputs.package }}/v+([0-9]).+([0-9]).+([0-9])?(-+([a-z0-9-])) ]]; then
+          ( echo version="${ref##refs/tags/${{ inputs.package }}/}"
+            echo mode=release
+          ) >> "$GITHUB_OUTPUT"
+        else
+          sha="${{ github.sha }}"
+          ( echo version="test-${sha:0:7}"
+            echo mode=test
+          ) >> "$GITHUB_OUTPUT"
+        fi
+        echo "repo=ghcr.io/${{ github.repository_owner }}/${{ inputs.package }}" >> "$GITHUB_OUTPUT"
+    - if: steps.meta.outputs.mode == 'release' && inputs.check == 'true'
+      name: Check that version matches release version
+      shell: bash
+      run: |
+        version=$(just ${{ inputs.package }} --evaluate version)
+        # shellcheck disable=SC2193
+        if [[ "${version}" != '${{ steps.meta.outputs.version }}' ]]; then
+          echo "::error ::Crate version v${version} does not match tag ${{ steps.meta.outputs.version }}"
+          exit 1
+        fi
+
+outputs:
+  mode:
+    value: ${{ steps.meta.outputs.mode }}
+  version:
+    value: ${{ steps.meta.outputs.version }}
+  repo:
+    value: ${{ steps.meta.outputs.repo }}

@@ -17,33 +17,13 @@ jobs:
     container: ghcr.io/linkerd/dev:v42-rust
     steps:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
-      - id: meta
-        shell: bash
-        run: |
-          set -eu
-          shopt -s extglob
-          ref="${{ github.ref }}"
-          if [[ "$ref" == refs/tags/validator/v+([0-9]).+([0-9]).+([0-9])?(-+([a-z0-9-])) ]]; then
-            ( echo version="${ref##refs/tags/validator/}"
-              echo mode=release
-            ) >> "$GITHUB_OUTPUT"
-          else
-            sha="${{ github.sha }}"
-            ( echo version="$(just validator --evaluate version)-${sha:0:7}"
-              echo mode=test
-            ) >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.meta.outputs.mode == 'release'
-        name: Check that validator version matches release version
-        shell: bash
-        run: |
-          version=$(just validator --evaluate version)
-          # shellcheck disable=SC2193
-          if [[ "${version}" != '${{ steps.meta.outputs.version }}' ]]; then
-            echo "::error ::Crate version v${version} does not match tag ${{ steps.meta.outputs.version }}"
-            exit 1
-          fi
+      - uses: ./.github/actions/version-mode
+        id: meta
+        with:
+          package: validator
+          check: true
     outputs:
+      repo: ${{ steps.meta.outputs.repo }}
       mode: ${{ steps.meta.outputs.mode }}
       version: ${{ steps.meta.outputs.version }}
 
