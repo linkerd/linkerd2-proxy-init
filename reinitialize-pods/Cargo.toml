@@ -16,8 +16,8 @@ rustls-tls = ["kube/rustls-tls"]
 [dependencies]
 anyhow = "1"
 futures-util = "0.3"
-k8s-openapi = { version = "0.19", features = ["v1_21"] }
-kube = { version = "0.85", features = ["runtime"] }
+k8s-openapi = { version = "0.20", features = ["v1_22"] }
+kube = { version = "0.87", features = ["runtime"] }
 openssl = { version = "0.10.60", optional = true }
 tracing = "0.1"
 
@@ -27,9 +27,9 @@ default-features = false
 features = ["derive", "env", "help", "std"]
 
 [dependencies.kubert]
-version = "0.19.0"
+version = "0.20.0"
 default-features = false
-features = ["clap", "metrics", "runtime"]
+features = ["admin", "clap", "metrics", "runtime"]
 
 [dependencies.tokio]
 version = "1"
