@@ -22,8 +22,11 @@ struct Args {
     )]
     log_format: kubert::LogFormat,
 
-    #[arg(long, env = "LINKERD_REINITIALIZE_PODS_POD_NODE_NAME")]
+    #[arg(long, env = "LINKERD_REINITIALIZE_PODS_NODE_NAME")]
     node_name: String,
+
+    #[arg(long, env = "LINKERD_REINITIALIZE_PODS_POD_NAME")]
+    controller_pod_name: String,
 
     #[command(flatten)]
     client: kubert::ClientArgs,
@@ -38,6 +41,7 @@ async fn main() -> Result<()> {
         log_level,
         log_format,
         node_name,
+        controller_pod_name,
         client,
         admin,
     } = Args::parse();
@@ -52,7 +56,7 @@ async fn main() -> Result<()> {
         .build()
         .await?;
 
-    linkerd_reinitialize_pods::run(&mut runtime, node_name);
+    linkerd_reinitialize_pods::run(&mut runtime, node_name, controller_pod_name);
 
     // Block the main thread on the shutdown signal. Once it fires, wait for the background tasks to
     // complete before exiting.
