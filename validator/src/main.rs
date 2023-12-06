@@ -47,7 +47,7 @@ struct Args {
 }
 
 // ERRNO 95: Operation not supported
-pub const UNSUCCESSFUL_EXIT_CODE: i32 = 95;
+const UNSUCCESSFUL_EXIT_CODE: i32 = 95;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
