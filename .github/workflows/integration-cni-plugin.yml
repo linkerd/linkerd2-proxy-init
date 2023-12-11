@@ -1,13 +1,13 @@
-name: cni-plugin-integration
+name: integration-cni-plugin
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
+      - .github/workflows/integration-cni-plugin.yml
       - Dockerfile-cni-plugin
-      - cni-plugin/integration/flannel/Dockerfile-tester
-      - cni-plugin/integration/run.sh
       - cni-plugin/**
+      - reinitialize-pods/**
 
 jobs:
   cni-flannel-test:
@@ -46,3 +46,11 @@ jobs:
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
       - name: Run CNI ordering tests
         run: just cni-plugin-test-ordering
+  reinitialize-pods:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: linkerd/dev/actions/setup-tools@v42
+      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+      - name: Run reinitialize-pods tests
+        run: just reinitialize-pods-integration

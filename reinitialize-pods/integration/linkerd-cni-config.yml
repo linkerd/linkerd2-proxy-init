@@ -1,0 +1,4 @@
+extraInitContainers:
+- name: sleep
+  image: busybox
+  command: ["/bin/sh", "-c", "sleep 15"]

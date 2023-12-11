@@ -16,12 +16,17 @@ FROM --platform=$BUILDPLATFORM curlimages/curl:7.86.0 as fetch
 WORKDIR /build
 ARG TARGETARCH
 ARG LINKERD_REINITIALIZE_PODS_VERSION=v0.1.0
-# TODO: replace org with linkerd, once we make a first release
-RUN curl -LO https://github.com/alpeb/linkerd2-proxy-init/releases/download/reinitialize-pods%2F${LINKERD_REINITIALIZE_PODS_VERSION}/linkerd-reinitialize-pods-${LINKERD_REINITIALIZE_PODS_VERSION}-${TARGETARCH}.tgz
+RUN curl -LO https://github.com/linkerd/linkerd2-proxy-init/releases/download/reinitialize-pods%2F${LINKERD_REINITIALIZE_PODS_VERSION}/linkerd-reinitialize-pods-${LINKERD_REINITIALIZE_PODS_VERSION}-${TARGETARCH}.tgz
 RUN tar -zxvf linkerd-reinitialize-pods-${LINKERD_REINITIALIZE_PODS_VERSION}-${TARGETARCH}.tgz && \
   mv linkerd-reinitialize-pods-${LINKERD_REINITIALIZE_PODS_VERSION}-${TARGETARCH}/linkerd-reinitialize-pods .
 
-FROM --platform=$TARGETPLATFORM alpine:3.18.5 as runtime
+FROM --platform=$BUILDPLATFORM golang:1.21-alpine as copy-test
+WORKDIR /build
+COPY ./target/package/linkerd-reinitialize-pods-test-amd64.tgz .
+RUN tar -zxvf linkerd-reinitialize-pods-test-amd64.tgz && \
+  mv ./linkerd-reinitialize-pods-test-amd64/linkerd-reinitialize-pods .
+
+FROM --platform=$TARGETPLATFORM alpine:3.18.5 as runtime-base
 WORKDIR /linkerd
 RUN apk add \
     # For inotifywait
@@ -32,10 +37,15 @@ RUN apk add \
     jq
 
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
-COPY --from=fetch /build/linkerd-reinitialize-pods /usr/lib/linkerd/
 COPY LICENSE .
 COPY cni-plugin/deployment/scripts/install-cni.sh .
 COPY cni-plugin/deployment/linkerd-cni.conf.default .
 COPY cni-plugin/deployment/scripts/filter.jq .
 ENV PATH=/linkerd:/opt/cni/bin:$PATH
 CMD ["install-cni.sh"]
+
+FROM --platform=$TARGETPLATFORM runtime-base as runtime-test
+COPY --from=copy-test /build/linkerd-reinitialize-pods /usr/lib/linkerd/
+
+FROM --platform=$TARGETPLATFORM runtime-base as runtime
+COPY --from=fetch /build/linkerd-reinitialize-pods /usr/lib/linkerd/

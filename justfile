@@ -17,7 +17,7 @@ lint: sh-lint md-lint rs-clippy action-lint action-dev-check
 
 go-lint *flags: (proxy-init-lint flags) (cni-plugin-lint flags)
 
-test: rs-test proxy-init-test-unit proxy-init-test-integration
+test: rs-test proxy-init-test-unit proxy-init-test-integration reinitialize-pods-integration
 
 # Check whether the Go code is formatted.
 go-fmt-check:
@@ -78,9 +78,18 @@ validator *args:
 ## reinitialize-pods
 ##
 
-reinitialize-pods *args:
+reinitialize-pods version *args:
     TARGETCRATE=linkerd-reinitialize-pods \
-      {{ just_executable() }} --justfile=justfile-rust {{ args }}
+      {{ just_executable() }} --justfile=justfile-rust version={{version}} {{ args }}
+
+# The K3S_IMAGES_JSON file used instructs the creation of a cluster on version
+# v1.27.6-k3s1, because after that Calico won't work.
+# See https://github.com/k3d-io/k3d/issues/1375
+reinitialize-pods-integration $K3S_IMAGES_JSON='./cni-plugin/integration/manifests/calico/k3s-images.json': (reinitialize-pods "test" "package") (build-cni-plugin-image "--target=runtime-test" "--load")
+    @{{ just_executable() }} K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI }}' _k3d-cni-create
+    @just-k3d use
+    @just-k3d import {{ cni-plugin-image }}
+    ./reinitialize-pods/integration/run.sh {{ cni-plugin-image }}
 
 ##
 ## cni-plugin
