@@ -1,5 +1,7 @@
 use anyhow::{bail, Result};
 use clap::Parser;
+use kubert::Runtime;
+use linkerd_reinitialize_pods::Metrics;
 
 /// Scan the pods in the current node to find those that have been injected by linkerd, and whose
 /// linkerd-network-validator container has failed, and proceed to evict them so they can restart
@@ -46,21 +48,20 @@ async fn main() -> Result<()> {
         admin,
     } = Args::parse();
 
-    let mut admin = admin.into_builder();
-    admin.with_default_prometheus();
-
-    let mut runtime = kubert::Runtime::builder()
+    let mut prom = prometheus_client::registry::Registry::default();
+    let metrics = Metrics::register(prom.sub_registry_with_prefix("linkerd_reinitialize_pods"));
+    let mut rt = Runtime::builder()
         .with_log(log_level, log_format)
-        .with_admin(admin)
+        .with_admin(admin.into_builder().with_prometheus(prom))
         .with_client(client)
         .build()
         .await?;
 
-    linkerd_reinitialize_pods::run(&mut runtime, node_name, controller_pod_name);
+    linkerd_reinitialize_pods::run(&mut rt, node_name, controller_pod_name, metrics);
 
     // Block the main thread on the shutdown signal. Once it fires, wait for the background tasks to
     // complete before exiting.
-    if runtime.run().await.is_err() {
+    if rt.run().await.is_err() {
         bail!("aborted");
     }
 
