@@ -87,16 +87,12 @@ async fn process_events(
                 match tx.try_send(pod.clone()) {
                     Ok(_) => {}
                     Err(TrySendError::Full(_)) => {
-                        tracing::warn!(
-                            name = format!("{namespace}/{name}"),
-                            "Dropped event (channel full)"
-                        );
+                        tracing::warn!(%namespace, %name, "Dropped event (channel full)");
                         metrics.queue_overflow.inc();
                     }
-                    Err(TrySendError::Closed(_)) => tracing::warn!(
-                        name = format!("{namespace}/{name}"),
-                        "Dropped event (channel closed or dropped)"
-                    ),
+                    Err(TrySendError::Closed(_)) => {
+                        tracing::warn!(%namespace, %name, "Dropped event (channel closed or dropped)")
+                    }
                 }
             }
         }
@@ -116,16 +112,16 @@ async fn process_pods(
         let evict_res = pods.evict(&name, &Default::default()).await;
         match evict_res {
             Ok(_) => {
-                tracing::info!(name = format!("{namespace}/{name}"), "Evicting pod");
+                tracing::info!(%namespace, %name, "Evicting pod");
                 metrics.evicted_pods.inc();
                 if let Err(err) =
                     publish_k8s_event(client.clone(), controller_pod_name.clone(), &pod).await
                 {
-                    tracing::warn!(%err, name = format!("{namespace}/{name}"), "Error publishing event");
+                    tracing::warn!(%err, %namespace, %name, "Error publishing event");
                 }
             }
             Err(err) => {
-                tracing::warn!(%err, name = format!("{namespace}/{name}"), "Error evicting pod")
+                tracing::warn!(%err, %namespace, %name, "Error evicting pod")
             }
         }
     }
