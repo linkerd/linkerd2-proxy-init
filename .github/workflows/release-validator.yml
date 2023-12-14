@@ -38,7 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - run: just validator arch=${{ matrix.arch }} profile=release version=${{ needs.meta.outputs.version }} package
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.arch }}-artifacts
           path: target/package/
