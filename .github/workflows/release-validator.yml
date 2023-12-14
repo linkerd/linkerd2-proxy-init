@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/linkerd/dev:v42-rust
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - uses: ./.github/actions/version-mode
         id: meta
         with:
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/linkerd/dev:v42-rust-musl
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - run: just validator arch=${{ matrix.arch }} profile=release version=${{ needs.meta.outputs.version }} package
       - uses: actions/upload-artifact@v3
         with:
@@ -54,7 +54,7 @@ jobs:
         with:
           path: ${{ runner.temp }}/artifacts
       - run: find "$RUNNER_TEMP"/artifacts -type f -ls
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - if: needs.meta.outputs.mode == 'release'
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
         with:
