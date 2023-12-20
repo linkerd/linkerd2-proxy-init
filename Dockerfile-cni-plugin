@@ -12,14 +12,25 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
     go build -o /go/bin/linkerd-cni -mod=readonly -ldflags "-s -w" -v ./cni-plugin/
 
-FROM --platform=$BUILDPLATFORM curlimages/curl:7.86.0 as fetch
+FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v42-rust-musl as reinitialize-pods
 WORKDIR /build
+COPY --link justfile justfile-rust .
+COPY --link Cargo.toml Cargo.lock .
+COPY --link validator validator
+COPY --link reinitialize-pods reinitialize-pods
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    cargo fetch
 ARG TARGETARCH
-ARG LINKERD_REINITIALIZE_PODS_VERSION=v0.1.0
-# TODO: replace org with linkerd, once we make a first release
-RUN curl -LO https://github.com/alpeb/linkerd2-proxy-init/releases/download/reinitialize-pods%2F${LINKERD_REINITIALIZE_PODS_VERSION}/linkerd-reinitialize-pods-${LINKERD_REINITIALIZE_PODS_VERSION}-${TARGETARCH}.tgz
-RUN tar -zxvf linkerd-reinitialize-pods-${LINKERD_REINITIALIZE_PODS_VERSION}-${TARGETARCH}.tgz && \
-  mv linkerd-reinitialize-pods-${LINKERD_REINITIALIZE_PODS_VERSION}-${TARGETARCH}/linkerd-reinitialize-pods .
+RUN --mount=type=cache,target=target \
+    --mount=type=cache,target=/usr/local/cargo/registry \
+    target=$(case "$TARGETARCH" in \
+        amd64) echo x86_64-unknown-linux-musl ;; \
+        arm64) echo aarch64-unknown-linux-musl ;; \
+        arm) echo armv7-unknown-linux-musleabihf ;; \
+        *) echo "unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
+    esac) && \
+    just reinitialize-pods arch="$TARGETARCH" profile=release build && \
+    mv "target/$target/release/linkerd-reinitialize-pods" .
 
 FROM --platform=$TARGETPLATFORM alpine:3.18.5 as runtime
 WORKDIR /linkerd
@@ -32,7 +43,7 @@ RUN apk add \
     jq
 
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
-COPY --from=fetch /build/linkerd-reinitialize-pods /usr/lib/linkerd/
+COPY --from=reinitialize-pods /build/linkerd-reinitialize-pods /usr/lib/linkerd/
 COPY LICENSE .
 COPY cni-plugin/deployment/scripts/install-cni.sh .
 COPY cni-plugin/deployment/linkerd-cni.conf.default .
