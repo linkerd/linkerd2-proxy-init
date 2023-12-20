@@ -1,5 +1,5 @@
 [workspace]
-members = ["reinitialize-pods", "validator"]
+members = ["cni-repair-controller", "validator"]
 
 [profile.release]
 lto = true

@@ -75,11 +75,11 @@ validator *args:
       {{ just_executable() }} --justfile=justfile-rust {{ args }}
 
 ##
-## reinitialize-pods
+## cni-repair-controller
 ##
 
-reinitialize-pods *args:
-    TARGETCRATE=linkerd-reinitialize-pods \
+cni-repair-controller *args:
+    TARGETCRATE=linkerd-cni-repair-controller \
       {{ just_executable() }} --justfile=justfile-rust {{ args }}
 
 ##

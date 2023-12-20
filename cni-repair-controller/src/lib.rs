@@ -133,7 +133,7 @@ async fn publish_k8s_event(
     pod: &Pod,
 ) -> Result<(), Error> {
     let reporter = Reporter {
-        controller: "linkerd-reinitialize-pods".into(),
+        controller: "linkerd-cni-repair-controller".into(),
         instance: Some(controller_pod_name),
     };
     let reference = pod.object_ref(&());

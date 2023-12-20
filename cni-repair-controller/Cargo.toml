@@ -1,5 +1,5 @@
 [package]
-name = "linkerd-reinitialize-pods"
+name = "linkerd-cni-repair-controller"
 version = "0.1.0"
 authors = ["Linkerd Authors <cncf-linkerd-dev@lists.cncf.io>"]
 edition = "2018"
