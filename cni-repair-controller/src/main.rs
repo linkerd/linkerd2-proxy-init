@@ -57,7 +57,8 @@ async fn main() -> Result<()> {
         .build()
         .await?;
 
-    linkerd_cni_repair_controller::run(&mut rt, node_name, controller_pod_name, metrics);
+    let handle =
+        linkerd_cni_repair_controller::run(&mut rt, node_name, controller_pod_name, metrics);
 
     // Block the main thread on the shutdown signal. Once it fires, wait for the background tasks to
     // complete before exiting.
@@ -65,5 +66,6 @@ async fn main() -> Result<()> {
         bail!("aborted");
     }
 
+    handle.abort();
     Ok(())
 }

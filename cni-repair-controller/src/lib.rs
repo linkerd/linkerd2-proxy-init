@@ -1,5 +1,5 @@
 use futures_util::{Stream, StreamExt};
-use k8s_openapi::api::core::v1::Pod;
+use k8s_openapi::api::core::v1::{ObjectReference, Pod};
 use kube::{
     runtime::{
         events::{Event, EventType, Recorder, Reporter},
@@ -10,9 +10,10 @@ use kube::{
 use kubert::Runtime;
 use prometheus_client::{metrics::counter::Counter, registry::Registry};
 use tokio::sync::mpsc::{self, error::TrySendError, Receiver, Sender};
+use tokio::task::JoinHandle;
 
 // ERRNO 95: Operation not supported
-pub const UNSUCCESSFUL_EXIT_CODE: i32 = 95;
+const UNSUCCESSFUL_EXIT_CODE: i32 = 95;
 
 // If the event channel capacity is reached, the event is dropped, but a new one will be emitted
 // in the pod's next crashloop iteration
@@ -29,7 +30,12 @@ pub struct Metrics {
     evicted_pods: Counter<u64>,
 }
 
-pub fn run(rt: &mut Runtime, node_name: String, controller_pod_name: String, metrics: Metrics) {
+pub fn run(
+    rt: &mut Runtime,
+    node_name: String,
+    controller_pod_name: String,
+    metrics: Metrics,
+) -> JoinHandle<()> {
     let pod_evts = rt.watch_all::<Pod>(
         watcher::Config::default()
             .labels(DATA_PLANE_LABEL)
@@ -39,12 +45,12 @@ pub fn run(rt: &mut Runtime, node_name: String, controller_pod_name: String, met
     tokio::spawn(process_events(pod_evts, tx, metrics.clone()));
 
     let client = rt.client();
-    tokio::spawn(process_pods(client, controller_pod_name, rx, metrics));
+    tokio::spawn(process_pods(client, controller_pod_name, rx, metrics))
 }
 
 async fn process_events(
     pod_evts: impl Stream<Item = watcher::Event<Pod>>,
-    tx: Sender<Pod>,
+    tx: Sender<ObjectReference>,
     metrics: Metrics,
 ) {
     tokio::pin!(pod_evts);
@@ -83,16 +89,15 @@ async fn process_events(
             if terminated && !evicted {
                 let namespace = pod.namespace().unwrap();
                 let name = pod.name_any();
+                let object_ref = pod.object_ref(&());
                 // this avoids blocking the event loop
-                match tx.try_send(pod.clone()) {
+                match tx.try_send(object_ref) {
                     Ok(_) => {}
                     Err(TrySendError::Full(_)) => {
                         tracing::warn!(%namespace, %name, "Dropped event (channel full)");
                         metrics.queue_overflow.inc();
                     }
-                    Err(TrySendError::Closed(_)) => {
-                        tracing::warn!(%namespace, %name, "Dropped event (channel closed or dropped)")
-                    }
+                    Err(TrySendError::Closed(_)) => panic!("Channel closed or dropped"),
                 }
             }
         }
@@ -102,12 +107,12 @@ async fn process_events(
 async fn process_pods(
     client: Client,
     controller_pod_name: String,
-    mut rx: Receiver<Pod>,
+    mut rx: Receiver<ObjectReference>,
     metrics: Metrics,
 ) {
-    while let Some(pod) = rx.recv().await {
-        let namespace = pod.namespace().unwrap();
-        let name = pod.name_any();
+    while let Some(object_ref) = rx.recv().await {
+        let namespace = object_ref.namespace.clone().unwrap_or_default();
+        let name = object_ref.name.clone().unwrap_or_default();
         let pods = kube::Api::<Pod>::namespaced(client.clone(), &namespace);
         let evict_res = pods.evict(&name, &Default::default()).await;
         match evict_res {
@@ -115,7 +120,7 @@ async fn process_pods(
                 tracing::info!(%namespace, %name, "Evicting pod");
                 metrics.evicted_pods.inc();
                 if let Err(err) =
-                    publish_k8s_event(client.clone(), controller_pod_name.clone(), &pod).await
+                    publish_k8s_event(client.clone(), controller_pod_name.clone(), object_ref).await
                 {
                     tracing::warn!(%err, %namespace, %name, "Error publishing event");
                 }
@@ -130,14 +135,13 @@ async fn process_pods(
 async fn publish_k8s_event(
     client: Client,
     controller_pod_name: String,
-    pod: &Pod,
+    object_ref: ObjectReference,
 ) -> Result<(), Error> {
     let reporter = Reporter {
         controller: "linkerd-cni-repair-controller".into(),
         instance: Some(controller_pod_name),
     };
-    let reference = pod.object_ref(&());
-    let recorder = Recorder::new(client, reporter, reference);
+    let recorder = Recorder::new(client, reporter, object_ref);
     recorder
         .publish(Event {
             action: EVENT_ACTION.into(),
