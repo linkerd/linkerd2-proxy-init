@@ -20,14 +20,13 @@ const UNSUCCESSFUL_EXIT_CODE: i32 = 95;
 const EVENT_CHANNEL_CAPACITY: usize = 32;
 
 const DATA_PLANE_LABEL: &str = "linkerd.io/control-plane-ns";
-const CONDITION_EVICTED_REASON: &str = "EvictionByEvictionAPI";
-const EVENT_ACTION: &str = "Evicting";
+const EVENT_ACTION: &str = "Deleting";
 const EVENT_REASON: &str = "LinkerdCNINotConfigured";
 
 #[derive(Clone, Debug)]
 pub struct Metrics {
     queue_overflow: Counter<u64>,
-    evicted_pods: Counter<u64>,
+    deleted_pods: Counter<u64>,
 }
 
 pub fn run(
@@ -74,19 +73,9 @@ async fn process_events(
                 .map(|term| term.exit_code == UNSUCCESSFUL_EXIT_CODE)
                 .unwrap_or(false);
 
-            let evicted = status
-                .conditions
-                .as_ref()
-                .and_then(|conds| {
-                    conds.iter().find(|cond| {
-                        cond.reason
-                            .as_ref()
-                            .is_some_and(|reason| reason == CONDITION_EVICTED_REASON)
-                    })
-                })
-                .is_some();
+            let deleting = pod.metadata.deletion_timestamp.is_some();
 
-            if terminated && !evicted {
+            if terminated && !deleting {
                 let namespace = pod.namespace().unwrap();
                 let name = pod.name_any();
                 let object_ref = pod.object_ref(&());
@@ -114,11 +103,11 @@ async fn process_pods(
         let namespace = object_ref.namespace.clone().unwrap_or_default();
         let name = object_ref.name.clone().unwrap_or_default();
         let pods = kube::Api::<Pod>::namespaced(client.clone(), &namespace);
-        let evict_res = pods.evict(&name, &Default::default()).await;
-        match evict_res {
+        let delete_res = pods.delete(&name, &Default::default()).await;
+        match delete_res {
             Ok(_) => {
-                tracing::info!(%namespace, %name, "Evicting pod");
-                metrics.evicted_pods.inc();
+                tracing::info!(%namespace, %name, "Deleting pod");
+                metrics.deleted_pods.inc();
                 if let Err(err) =
                     publish_k8s_event(client.clone(), controller_pod_name.clone(), object_ref).await
                 {
@@ -126,7 +115,7 @@ async fn process_pods(
                 }
             }
             Err(err) => {
-                tracing::warn!(%err, %namespace, %name, "Error evicting pod")
+                tracing::warn!(%err, %namespace, %name, "Error deleting pod")
             }
         }
     }
@@ -146,7 +135,7 @@ async fn publish_k8s_event(
         .publish(Event {
             action: EVENT_ACTION.into(),
             reason: EVENT_REASON.into(),
-            note: Some("Evicting pod to create a new one with proper CNI config".into()),
+            note: Some("Deleting pod to create a new one with proper CNI config".into()),
             type_: EventType::Normal,
             secondary: None,
         })
@@ -161,16 +150,16 @@ impl Metrics {
             "Incremented whenever the event processing queue overflows",
             queue_overflow.clone(),
         );
-        let evicted_pods = Counter::<u64>::default();
+        let deleted_pods = Counter::<u64>::default();
         prom.register(
-            "evicted",
-            "Number of pods evicted by the controller",
-            evicted_pods.clone(),
+            "deleted",
+            "Number of pods deleted by the controller",
+            deleted_pods.clone(),
         );
 
         Self {
             queue_overflow,
-            evicted_pods,
+            deleted_pods,
         }
     }
 }
