@@ -1,4 +1,4 @@
-use futures_util::{Stream, StreamExt};
+use futures::{Stream, StreamExt};
 use k8s_openapi::api::core::v1::{ObjectReference, Pod};
 use kube::{
     runtime::{
@@ -161,5 +161,86 @@ impl Metrics {
             queue_overflow,
             deleted_pods,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use chrono::Utc;
+    use k8s_openapi::api::core::v1::{
+        ContainerState, ContainerStateTerminated, ContainerStatus, PodStatus,
+    };
+    use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, Time};
+    use tokio::{
+        sync::mpsc::error::TryRecvError,
+        time::{self, Duration},
+    };
+
+    #[tokio::test]
+    async fn test_process_events() {
+        let mut prom = prometheus_client::registry::Registry::default();
+        let metrics =
+            Metrics::register(prom.sub_registry_with_prefix("linkerd_cni_repair_controller"));
+
+        // This pod should be ignored
+        let pod1 = Pod {
+            metadata: ObjectMeta {
+                name: Some("pod1".to_string()),
+                namespace: Some("default".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        // This pod should be processed
+        let pod2 = Pod {
+            metadata: ObjectMeta {
+                name: Some("pod2".to_string()),
+                namespace: Some("default".to_string()),
+                ..Default::default()
+            },
+            status: Some(PodStatus {
+                init_container_statuses: Some(vec![ContainerStatus {
+                    name: "linkerd-network-validator".to_string(),
+                    last_state: Some(ContainerState {
+                        terminated: Some(ContainerStateTerminated {
+                            exit_code: UNSUCCESSFUL_EXIT_CODE,
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        // This pod should be ignored
+        let pod3 = Pod {
+            metadata: ObjectMeta {
+                name: Some("pod2".to_string()),
+                namespace: Some("default".to_string()),
+                deletion_timestamp: Some(Time(Utc::now())),
+                ..Default::default()
+            },
+            ..pod2.clone()
+        };
+
+        let (tx, mut rx) = mpsc::channel(EVENT_CHANNEL_CAPACITY);
+        let stream = futures::stream::iter(vec![
+            watcher::Event::Applied(pod1),
+            watcher::Event::Applied(pod2),
+            watcher::Event::Applied(pod3),
+        ]);
+
+        tokio::spawn(process_events(stream, tx, metrics));
+        time::sleep(Duration::from_secs(2)).await;
+        let msg = rx.try_recv();
+        let object_ref = msg.unwrap();
+        assert_eq!(object_ref.name, Some("pod2".to_string()));
+        let msg = rx.try_recv();
+        assert_eq!(msg, Err(TryRecvError::Disconnected));
     }
 }
