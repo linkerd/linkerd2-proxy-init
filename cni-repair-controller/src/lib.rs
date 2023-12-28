@@ -86,7 +86,7 @@ async fn process_events(
                         tracing::warn!(%namespace, %name, "Dropped event (channel full)");
                         metrics.queue_overflow.inc();
                     }
-                    Err(TrySendError::Closed(_)) => panic!("Channel closed or dropped"),
+                    Err(TrySendError::Closed(_)) => return,
                 }
             }
         }
@@ -235,12 +235,13 @@ mod test {
             watcher::Event::Applied(pod3),
         ]);
 
-        tokio::spawn(process_events(stream, tx, metrics));
+        let process_events_handle = tokio::spawn(process_events(stream, tx, metrics));
         time::sleep(Duration::from_secs(2)).await;
         let msg = rx.try_recv();
         let object_ref = msg.unwrap();
         assert_eq!(object_ref.name, Some("pod2".to_string()));
         let msg = rx.try_recv();
         assert_eq!(msg, Err(TryRecvError::Disconnected));
+        assert!(process_events_handle.is_finished());
     }
 }
