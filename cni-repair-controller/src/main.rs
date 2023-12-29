@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use clap::Parser;
 use kubert::Runtime;
 use linkerd_cni_repair_controller::Metrics;
@@ -60,11 +60,8 @@ async fn main() -> Result<()> {
     let handle =
         linkerd_cni_repair_controller::run(&mut rt, node_name, controller_pod_name, metrics);
 
-    // Block the main thread on the shutdown signal. Once it fires, wait for the background tasks to
-    // complete before exiting.
-    if rt.run().await.is_err() {
-        bail!("aborted");
-    }
+    // Block the main thread on the shutdown signal
+    rt.run().await?;
 
     handle.abort();
     Ok(())
