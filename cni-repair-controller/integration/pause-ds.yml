@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: pause
+spec:
+  selector:
+    matchLabels:
+      app: pause-app
+  template:
+    metadata:
+      annotations:
+        linkerd.io/inject: enabled
+      labels:
+        app: pause-app
+    spec:
+      priorityClassName: system-node-critical
+      containers:
+      - name: pause-container
+        image: k8s.gcr.io/pause

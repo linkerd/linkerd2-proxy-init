@@ -1,0 +1,11 @@
+{
+  "name": "docker.io/rancher/k3s",
+  "channels": {
+    "stable": "v1.27.6-k3s1",
+    "latest": "v1.27.6-k3s1",
+    "v1.27": "v1.27.6-k3s1"
+  },
+  "digests": {
+    "v1.27.6-k3s1": "sha256:9486bbb9ca9b81c098ecd07f1c45441e143dab12577e22cf062586edcfd9d952"
+  }
+}

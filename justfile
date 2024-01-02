@@ -17,7 +17,7 @@ lint: sh-lint md-lint rs-clippy action-lint action-dev-check
 
 go-lint *flags: (proxy-init-lint flags) (cni-plugin-lint flags)
 
-test: rs-test proxy-init-test-unit proxy-init-test-integration
+test: rs-test proxy-init-test-unit proxy-init-test-integration cni-repair-controller-integration
 
 # Check whether the Go code is formatted.
 go-fmt-check:
@@ -81,6 +81,15 @@ validator *args:
 cni-repair-controller *args:
     TARGETCRATE=linkerd-cni-repair-controller \
       {{ just_executable() }} --justfile=justfile-rust {{ args }}
+
+# The K3S_IMAGES_JSON file used instructs the creation of a cluster on version
+# v1.27.6-k3s1, because after that Calico won't work.
+# See https://github.com/k3d-io/k3d/issues/1375
+cni-repair-controller-integration $K3S_IMAGES_JSON='./cni-plugin/integration/calico-k3s-images.json': (cni-repair-controller "package") build-cni-plugin-image
+    @{{ just_executable() }} K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI }}' _k3d-cni-create
+    @just-k3d use
+    @just-k3d import {{ cni-plugin-image }}
+    ./cni-repair-controller/integration/run.sh {{ cni-plugin-image }}
 
 ##
 ## cni-plugin
@@ -178,8 +187,11 @@ _cni-plugin-test-integration:
 # Run cni-plugin integration tests using calico, in a dedicated k3d environment
 # NOTE: we have to rely on a different set of dependencies here; specifically
 # `k3d-create` instead of `_k3d-ready`, since without a CNI DNS pods won't
-# start
-cni-plugin-test-integration-calico:
+# start.
+# The K3S_IMAGES_JSON file used instructs the creation of a cluster on version
+# v1.27.6-k3s1, because after that Calico won't work.
+# See https://github.com/k3d-io/k3d/issues/1375
+cni-plugin-test-integration-calico $K3S_IMAGES_JSON='./cni-plugin/integration/calico-k3s-images.json':
     @{{ just_executable() }} \
         CNI_TEST_SCENARIO='calico' \
         K3D_CLUSTER_NAME='l5d-calico-test' \
