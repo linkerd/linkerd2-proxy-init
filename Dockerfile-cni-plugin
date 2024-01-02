@@ -1,9 +1,5 @@
 # syntax=docker/dockerfile:1.4
 
-##
-## Go
-##
-
 # Cross compile from native platform to target arch
 FROM --platform=$BUILDPLATFORM golang:1.21-alpine as go
 WORKDIR /build
@@ -16,9 +12,27 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
     go build -o /go/bin/linkerd-cni -mod=readonly -ldflags "-s -w" -v ./cni-plugin/
 
-##
-## Runtime
-##
+FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v42-rust-musl as cni-repair-controller
+WORKDIR /build
+COPY --link justfile justfile-rust .
+COPY --link Cargo.toml Cargo.lock .
+COPY --link validator validator
+COPY --link cni-repair-controller cni-repair-controller
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    cargo fetch
+ARG TARGETARCH
+# Enable tokio runtime metrics
+ENV RUSTFLAGS="--cfg tokio_unstable"
+RUN --mount=type=cache,target=target \
+    --mount=type=cache,target=/usr/local/cargo/registry \
+    target=$(case "$TARGETARCH" in \
+        amd64) echo x86_64-unknown-linux-musl ;; \
+        arm64) echo aarch64-unknown-linux-musl ;; \
+        arm) echo armv7-unknown-linux-musleabihf ;; \
+        *) echo "unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
+    esac) && \
+    just cni-repair-controller arch="$TARGETARCH" profile=release build && \
+    mv "target/$target/release/linkerd-cni-repair-controller" .
 
 FROM --platform=$TARGETPLATFORM alpine:3.18.5 as runtime
 WORKDIR /linkerd
@@ -31,6 +45,7 @@ RUN apk add \
     jq
 
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
+COPY --from=cni-repair-controller /build/linkerd-cni-repair-controller /usr/lib/linkerd/
 COPY LICENSE .
 COPY cni-plugin/deployment/scripts/install-cni.sh .
 COPY cni-plugin/deployment/linkerd-cni.conf.default .

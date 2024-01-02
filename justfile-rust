@@ -1,6 +1,6 @@
 # This justfile includes recipes for building and packaging the validator and
-# reinitialize-pods crates for release. This file is separated so that we can
-# invoke cargo, etc when building defaults. If this logic were in the main
+# the repair controller crates for release. This file is separated so that we
+# can invoke cargo, etc when building defaults. If this logic were in the main
 # justfile, then these tools would be invoked (possibly updating Rust, etc),
 # for unrelated targets.
 #

@@ -9,7 +9,7 @@ publish = false
 [dependencies]
 anyhow = "1"
 bytes = "1"
-kubert = { version = "0.19.0", features = ["log"] }
+kubert = { version = "0.21", features = ["log"] }
 rand = "0.8"
 tracing = "0.1"
 

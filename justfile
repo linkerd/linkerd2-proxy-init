@@ -75,6 +75,14 @@ validator *args:
       {{ just_executable() }} --justfile=justfile-rust {{ args }}
 
 ##
+## cni-repair-controller
+##
+
+cni-repair-controller *args:
+    TARGETCRATE=linkerd-cni-repair-controller \
+      {{ just_executable() }} --justfile=justfile-rust {{ args }}
+
+##
 ## cni-plugin
 ##
 
