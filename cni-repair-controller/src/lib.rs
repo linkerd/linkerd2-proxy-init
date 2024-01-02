@@ -16,6 +16,7 @@ use prometheus_client::{
 use tokio::sync::mpsc::{self, error::TrySendError, Receiver, Sender};
 use tokio::task::JoinHandle;
 use tokio::time::{self, Duration, Instant};
+use tracing::Instrument;
 
 // ERRNO 95: Operation not supported
 const UNSUCCESSFUL_EXIT_CODE: i32 = 95;
@@ -52,10 +53,16 @@ pub fn run(
             .fields(&format!("spec.nodeName={node_name}")),
     );
     let (tx, rx) = mpsc::channel(EVENT_CHANNEL_CAPACITY);
-    tokio::spawn(process_events(pod_evts, tx, metrics.clone()));
+    tokio::spawn(
+        process_events(pod_evts, tx, metrics.clone())
+            .instrument(tracing::info_span!("watch").or_current()),
+    );
 
     let client = rt.client();
-    tokio::spawn(process_pods(client, controller_pod_name, rx, metrics))
+    tokio::spawn(
+        process_pods(client, controller_pod_name, rx, metrics)
+            .instrument(tracing::info_span!("repair").or_current()),
+    )
 }
 
 async fn process_events(
