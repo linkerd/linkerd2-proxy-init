@@ -28,7 +28,7 @@ jobs:
   docker-publish:
     needs: meta
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     permissions:
       id-token: write # needed for signing the images with GitHub OIDC token
     steps:
