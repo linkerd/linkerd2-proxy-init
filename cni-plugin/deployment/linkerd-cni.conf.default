@@ -14,6 +14,7 @@
         "incoming-proxy-port": 4143,
         "outgoing-proxy-port": 4140,
         "proxy-uid": 2102,
+        "proxy-gid": 2102,
         "ports-to-redirect": [],
         "inbound-ports-to-ignore": [],
         "outbound-ports-to-ignore": [],

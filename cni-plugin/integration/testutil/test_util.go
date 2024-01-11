@@ -46,6 +46,7 @@ type ProxyInit struct {
 	IncomingProxyPort     int      `json:"incoming-proxy-port"`
 	OutgoingProxyPort     int      `json:"outgoing-proxy-port"`
 	ProxyUID              int      `json:"proxy-uid"`
+	ProxyGID              int      `json:"proxy-gid"`
 	PortsToRedirect       []int    `json:"ports-to-redirect"`
 	InboundPortsToIgnore  []string `json:"inbound-ports-to-ignore"`
 	OutboundPortsToIgnore []string `json:"outbound-ports-to-ignore"`
@@ -70,6 +71,7 @@ type LinkerdPlugin struct {
 //	   "incoming-proxy-port": 4143,
 //	   "outgoing-proxy-port": 4140,
 //	   "proxy-uid": 2102,
+//	   "proxy-gid": 2102,
 //	   "ports-to-redirect": [],
 //	   "inbound-ports-to-ignore": ["4191","4190"],
 //	   "simulate": false,
@@ -108,6 +110,11 @@ func checkLinkerdCniConf(plugin map[string]any) error {
 	proxyUID := proxyInit.ProxyUID
 	if proxyUID != 2102 {
 		return fmt.Errorf("proxy-uid has wrong value, expected: %v, found: %v", 2102, proxyUID)
+	}
+
+	proxyGID := proxyInit.ProxyGID
+	if proxyGID != 2102 {
+		return fmt.Errorf("proxy-gid has wrong value, expected: %v, found: %v", 2102, proxyUID)
 	}
 
 	simulate := proxyInit.Simulate
