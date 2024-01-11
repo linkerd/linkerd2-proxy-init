@@ -53,6 +53,7 @@ type FirewallConfiguration struct {
 	ProxyInboundPort       int
 	ProxyOutgoingPort      int
 	ProxyUID               int
+	ProxyGID               int
 	SimulateOnly           bool
 	NetNs                  string
 	UseWaitFlag            bool
@@ -182,6 +183,11 @@ func (fc FirewallConfiguration) addOutgoingTrafficRules(existingRules []byte, co
 	// Ignore traffic from the proxy
 	if fc.ProxyUID > 0 {
 		commands = append(commands, fc.makeIgnoreUserID(outputChainName, fc.ProxyUID, "ignore-proxy-user-id"))
+	}
+
+	// Ignore traffic from the proxy
+	if fc.ProxyGID > 0 {
+		commands = append(commands, fc.makeIgnoreGroupID(outputChainName, fc.ProxyGID, "ignore-proxy-group-id"))
 	}
 
 	// Ignore loopback
@@ -326,6 +332,17 @@ func (fc FirewallConfiguration) makeIgnoreUserID(chainName string, uid int, comm
 		"-A", chainName,
 		"-m", "owner",
 		"--uid-owner", strconv.Itoa(uid),
+		"-j", "RETURN",
+		"-m", "comment",
+		"--comment", formatComment(comment))
+}
+
+func (fc FirewallConfiguration) makeIgnoreGroupID(chainName string, gid int, comment string) *exec.Cmd {
+	return exec.Command(fc.BinPath,
+		"-t", "nat",
+		"-A", chainName,
+		"-m", "owner",
+		"--gid-owner", strconv.Itoa(gid),
 		"-j", "RETURN",
 		"-m", "comment",
 		"--comment", formatComment(comment))

@@ -12,6 +12,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 		expectedIncomingProxyPort := 1234
 		expectedOutgoingProxyPort := 2345
 		expectedProxyUserID := 33
+		expectedProxyGroupID := 33
 		expectedConfig := &iptables.FirewallConfiguration{
 			Mode:                   iptables.RedirectAllMode,
 			PortsToRedirectInbound: make([]int, 0),
@@ -21,6 +22,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 			ProxyInboundPort:       expectedIncomingProxyPort,
 			ProxyOutgoingPort:      expectedOutgoingProxyPort,
 			ProxyUID:               expectedProxyUserID,
+			ProxyGID:               expectedProxyGroupID,
 			SimulateOnly:           false,
 			UseWaitFlag:            false,
 			BinPath:                "iptables-legacy",
@@ -32,6 +34,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 		options.OutgoingProxyPort = expectedOutgoingProxyPort
 		options.ProxyUserID = expectedProxyUserID
 		options.IPv6 = false
+		options.ProxyGroupID = expectedProxyGroupID
 
 		config, err := BuildFirewallConfiguration(options)
 		if err != nil {
