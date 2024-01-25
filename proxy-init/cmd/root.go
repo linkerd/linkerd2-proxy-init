@@ -47,8 +47,8 @@ func newRootOptions() *RootOptions {
 		TimeoutCloseWaitSecs:  0,
 		LogFormat:             "plain",
 		LogLevel:              "info",
-		FirewallBinPath:       "iptables",
-		FirewallSaveBinPath:   "iptables-save",
+		FirewallBinPath:       "iptables-legacy",
+		FirewallSaveBinPath:   "iptables-legacy-save",
 	}
 }
 
