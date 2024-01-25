@@ -1,0 +1,7 @@
+# This config adds an extra initContainer that will make linkerd-cni to delay
+# its start for 15s, so to allow time for the pause DaemonSet to start before
+# the full CNI config is ready and enter a failure mode
+extraInitContainers:
+- name: sleep
+  image: alpine:3.19.0
+  command: ["/bin/sh", "-c", "sleep 15"]
