@@ -9,6 +9,7 @@ on:
       - cni-plugin/integration/run.sh
       - cni-plugin/**
       - cni-repair-controller/**
+      - justfile*
 
 jobs:
   cni-flannel-test:

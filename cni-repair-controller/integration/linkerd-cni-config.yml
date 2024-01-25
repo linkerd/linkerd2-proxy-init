@@ -3,5 +3,5 @@
 # the full CNI config is ready and enter a failure mode
 extraInitContainers:
 - name: sleep
-  image: busybox
+  image: alpine:3.19.0
   command: ["/bin/sh", "-c", "sleep 15"]
