@@ -138,7 +138,16 @@ func (fc FirewallConfiguration) addOutgoingTrafficRules(existingRules []byte, co
 				false))
 
 		if fc.DropFINToProxyForTesting {
-			commands = append(commands, fc.makeDropFIN(IptablesOutputChainName, fc.ProxyOutgoingPort, "drop-outbound-fin-to-proxy-for-testing"))
+			commands = append(commands, fc.makeDropPacket(
+				IptablesOutputChainName,
+				fc.ProxyOutgoingPort,
+				"FIN",
+				"drop-outbound-fin-to-proxy-for-testing"))
+			commands = append(commands, fc.makeDropPacket(
+				IptablesOutputChainName,
+				fc.ProxyOutgoingPort,
+				"RST",
+				"drop-outbound-rst-to-proxy-for-testing"))
 		}
 	}
 
@@ -166,7 +175,16 @@ func (fc FirewallConfiguration) addIncomingTrafficRules(existingRules []byte, co
 				false))
 
 		if fc.DropFINToProxyForTesting {
-			commands = append(commands, fc.makeDropFIN(iptablesInputChainName, fc.ProxyInboundPort, "drop-inbound-fin-to-proxy-for-testing"))
+			commands = append(commands, fc.makeDropPacket(
+				iptablesInputChainName,
+				fc.ProxyInboundPort,
+				"FIN",
+				"drop-inbound-fin-to-proxy-for-testing"))
+			commands = append(commands, fc.makeDropPacket(
+				iptablesInputChainName,
+				fc.ProxyInboundPort,
+				"RST",
+				"drop-inbound-rst-to-proxy-for-testing"))
 		}
 	}
 
@@ -298,13 +316,13 @@ func (fc FirewallConfiguration) makeRedirectChainToPort(chainName string, portTo
 		"--comment", formatComment(comment))
 }
 
-func (fc FirewallConfiguration) makeDropFIN(chainName string, port int, comment string) *exec.Cmd {
+func (fc FirewallConfiguration) makeDropPacket(chainName string, port int, packet, comment string) *exec.Cmd {
 	return exec.Command(fc.BinPath,
 		"-t", "filter",
 		"-A", chainName,
 		"-p", "tcp",
 		"--dport", strconv.Itoa(port),
-		"--tcp-flags", "FIN", "FIN",
+		"--tcp-flags", packet, packet,
 		"-j", "DROP",
 		"-m", "comment",
 		"--comment", formatComment(comment))
