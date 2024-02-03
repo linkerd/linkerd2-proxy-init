@@ -30,6 +30,8 @@ type RootOptions struct {
 	LogLevel              string
 	FirewallBinPath       string
 	FirewallSaveBinPath   string
+
+	DropFINToProxyForTesting bool
 }
 
 func newRootOptions() *RootOptions {
@@ -49,6 +51,8 @@ func newRootOptions() *RootOptions {
 		LogLevel:              "info",
 		FirewallBinPath:       "iptables-legacy",
 		FirewallSaveBinPath:   "iptables-legacy-save",
+
+		DropFINToProxyForTesting: true, // XXX(ver) Default to false after debugging.
 	}
 }
 
@@ -103,6 +107,13 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&options.LogLevel, "log-level", options.LogLevel, "Configure log level")
 	cmd.PersistentFlags().StringVar(&options.FirewallBinPath, "firewall-bin-path", options.FirewallBinPath, "Path to iptables binary")
 	cmd.PersistentFlags().StringVar(&options.FirewallSaveBinPath, "firewall-save-bin-path", options.FirewallSaveBinPath, "Path to iptables-save binary")
+
+	dropFinFlag := "drop-fin-to-proxy-for-testing"
+	cmd.PersistentFlags().BoolVar(&options.DropFINToProxyForTesting, dropFinFlag, options.DropFINToProxyForTesting, "Drop FIN packets to the proxy for testing")
+	if err := cmd.PersistentFlags().MarkHidden(dropFinFlag); err != nil {
+		panic("flag must be registered")
+	}
+
 	return cmd
 }
 
@@ -140,6 +151,8 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		UseWaitFlag:            options.UseWaitFlag,
 		BinPath:                options.FirewallBinPath,
 		SaveBinPath:            options.FirewallSaveBinPath,
+
+		DropFINToProxyForTesting: options.DropFINToProxyForTesting,
 	}
 
 	if len(options.PortsToRedirect) > 0 {

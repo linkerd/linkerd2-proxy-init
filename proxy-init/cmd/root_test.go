@@ -25,6 +25,8 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 			UseWaitFlag:            false,
 			BinPath:                "iptables-legacy",
 			SaveBinPath:            "iptables-legacy-save",
+
+			DropFINToProxyForTesting: true, // XXX(ver) Default to false after debugging.
 		}
 
 		options := newRootOptions()

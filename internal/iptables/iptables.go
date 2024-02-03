@@ -26,6 +26,7 @@ const (
 
 	// IptablesOutputChainName specifies an iptables `OUTPUT` chain.
 	IptablesOutputChainName = "OUTPUT"
+	iptablesInputChainName  = "INPUT"
 
 	// IptablesMultiportLimit specifies the maximum number of port references per single iptables command.
 	IptablesMultiportLimit = 15
@@ -58,6 +59,8 @@ type FirewallConfiguration struct {
 	UseWaitFlag            bool
 	BinPath                string
 	SaveBinPath            string
+
+	DropFINToProxyForTesting bool
 }
 
 // ConfigureFirewall configures a pod's internal iptables to redirect all desired traffic through the proxy, allowing for
@@ -133,6 +136,10 @@ func (fc FirewallConfiguration) addOutgoingTrafficRules(existingRules []byte, co
 				outputChainName,
 				"install-proxy-init-output",
 				false))
+
+		if fc.DropFINToProxyForTesting {
+			commands = append(commands, fc.makeDropFIN(IptablesOutputChainName, fc.ProxyOutgoingPort, "drop-outbound-fin-to-proxy-for-testing"))
+		}
 	}
 
 	return commands
@@ -157,6 +164,10 @@ func (fc FirewallConfiguration) addIncomingTrafficRules(existingRules []byte, co
 				redirectChainName,
 				"install-proxy-init-prerouting",
 				false))
+
+		if fc.DropFINToProxyForTesting {
+			commands = append(commands, fc.makeDropFIN(iptablesInputChainName, fc.ProxyInboundPort, "drop-inbound-fin-to-proxy-for-testing"))
+		}
 	}
 
 	return commands
@@ -283,6 +294,18 @@ func (fc FirewallConfiguration) makeRedirectChainToPort(chainName string, portTo
 		"-p", "tcp",
 		"-j", "REDIRECT",
 		"--to-port", strconv.Itoa(portToRedirect),
+		"-m", "comment",
+		"--comment", formatComment(comment))
+}
+
+func (fc FirewallConfiguration) makeDropFIN(chainName string, port int, comment string) *exec.Cmd {
+	return exec.Command(fc.BinPath,
+		"-t", "filter",
+		"-A", chainName,
+		"-p", "tcp",
+		"--dport", strconv.Itoa(port),
+		"--tcp-flags", "FIN", "FIN",
+		"-j", "DROP",
 		"-m", "comment",
 		"--comment", formatComment(comment))
 }
