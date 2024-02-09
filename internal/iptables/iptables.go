@@ -307,7 +307,7 @@ func (fc FirewallConfiguration) makeIgnoreSubnet(chainName string, subnet string
 		"-A", chainName,
 		"-p", "all",
 		"-j", "RETURN",
-		"-" + dFlag, subnet,
+		"-"+dFlag, subnet,
 		"-m", "comment",
 		"--comment", formatComment(comment))
 }
