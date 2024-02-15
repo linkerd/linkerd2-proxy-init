@@ -113,7 +113,7 @@ func (fc FirewallConfiguration) addOutgoingTrafficRules(existingRules []byte, co
 	}
 
 	// Ignore traffic from the proxy
-	if fc.ProxyUID > 0 {
+	if fc.ProxyUID >= 0 {
 		commands = append(commands, fc.makeIgnoreUserID(outputChainName, fc.ProxyUID, "ignore-proxy-user-id"))
 	}
 
