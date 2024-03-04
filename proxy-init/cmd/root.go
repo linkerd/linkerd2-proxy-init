@@ -75,16 +75,48 @@ func NewRootCmd() *cobra.Command {
 				log.Info(string(out))
 			}
 
-			config, err := BuildFirewallConfiguration(options)
+			/*config, err := BuildFirewallConfiguration(options)
 			if err != nil {
 				return err
-			}
+			}*/
 			log.SetFormatter(getFormatter(options.LogFormat))
-			err = setLogLevel(options.LogLevel)
+			err := setLogLevel(options.LogLevel)
 			if err != nil {
 				return err
 			}
-			return iptables.ConfigureFirewall(*config)
+
+			log.Info("BEFORE:")
+			com := exec.Command("nft", "list", "ruleset")
+			out, err := com.CombinedOutput()
+			if len(out) > 0 {
+				log.Infof("%s", out)
+			}
+			if err != nil {
+				return err
+			}
+
+			com = exec.Command("nft", "-f", "/usr/local/nft-saved")
+			out, err = com.CombinedOutput()
+			if len(out) > 0 {
+				log.Infof("%s", out)
+			}
+			if err != nil {
+				return err
+			}
+
+			log.Info("AFTER:")
+			com = exec.Command("nft", "list", "ruleset")
+			out, err = com.CombinedOutput()
+			if len(out) > 0 {
+				log.Infof("%s", out)
+			}
+			if err != nil {
+				return err
+			}
+
+			return nil
+
+			//return iptables.ConfigureFirewall(*config)
 		},
 	}
 

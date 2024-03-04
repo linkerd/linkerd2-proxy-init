@@ -1,0 +1,25 @@
+table inet nat {
+	chain PREROUTING {
+		type nat hook prerouting priority dstnat; policy accept;
+		counter packets 0 bytes 0 jump PROXY_INIT_REDIRECT comment "proxy-init/install-proxy-init-prerouting/xxxx"
+	}
+
+	chain OUTPUT {
+		type nat hook output priority dstnat; policy accept;
+		counter packets 1 bytes 60 jump PROXY_INIT_OUTPUT comment "proxy-init/install-proxy-init-output/xxxx"
+	}
+
+	chain PROXY_INIT_OUTPUT {
+		meta skuid 2102 counter packets 0 bytes 0 return comment "proxy-init/ignore-proxy-user-id/xxx"
+		oifname "lo" counter packets 0 bytes 0 return comment "proxy-init/ignore-loopback/xxx"
+		tcp dport { 443, 4567, 4568 } counter packets 0 bytes 0 return comment "proxy-init/ignore-port-4567,4568/xxx"
+		ip protocol tcp counter packets 1 bytes 60 redirect to :4140 comment "proxy-init/redirect-all-outgoing-to-proxy-port/xxx"
+		ip6 nexthdr tcp counter packets 1 bytes 60 redirect to :4140 comment "proxy-init/redirect-all-outgoing-to-proxy-port/xxx"
+	}
+
+	chain PROXY_INIT_REDIRECT {
+		tcp dport { 4190, 4191, 4567, 4568 } counter packets 0 bytes 0 return comment "proxy-init/ignore-port-4190,4191,4567,4568/xxx"
+		ip protocol tcp counter packets 0 bytes 0 redirect to :4143 comment "proxy-init/redirect-all-incoming-to-proxy-port/xxx"
+		ip6 nexthdr tcp counter packets 0 bytes 0 redirect to :4143 comment "proxy-init/redirect-all-incoming-to-proxy-port/xxx"
+	}
+}

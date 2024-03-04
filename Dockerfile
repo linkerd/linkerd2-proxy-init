@@ -23,13 +23,16 @@ FROM --platform=$TARGETPLATFORM alpine:3.19.0 as runtime
 RUN apk add iptables-legacy iptables libcap && \
     touch /run/xtables.lock && \
     chmod 0666 /run/xtables.lock
+RUN apk add nftables
 
 COPY --link --from=go /out/linkerd2-proxy-init /usr/local/bin/proxy-init
+COPY nft-saved /usr/local/nft-saved
 
 # Set sys caps for iptables utilities and proxy-init
 RUN setcap cap_net_raw,cap_net_admin+eip /sbin/xtables-legacy-multi && \
     setcap cap_net_raw,cap_net_admin+eip /sbin/xtables-nft-multi && \
     setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/proxy-init
+RUN setcap cap_net_raw,cap_net_admin+eip /usr/sbin/nft
 
 USER 65534
 ENTRYPOINT ["/usr/local/bin/proxy-init"]
