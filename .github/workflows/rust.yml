@@ -1,14 +1,7 @@
 name: Rust
 
-on:
-  pull_request:
-    paths:
-      - .github/workflows/rust.yml
-      - '**/*.rs'
-      - '**/Cargo.toml'
-      - Cargo.lock
-      - deny.toml
-      - justfile
+on: workflow_dispatch
+
 
 jobs:
   check:

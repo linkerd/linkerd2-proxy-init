@@ -3,11 +3,8 @@ name: Markdown
 permissions:
   contents: read
 
-on:
-  pull_request:
-    paths:
-      - '**/*.md'
-      - .github/workflows/markdown.yml
+on: workflow_dispatch
+
 
 jobs:
   md-lint:

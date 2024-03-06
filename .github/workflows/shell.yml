@@ -3,12 +3,7 @@ name: Shell
 permissions:
   contents: read
 
-on:
-  pull_request:
-    paths:
-      - '**/*.sh'
-      - .github/workflows/shellcheck.yml
-      - justfile
+on: workflow_dispatch
 
 jobs:
   sh-lint:

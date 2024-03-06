@@ -1,11 +1,7 @@
 name: cni-plugin release
 
-on:
-  pull_request:
-    paths:
-      - .github/workflows/release-cni-plugin.yml
-  push:
-    tags: ["cni-plugin/v*"]
+on: workflow_dispatch
+
 
 permissions:
   contents: read

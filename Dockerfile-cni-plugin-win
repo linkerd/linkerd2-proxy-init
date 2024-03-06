@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1.4
+FROM --platform=windows/amd64 golang:1.22.1-windowsservercore AS go
+WORKDIR /build
+COPY --link go.mod go.sum ./
+COPY --link ./cni-win ./cni-win
+RUN go mod download
+RUN go build -o /go/bin/cni-win -mod=readonly -ldflags -v ./cni-win/
+
+FROM --platform=windows/amd64 mcr.microsoft.com/windows/nanoserver:ltsc2022
+COPY --from=go /go/bin/cni-win /go/bin/cni-win
+ENTRYPOINT [ "/go/bin/cni-win" ]
