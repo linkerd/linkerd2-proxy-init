@@ -1,11 +1,7 @@
 name: Proxy-init release
 
-on:
-  pull_request:
-    paths:
-      - .github/workflows/release-proxy-init.yml
-  push:
-    tags: ["proxy-init/v*"]
+on: workflow_dispatch
+
 
 permissions:
   contents: read

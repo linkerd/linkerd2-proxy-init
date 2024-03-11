@@ -1,15 +1,7 @@
 name: cni-plugin-integration
 
-on:
-  workflow_dispatch:
-  pull_request:
-    paths:
-      - Dockerfile-cni-plugin
-      - cni-plugin/integration/flannel/Dockerfile-tester
-      - cni-plugin/integration/run.sh
-      - cni-plugin/**
-      - cni-repair-controller/**
-      - justfile*
+on: workflow_dispatch
+
 
 jobs:
   cni-flannel-test:

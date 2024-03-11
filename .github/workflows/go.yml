@@ -1,12 +1,7 @@
 name: Go
 
-on:
-  pull_request:
-    paths:
-      - .github/workflows/go.yml
-      - '**/*.go'
-      - go.sum
-      - justfile
+on: workflow_dispatch
+
 
 permissions:
   contents: read

@@ -1,11 +1,7 @@
 name: Validator release
 
-on:
-  pull_request:
-    paths:
-      - .github/workflows/release-validator.yml
-  push:
-    tags: ["validator/v*"]
+on: workflow_dispatch
+
 
 permissions:
   contents: read

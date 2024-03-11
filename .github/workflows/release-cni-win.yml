@@ -1,0 +1,36 @@
+name: cni-win release
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/release-cni-win.yml
+
+permissions:
+  contents: read
+
+jobs:
+  meta:
+    timeout-minutes: 3
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - id: meta
+        uses: ./.github/actions/version-mode
+        with:
+          package: cni-win
+    outputs:
+      repo: ${{ steps.meta.outputs.repo }}
+      mode: ${{ steps.meta.outputs.mode }}
+      version: ${{ steps.meta.outputs.version }}
+
+  docker-publish:
+    needs: meta
+    runs-on: windows-latest
+    timeout-minutes: 25
+    permissions:
+      id-token: write # needed for signing the images with GitHub OIDC token
+    steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - run: |
+          docker build -f Dockerfile-cni-plugin-win .
+
