@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: linkerd/dev/actions/setup-tools@v42
+      - uses: linkerd/dev/actions/setup-tools@v43
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Run CNI integration tests
         run: just cni-plugin-test-integration-flannel
@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: linkerd/dev/actions/setup-tools@v42
+      - uses: linkerd/dev/actions/setup-tools@v43
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Run CNI integration tests
         run: just cni-plugin-test-integration-calico
@@ -35,7 +35,7 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: linkerd/dev/actions/setup-tools@v42
+      - uses: linkerd/dev/actions/setup-tools@v43
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Run CNI integration tests
         run: just cni-plugin-test-integration-cilium
@@ -44,7 +44,7 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: linkerd/dev/actions/setup-tools@v42
+      - uses: linkerd/dev/actions/setup-tools@v43
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
       - name: Run CNI ordering tests
         run: just cni-plugin-test-ordering
@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: linkerd/dev/actions/setup-tools@v42
+      - uses: linkerd/dev/actions/setup-tools@v43
       - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
       - name: Run repair-controller tests
         run: just cni-repair-controller-integration
