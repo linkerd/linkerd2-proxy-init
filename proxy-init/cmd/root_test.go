@@ -32,7 +32,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 		options.OutgoingProxyPort = expectedOutgoingProxyPort
 		options.ProxyUserID = expectedProxyUserID
 
-		config, err := BuildFirewallConfiguration(options)
+		config, err := BuildFirewallConfiguration(options, false)
 		if err != nil {
 			t.Fatalf("Unexpected error: %s", err)
 		}
@@ -51,6 +51,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				options: &RootOptions{
 					IncomingProxyPort: -1,
 					OutgoingProxyPort: 1234,
+					IPTablesMode:      IPTablesModeLegacy,
 				},
 				errorMessage: "--incoming-proxy-port must be a valid TCP port number",
 			},
@@ -58,6 +59,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				options: &RootOptions{
 					IncomingProxyPort: 100000,
 					OutgoingProxyPort: 1234,
+					IPTablesMode:      IPTablesModeLegacy,
 				},
 				errorMessage: "--incoming-proxy-port must be a valid TCP port number",
 			},
@@ -65,6 +67,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				options: &RootOptions{
 					IncomingProxyPort: 1234,
 					OutgoingProxyPort: -1,
+					IPTablesMode:      IPTablesModeLegacy,
 				},
 				errorMessage: "--outgoing-proxy-port must be a valid TCP port number",
 			},
@@ -72,17 +75,19 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				options: &RootOptions{
 					IncomingProxyPort: 1234,
 					OutgoingProxyPort: 100000,
+					IPTablesMode:      IPTablesModeLegacy,
 				},
 				errorMessage: "--outgoing-proxy-port must be a valid TCP port number",
 			},
 			{
 				options: &RootOptions{
 					SubnetsToIgnore: []string{"1.1.1.1/24", "0.0.0.0"},
+					IPTablesMode:    IPTablesModeLegacy,
 				},
 				errorMessage: "0.0.0.0 is not a valid CIDR address",
 			},
 		} {
-			_, err := BuildFirewallConfiguration(tt.options)
+			_, err := BuildFirewallConfiguration(tt.options, false)
 			if err == nil {
 				t.Fatalf("Expected error for config [%v], got nil", tt.options)
 			}
@@ -102,11 +107,12 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				// Tests that subnets are parsed properly and trimmed of excess whitespace
 				options: &RootOptions{
 					SubnetsToIgnore: []string{"1.1.1.1/24 "},
+					IPTablesMode:    IPTablesModeLegacy,
 				},
 				errorMessage: "",
 			},
 		} {
-			_, err := BuildFirewallConfiguration(tt.options)
+			_, err := BuildFirewallConfiguration(tt.options, false)
 			if err != nil {
 				t.Fatalf("Got error error for config [%v]", tt.options)
 			}

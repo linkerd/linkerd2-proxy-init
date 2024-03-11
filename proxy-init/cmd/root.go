@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os/exec"
@@ -11,6 +12,22 @@ import (
 
 	"github.com/linkerd/linkerd2-proxy-init/internal/iptables"
 	"github.com/linkerd/linkerd2-proxy-init/internal/util"
+)
+
+const (
+	// IPTablesModeLegacy signals the usage of the iptables-legacy commands
+	IPTablesModeLegacy = "legacy"
+	// ipTablesModeNFT signals the usage of the iptables-nft commands
+	ipTablesModeNFT = "nft"
+
+	cmdLegacy         = "iptables-legacy"
+	cmdLegacySave     = "iptables-legacy-save"
+	cmdLegacyIPv6     = "ip6tables-legacy"
+	cmdLegacyIPv6Save = "ip6tables-legacy-save"
+	cmdNFT            = "iptables-nft"
+	cmdNFTSave        = "iptables-nft-save"
+	cmdNFTIPv6        = "ip6tables-nft"
+	cmdNFTIPv6Save    = "ip6tables-nft-save"
 )
 
 // RootOptions provides the information that will be used to build a firewall configuration.
@@ -28,8 +45,12 @@ type RootOptions struct {
 	TimeoutCloseWaitSecs  int
 	LogFormat             string
 	LogLevel              string
-	FirewallBinPath       string
-	FirewallSaveBinPath   string
+	IPTablesMode          string
+	IPv6                  bool
+
+	// No longer supported
+	FirewallBinPath     string
+	FirewallSaveBinPath string
 }
 
 func newRootOptions() *RootOptions {
@@ -47,8 +68,8 @@ func newRootOptions() *RootOptions {
 		TimeoutCloseWaitSecs:  0,
 		LogFormat:             "plain",
 		LogLevel:              "info",
-		FirewallBinPath:       "iptables-legacy",
-		FirewallSaveBinPath:   "iptables-legacy-save",
+		IPTablesMode:          IPTablesModeLegacy,
+		IPv6:                  true,
 	}
 }
 
@@ -61,7 +82,7 @@ func NewRootCmd() *cobra.Command {
 		Use:   "proxy-init",
 		Short: "proxy-init adds a Kubernetes pod to the Linkerd service mesh",
 		Long:  "proxy-init adds a Kubernetes pod to the Linkerd service mesh.",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 
 			if options.TimeoutCloseWaitSecs != 0 {
 				sysctl := exec.Command("sysctl", "-w",
@@ -75,16 +96,35 @@ func NewRootCmd() *cobra.Command {
 				log.Info(string(out))
 			}
 
-			config, err := BuildFirewallConfiguration(options)
-			if err != nil {
-				return err
-			}
 			log.SetFormatter(getFormatter(options.LogFormat))
-			err = setLogLevel(options.LogLevel)
+			err := setLogLevel(options.LogLevel)
 			if err != nil {
 				return err
 			}
-			return iptables.ConfigureFirewall(*config)
+
+			config, err := BuildFirewallConfiguration(options, false)
+			if err != nil {
+				return err
+			}
+
+			if err = iptables.ConfigureFirewall(*config); err != nil {
+				return err
+			}
+
+			if !options.IPv6 {
+				return nil
+			}
+
+			config, err = BuildFirewallConfiguration(options, true)
+			if err != nil {
+				return err
+			}
+
+			// We couldn't find a robust way of checking IPv6 support besides trying to just call ip6tables-save.
+			// If IPv4 rules worked but not IPv6, let's not fail the container (the actual problem will get logged).
+			_ = iptables.ConfigureFirewall(*config)
+
+			return nil
 		},
 	}
 
@@ -101,13 +141,31 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().IntVar(&options.TimeoutCloseWaitSecs, "timeout-close-wait-secs", options.TimeoutCloseWaitSecs, "Sets nf_conntrack_tcp_timeout_close_wait")
 	cmd.PersistentFlags().StringVar(&options.LogFormat, "log-format", options.LogFormat, "Configure log format ('plain' or 'json')")
 	cmd.PersistentFlags().StringVar(&options.LogLevel, "log-level", options.LogLevel, "Configure log level")
+	cmd.PersistentFlags().StringVar(&options.IPTablesMode, "iptables-mode", options.IPTablesMode, "Variant of iptables command to use (\"legacy\" or \"nft\")")
+	cmd.PersistentFlags().BoolVar(&options.IPv6, "ipv6", options.IPv6, "Set rules both via iptables and ip6tables to support dual-stack networking")
 	cmd.PersistentFlags().StringVar(&options.FirewallBinPath, "firewall-bin-path", options.FirewallBinPath, "Path to iptables binary")
 	cmd.PersistentFlags().StringVar(&options.FirewallSaveBinPath, "firewall-save-bin-path", options.FirewallSaveBinPath, "Path to iptables-save binary")
+
+	if err := cmd.PersistentFlags().MarkHidden("firewall-bin-path"); err != nil {
+		log.Fatal(err)
+	}
+	if err := cmd.PersistentFlags().MarkHidden("firewall-save-bin-path"); err != nil {
+		log.Fatal(err)
+	}
+
 	return cmd
 }
 
 // BuildFirewallConfiguration returns an iptables FirewallConfiguration suitable to use to configure iptables.
-func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfiguration, error) {
+func BuildFirewallConfiguration(options *RootOptions, ipv6 bool) (*iptables.FirewallConfiguration, error) {
+	if options.FirewallBinPath != "" || options.FirewallSaveBinPath != "" {
+		return nil, errors.New("--firewal-bin-path and firewall-save-bin-path are no longer supported; please use --iptables-mode instead")
+	}
+
+	if options.IPTablesMode != IPTablesModeLegacy && options.IPTablesMode != ipTablesModeNFT {
+		return nil, errors.New("--iptables-mode valid values are only \"legacy\" and \"nft\"")
+	}
+
 	if !util.IsValidPort(options.IncomingProxyPort) {
 		return nil, fmt.Errorf("--incoming-proxy-port must be a valid TCP port number")
 	}
@@ -115,6 +173,8 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 	if !util.IsValidPort(options.OutgoingProxyPort) {
 		return nil, fmt.Errorf("--outgoing-proxy-port must be a valid TCP port number")
 	}
+
+	cmd, cmdSave := getCommands(options.IPTablesMode, ipv6)
 
 	sanitizedSubnets := []string{}
 	for _, subnet := range options.SubnetsToIgnore {
@@ -138,8 +198,8 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		SimulateOnly:           options.SimulateOnly,
 		NetNs:                  options.NetNs,
 		UseWaitFlag:            options.UseWaitFlag,
-		BinPath:                options.FirewallBinPath,
-		SaveBinPath:            options.FirewallSaveBinPath,
+		BinPath:                cmd,
+		SaveBinPath:            cmdSave,
 	}
 
 	if len(options.PortsToRedirect) > 0 {
@@ -158,6 +218,21 @@ func getFormatter(format string) log.Formatter {
 	default:
 		return &log.TextFormatter{FullTimestamp: true}
 	}
+}
+
+func getCommands(mode string, ipv6 bool) (string, string) {
+	if mode == IPTablesModeLegacy {
+		if ipv6 {
+			return cmdLegacyIPv6, cmdLegacyIPv6Save
+		}
+		return cmdLegacy, cmdLegacySave
+	}
+
+	if ipv6 {
+		return cmdNFTIPv6, cmdNFTIPv6Save
+	}
+
+	return cmdNFT, cmdNFTSave
 }
 
 func setLogLevel(logLevel string) error {

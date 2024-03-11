@@ -224,6 +224,7 @@ _cni-plugin-setup-cilium:
     echo "Mounted /sys/fs/bpf to cilium-test-server cluster"
     helm repo add cilium https://helm.cilium.io/
     helm install cilium cilium/cilium --version 1.13.0 \
+        --kube-context k3d-l5d-cilium-test \
         --namespace kube-system \
         --set kubeProxyReplacement=partial \
         --set hostServices.enabled=false \
