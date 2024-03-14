@@ -4,9 +4,8 @@ set -euxo pipefail
 
 cd "${BASH_SOURCE[0]%/*}"
 
-# Integration tests to run. Scenario is passed in as an environment variable.
-# Default is 'flannel'
 SCENARIO=${CNI_TEST_SCENARIO:-flannel}
+IPTABLES_MODE=${IPTABLES_MODE:-legacy}
 
 # Run kubectl with the correct context.
 function k() {
@@ -25,7 +24,10 @@ function create_test_lab() {
     # can enable a testing matrix?
     # Apply all files in scenario directory. For non-flannel CNIs, this will
     # include the CNI manifest itself.
-    k apply -f "manifests/$SCENARIO/"
+    for f in ./manifests/"$SCENARIO"/*.yaml
+    do
+      envsubst < "$f" | k apply -f -
+    done
 }
 
 function cleanup() {
