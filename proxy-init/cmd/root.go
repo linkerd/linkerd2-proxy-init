@@ -17,8 +17,8 @@ import (
 const (
 	// IPTablesModeLegacy signals the usage of the iptables-legacy commands
 	IPTablesModeLegacy = "legacy"
-	// ipTablesModeNFT signals the usage of the iptables-nft commands
-	ipTablesModeNFT = "nft"
+	// IPTablesModeNFT signals the usage of the iptables-nft commands
+	IPTablesModeNFT = "nft"
 
 	cmdLegacy         = "iptables-legacy"
 	cmdLegacySave     = "iptables-legacy-save"
@@ -102,7 +102,10 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
-			config, err := BuildFirewallConfiguration(options, false)
+			// always trigger the IPv4 rules
+			optIPv4 := *options
+			optIPv4.IPv6 = false
+			config, err := BuildFirewallConfiguration(&optIPv4)
 			if err != nil {
 				return err
 			}
@@ -115,7 +118,8 @@ func NewRootCmd() *cobra.Command {
 				return nil
 			}
 
-			config, err = BuildFirewallConfiguration(options, true)
+			// trigger the IPv6 rules
+			config, err = BuildFirewallConfiguration(options)
 			if err != nil {
 				return err
 			}
@@ -157,12 +161,12 @@ func NewRootCmd() *cobra.Command {
 }
 
 // BuildFirewallConfiguration returns an iptables FirewallConfiguration suitable to use to configure iptables.
-func BuildFirewallConfiguration(options *RootOptions, ipv6 bool) (*iptables.FirewallConfiguration, error) {
+func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfiguration, error) {
 	if options.FirewallBinPath != "" || options.FirewallSaveBinPath != "" {
 		return nil, errors.New("--firewal-bin-path and firewall-save-bin-path are no longer supported; please use --iptables-mode instead")
 	}
 
-	if options.IPTablesMode != IPTablesModeLegacy && options.IPTablesMode != ipTablesModeNFT {
+	if options.IPTablesMode != IPTablesModeLegacy && options.IPTablesMode != IPTablesModeNFT {
 		return nil, errors.New("--iptables-mode valid values are only \"legacy\" and \"nft\"")
 	}
 
@@ -174,7 +178,7 @@ func BuildFirewallConfiguration(options *RootOptions, ipv6 bool) (*iptables.Fire
 		return nil, fmt.Errorf("--outgoing-proxy-port must be a valid TCP port number")
 	}
 
-	cmd, cmdSave := getCommands(options.IPTablesMode, ipv6)
+	cmd, cmdSave := getCommands(options)
 
 	sanitizedSubnets := []string{}
 	for _, subnet := range options.SubnetsToIgnore {
@@ -220,15 +224,15 @@ func getFormatter(format string) log.Formatter {
 	}
 }
 
-func getCommands(mode string, ipv6 bool) (string, string) {
-	if mode == IPTablesModeLegacy {
-		if ipv6 {
+func getCommands(options *RootOptions) (string, string) {
+	if options.IPTablesMode == IPTablesModeLegacy {
+		if options.IPv6 {
 			return cmdLegacyIPv6, cmdLegacyIPv6Save
 		}
 		return cmdLegacy, cmdLegacySave
 	}
 
-	if ipv6 {
+	if options.IPv6 {
 		return cmdNFTIPv6, cmdNFTIPv6Save
 	}
 

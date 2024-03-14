@@ -299,11 +299,16 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.IPTablesMode = cmd.IPTablesModeLegacy
 			}
 
-			if err := buildAndConfigure(logEntry, &options, false); err != nil {
+			// always trigger the IPv4 rules
+			optIPv4 := options
+			optIPv4.IPv6 = false
+			if err := buildAndConfigure(logEntry, &optIPv4); err != nil {
 				return err
 			}
+
+			// trigger the IPv6 rules
 			if options.IPv6 {
-				if err := buildAndConfigure(logEntry, &options, true); err != nil {
+				if err := buildAndConfigure(logEntry, &options); err != nil {
 					return err
 				}
 			}
@@ -357,8 +362,8 @@ func getAPIServerPorts(ctx context.Context, api *kubernetes.Clientset) ([]string
 	return ports, nil
 }
 
-func buildAndConfigure(logEntry *logrus.Entry, options *cmd.RootOptions, ipv6 bool) error {
-	firewallConfiguration, err := cmd.BuildFirewallConfiguration(options, ipv6)
+func buildAndConfigure(logEntry *logrus.Entry, options *cmd.RootOptions) error {
+	firewallConfiguration, err := cmd.BuildFirewallConfiguration(options)
 	if err != nil {
 		logEntry.Errorf("linkerd-cni: could not create a Firewall Configuration from the options: %v", options)
 		return err
@@ -367,7 +372,7 @@ func buildAndConfigure(logEntry *logrus.Entry, options *cmd.RootOptions, ipv6 bo
 	err = iptables.ConfigureFirewall(*firewallConfiguration)
 	// We couldn't find a robust way of checking IPv6 support besides trying to just call ip6tables-save.
 	// If IPv4 rules worked but not IPv6, let's not fail the container (the actual problem will get logged).
-	if !ipv6 && err != nil {
+	if !options.IPv6 && err != nil {
 		logEntry.Errorf("linkerd-cni: could not configure firewall: %s", err)
 		return err
 	}

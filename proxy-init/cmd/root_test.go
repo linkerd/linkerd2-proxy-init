@@ -31,8 +31,9 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 		options.IncomingProxyPort = expectedIncomingProxyPort
 		options.OutgoingProxyPort = expectedOutgoingProxyPort
 		options.ProxyUserID = expectedProxyUserID
+		options.IPv6 = false
 
-		config, err := BuildFirewallConfiguration(options, false)
+		config, err := BuildFirewallConfiguration(options)
 		if err != nil {
 			t.Fatalf("Unexpected error: %s", err)
 		}
@@ -87,7 +88,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				errorMessage: "0.0.0.0 is not a valid CIDR address",
 			},
 		} {
-			_, err := BuildFirewallConfiguration(tt.options, false)
+			_, err := BuildFirewallConfiguration(tt.options)
 			if err == nil {
 				t.Fatalf("Expected error for config [%v], got nil", tt.options)
 			}
@@ -112,7 +113,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				errorMessage: "",
 			},
 		} {
-			_, err := BuildFirewallConfiguration(tt.options, false)
+			_, err := BuildFirewallConfiguration(tt.options)
 			if err != nil {
 				t.Fatalf("Got error error for config [%v]", tt.options)
 			}
