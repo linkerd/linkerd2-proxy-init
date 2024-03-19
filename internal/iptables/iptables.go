@@ -119,6 +119,8 @@ func (fc FirewallConfiguration) addOutgoingTrafficRules(existingRules []byte, co
 
 	// Ignore loopback
 	commands = append(commands, fc.makeIgnoreLoopback(outputChainName, "ignore-loopback"))
+	// Ignore subnets
+	commands = fc.addRulesForIgnoredSubnets(outputChainName, "d", commands)
 	// Ignore ports
 	commands = fc.addRulesForIgnoredPorts(fc.OutboundPortsToIgnore, outputChainName, commands)
 
@@ -145,7 +147,7 @@ func (fc FirewallConfiguration) addIncomingTrafficRules(existingRules []byte, co
 		commands = append(commands, fc.makeFlushChain(redirectChainName))
 	}
 	commands = fc.addRulesForIgnoredPorts(fc.InboundPortsToIgnore, redirectChainName, commands)
-	commands = fc.addRulesForIgnoredSubnets(redirectChainName, commands)
+	commands = fc.addRulesForIgnoredSubnets(redirectChainName, "s", commands)
 	commands = fc.addRulesForInboundPortRedirect(redirectChainName, commands)
 
 	if preroutingRuleRegex.Find(existingRules) == nil {
@@ -191,9 +193,9 @@ func (fc FirewallConfiguration) addRulesForIgnoredPorts(portsToIgnore []string, 
 	return commands
 }
 
-func (fc FirewallConfiguration) addRulesForIgnoredSubnets(chainName string, commands []*exec.Cmd) []*exec.Cmd {
+func (fc FirewallConfiguration) addRulesForIgnoredSubnets(chainName string, dFlag string, commands []*exec.Cmd) []*exec.Cmd {
 	for _, subnet := range fc.SubnetsToIgnore {
-		commands = append(commands, fc.makeIgnoreSubnet(chainName, subnet, fmt.Sprintf("ignore-subnet-%s", subnet)))
+		commands = append(commands, fc.makeIgnoreSubnet(chainName, subnet, dFlag, fmt.Sprintf("ignore-subnet-%s", subnet)))
 	}
 	return commands
 }
@@ -299,13 +301,13 @@ func (fc FirewallConfiguration) makeIgnorePorts(chainName string, destinations [
 		"--comment", formatComment(comment))
 }
 
-func (fc FirewallConfiguration) makeIgnoreSubnet(chainName string, subnet string, comment string) *exec.Cmd {
+func (fc FirewallConfiguration) makeIgnoreSubnet(chainName string, subnet string, dFlag string, comment string) *exec.Cmd {
 	return exec.Command(fc.BinPath,
 		"-t", "nat",
 		"-A", chainName,
 		"-p", "all",
 		"-j", "RETURN",
-		"-s", subnet,
+		"-"+dFlag, subnet,
 		"-m", "comment",
 		"--comment", formatComment(comment))
 }
