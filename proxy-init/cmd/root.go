@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"os/exec"
@@ -45,12 +44,10 @@ type RootOptions struct {
 	TimeoutCloseWaitSecs  int
 	LogFormat             string
 	LogLevel              string
+	FirewallBinPath       string
+	FirewallSaveBinPath   string
 	IPTablesMode          string
 	IPv6                  bool
-
-	// No longer supported
-	FirewallBinPath     string
-	FirewallSaveBinPath string
 }
 
 func newRootOptions() *RootOptions {
@@ -68,7 +65,9 @@ func newRootOptions() *RootOptions {
 		TimeoutCloseWaitSecs:  0,
 		LogFormat:             "plain",
 		LogLevel:              "info",
-		IPTablesMode:          IPTablesModeLegacy,
+		FirewallBinPath:       "",
+		FirewallSaveBinPath:   "",
+		IPTablesMode:          "",
 		IPv6:                  true,
 	}
 }
@@ -145,29 +144,30 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().IntVar(&options.TimeoutCloseWaitSecs, "timeout-close-wait-secs", options.TimeoutCloseWaitSecs, "Sets nf_conntrack_tcp_timeout_close_wait")
 	cmd.PersistentFlags().StringVar(&options.LogFormat, "log-format", options.LogFormat, "Configure log format ('plain' or 'json')")
 	cmd.PersistentFlags().StringVar(&options.LogLevel, "log-level", options.LogLevel, "Configure log level")
-	cmd.PersistentFlags().StringVar(&options.IPTablesMode, "iptables-mode", options.IPTablesMode, "Variant of iptables command to use (\"legacy\" or \"nft\")")
+	cmd.PersistentFlags().StringVar(&options.IPTablesMode, "iptables-mode", options.IPTablesMode, "Variant of iptables command to use (\"legacy\" or \"nft\"); overrides --firewall-bin-path and --firewall-save-bin-path")
 	cmd.PersistentFlags().BoolVar(&options.IPv6, "ipv6", options.IPv6, "Set rules both via iptables and ip6tables to support dual-stack networking")
+
+	// these two flags are kept for backwards-compatibility, but --iptables-mode is preferred
 	cmd.PersistentFlags().StringVar(&options.FirewallBinPath, "firewall-bin-path", options.FirewallBinPath, "Path to iptables binary")
 	cmd.PersistentFlags().StringVar(&options.FirewallSaveBinPath, "firewall-save-bin-path", options.FirewallSaveBinPath, "Path to iptables-save binary")
-
-	if err := cmd.PersistentFlags().MarkHidden("firewall-bin-path"); err != nil {
-		log.Fatal(err)
-	}
-	if err := cmd.PersistentFlags().MarkHidden("firewall-save-bin-path"); err != nil {
-		log.Fatal(err)
-	}
-
 	return cmd
 }
 
 // BuildFirewallConfiguration returns an iptables FirewallConfiguration suitable to use to configure iptables.
 func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfiguration, error) {
-	if options.FirewallBinPath != "" || options.FirewallSaveBinPath != "" {
-		return nil, errors.New("--firewal-bin-path and firewall-save-bin-path are no longer supported; please use --iptables-mode instead")
+	if options.IPTablesMode != "" && options.IPTablesMode != IPTablesModeLegacy && options.IPTablesMode != IPTablesModeNFT {
+		return nil, fmt.Errorf("--iptables-mode valid values are only \"%s\" and \"%s\"", IPTablesModeLegacy, IPTablesModeNFT)
 	}
 
-	if options.IPTablesMode != IPTablesModeLegacy && options.IPTablesMode != IPTablesModeNFT {
-		return nil, errors.New("--iptables-mode valid values are only \"legacy\" and \"nft\"")
+	if options.IPTablesMode == "" {
+		switch options.FirewallBinPath {
+		case "", cmdLegacy:
+			options.IPTablesMode = IPTablesModeLegacy
+		case cmdNFT:
+			options.IPTablesMode = IPTablesModeNFT
+		default:
+			return nil, fmt.Errorf("--firewall-bin-path valid values are only \"%s\" and \"%s\"", cmdLegacy, cmdNFT)
+		}
 	}
 
 	if !util.IsValidPort(options.IncomingProxyPort) {
