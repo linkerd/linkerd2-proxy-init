@@ -52,6 +52,8 @@ type ProxyInit struct {
 	SubnetsToIgnore       []string `json:"subnets-to-ignore"`
 	Simulate              bool     `json:"simulate"`
 	UseWaitFlag           bool     `json:"use-wait-flag"`
+	IPTablesMode          string   `json:"iptables-mode"`
+	IPv6                  bool     `json:"ipv6"`
 }
 
 // Kubernetes a K8s specific struct to hold config
@@ -219,8 +221,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 				SimulateOnly:          conf.ProxyInit.Simulate,
 				NetNs:                 args.Netns,
 				UseWaitFlag:           conf.ProxyInit.UseWaitFlag,
-				FirewallBinPath:       "iptables-legacy",
-				FirewallSaveBinPath:   "iptables-legacy-save",
+				IPTablesMode:          conf.ProxyInit.IPTablesMode,
+				IPv6:                  conf.ProxyInit.IPv6,
 			}
 
 			// Check if there are any overridden ports to be skipped
@@ -292,16 +294,23 @@ func cmdAdd(args *skel.CmdArgs) error {
 				options.OutboundPortsToIgnore = append(options.OutboundPortsToIgnore, skippedPorts...)
 			}
 
-			firewallConfiguration, err := cmd.BuildFirewallConfiguration(&options)
-			if err != nil {
-				logEntry.Errorf("linkerd-cni: could not create a Firewall Configuration from the options: %v", options)
+			// This ensures BC against linkerd2-cni older versions not yet passing this flag
+			if options.IPTablesMode == "" {
+				options.IPTablesMode = cmd.IPTablesModeLegacy
+			}
+
+			// always trigger the IPv4 rules
+			optIPv4 := options
+			optIPv4.IPv6 = false
+			if err := buildAndConfigure(logEntry, &optIPv4); err != nil {
 				return err
 			}
 
-			err = iptables.ConfigureFirewall(*firewallConfiguration)
-			if err != nil {
-				logEntry.Errorf("linkerd-cni: could not configure firewall: %s", err)
-				return err
+			// trigger the IPv6 rules
+			if options.IPv6 {
+				if err := buildAndConfigure(logEntry, &options); err != nil {
+					return err
+				}
 			}
 		} else {
 			if containsInitContainer {
@@ -351,6 +360,24 @@ func getAPIServerPorts(ctx context.Context, api *kubernetes.Clientset) ([]string
 	}
 
 	return ports, nil
+}
+
+func buildAndConfigure(logEntry *logrus.Entry, options *cmd.RootOptions) error {
+	firewallConfiguration, err := cmd.BuildFirewallConfiguration(options)
+	if err != nil {
+		logEntry.Errorf("linkerd-cni: could not create a Firewall Configuration from the options: %v", options)
+		return err
+	}
+
+	err = iptables.ConfigureFirewall(*firewallConfiguration)
+	// We couldn't find a robust way of checking IPv6 support besides trying to just call ip6tables-save.
+	// If IPv4 rules worked but not IPv6, let's not fail the container (the actual problem will get logged).
+	if !options.IPv6 && err != nil {
+		logEntry.Errorf("linkerd-cni: could not configure firewall: %s", err)
+		return err
+	}
+
+	return nil
 }
 
 func getAnnotationOverride(ctx context.Context, api *kubernetes.Clientset, pod *v1.Pod, key string) (string, error) {

@@ -49,8 +49,11 @@ type ProxyInit struct {
 	PortsToRedirect       []int    `json:"ports-to-redirect"`
 	InboundPortsToIgnore  []string `json:"inbound-ports-to-ignore"`
 	OutboundPortsToIgnore []string `json:"outbound-ports-to-ignore"`
+	SubnetsToIgnore       []string `json:"subnets-to-ignore"`
 	Simulate              bool     `json:"simulate"`
 	UseWaitFlag           bool     `json:"use-wait-flag"`
+	IPTablesMode          string   `json:"iptables-mode"`
+	IPv6                  bool     `json:"ipv6"`
 }
 
 // LinkerdPlugin is what we use for CNI configuration in the plugins section

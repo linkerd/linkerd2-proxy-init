@@ -31,6 +31,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 		options.IncomingProxyPort = expectedIncomingProxyPort
 		options.OutgoingProxyPort = expectedOutgoingProxyPort
 		options.ProxyUserID = expectedProxyUserID
+		options.IPv6 = false
 
 		config, err := BuildFirewallConfiguration(options)
 		if err != nil {
@@ -51,6 +52,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				options: &RootOptions{
 					IncomingProxyPort: -1,
 					OutgoingProxyPort: 1234,
+					IPTablesMode:      IPTablesModeLegacy,
 				},
 				errorMessage: "--incoming-proxy-port must be a valid TCP port number",
 			},
@@ -58,6 +60,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				options: &RootOptions{
 					IncomingProxyPort: 100000,
 					OutgoingProxyPort: 1234,
+					IPTablesMode:      IPTablesModeLegacy,
 				},
 				errorMessage: "--incoming-proxy-port must be a valid TCP port number",
 			},
@@ -65,6 +68,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				options: &RootOptions{
 					IncomingProxyPort: 1234,
 					OutgoingProxyPort: -1,
+					IPTablesMode:      IPTablesModeLegacy,
 				},
 				errorMessage: "--outgoing-proxy-port must be a valid TCP port number",
 			},
@@ -72,12 +76,14 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				options: &RootOptions{
 					IncomingProxyPort: 1234,
 					OutgoingProxyPort: 100000,
+					IPTablesMode:      IPTablesModeLegacy,
 				},
 				errorMessage: "--outgoing-proxy-port must be a valid TCP port number",
 			},
 			{
 				options: &RootOptions{
 					SubnetsToIgnore: []string{"1.1.1.1/24", "0.0.0.0"},
+					IPTablesMode:    IPTablesModeLegacy,
 				},
 				errorMessage: "0.0.0.0 is not a valid CIDR address",
 			},
@@ -102,6 +108,7 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 				// Tests that subnets are parsed properly and trimmed of excess whitespace
 				options: &RootOptions{
 					SubnetsToIgnore: []string{"1.1.1.1/24 "},
+					IPTablesMode:    IPTablesModeLegacy,
 				},
 				errorMessage: "",
 			},

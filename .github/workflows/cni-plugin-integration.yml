@@ -12,33 +12,20 @@ on:
       - justfile*
 
 jobs:
-  cni-flannel-test:
-    continue-on-error: true
+  cni-test:
+    strategy:
+      matrix:
+        cni: [flannel, calico, cilium]
+        iptables-mode: [legacy, nft]
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - uses: linkerd/dev/actions/setup-tools@v43
       - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
       - name: Run CNI integration tests
-        run: just cni-plugin-test-integration-flannel
-  cni-calico-test:
-    continue-on-error: true
-    timeout-minutes: 15
-    runs-on: ubuntu-latest
-    steps:
-      - uses: linkerd/dev/actions/setup-tools@v43
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
-      - name: Run CNI integration tests
-        run: just cni-plugin-test-integration-calico
-  cni-cilium-test:
-    continue-on-error: true
-    timeout-minutes: 15
-    runs-on: ubuntu-latest
-    steps:
-      - uses: linkerd/dev/actions/setup-tools@v43
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
-      - name: Run CNI integration tests
-        run: just cni-plugin-test-integration-cilium
+        env:
+          IPTABLES_MODE: ${{ matrix.iptables-mode }}
+        run: just cni-plugin-test-integration-${{ matrix.cni }}
   ordering-test:
     continue-on-error: true
     timeout-minutes: 15
