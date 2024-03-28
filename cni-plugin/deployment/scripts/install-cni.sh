@@ -241,9 +241,10 @@ install_cni_conf() {
 }
 
 # Sync() is responsible for reacting to file system changes. It is used in
-# conjunction with inotify events; sync() is called with the name of the file that
-# has changed, the event type (which can be either 'CREATE', 'DELETE' or
-# 'MOVED_TO'), and the previously observed SHA of the configuration file.
+# conjunction with inotify events; sync() is called with the name of the file
+# that has changed, the event type (which can be either 'CREATE', 'DELETE',
+# 'MOVED_TO' or 'MODIFY', and the previously observed SHA of the configuration
+# file.
 #
 # Based on the changed file and event type, sync() might re-install the CNI
 # plugin's configuration file.
@@ -263,10 +264,11 @@ sync() {
     if [ "$config_file_count" -eq 0 ]; then
       log "No active CNI configuration file found after $ev event"
     fi
-  elif [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ]; then
-    # When the event type is 'CREATE' or 'MOVED_TO', we check the previously
-    # observed SHA (updated with each file watch) and compare it against the
-    # new file's SHA. If they differ, it means something has changed.
+  elif [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ] || [ "$ev" = 'MODIFY' ]; then
+    # When the event type is 'CREATE', 'MOVED_TO' or 'MODIFY', we check the
+    # previously observed SHA (updated with each file watch) and compare it
+    # against the new file's SHA. If they differ, it means something has
+    # changed.
     new_sha=$(sha256sum "${filepath}" | while read -r s _; do echo "$s"; done)
     if [ "$new_sha" != "$prev_sha" ]; then
       # Create but don't rm old one since we don't know if this will be configured
@@ -285,7 +287,7 @@ sync() {
 
 # Monitor will start a watch on host's CNI config directory
 monitor() {
-  inotifywait -m "${HOST_CNI_NET}" -e create,delete,moved_to |
+  inotifywait -m "${HOST_CNI_NET}" -e create,delete,moved_to,modify |
     while read -r directory action filename; do
       if [[ "$filename" =~ .*.(conflist|conf)$ ]]; then 
         log "Detected change in $directory: $action $filename"
