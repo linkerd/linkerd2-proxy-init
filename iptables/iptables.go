@@ -35,7 +35,7 @@ const (
 
 var (
 	// ExecutionTraceID provides a unique identifier for this script's execution.
-	ExecutionTraceID = strconv.Itoa(int(time.Now().Unix()))
+	executionTraceID = strconv.Itoa(int(time.Now().Unix()))
 
 	preroutingRuleRegex = regexp.MustCompile(`(?m)^-A PREROUTING (.+ )?-j PROXY_INIT_REDIRECT`)
 	outputRuleRegex     = regexp.MustCompile(`(?m)^-A OUTPUT (.+ )?-j PROXY_INIT_OUTPUT`)
@@ -43,7 +43,7 @@ var (
 	outputChainRegex    = regexp.MustCompile(`(?m)^:PROXY_INIT_OUTPUT `)
 )
 
-// FirewallConfiguration specifies how to configure a pod's iptables.
+// FirewallConfiguration specifies how to configure iptables.
 type FirewallConfiguration struct {
 	Mode                   string
 	PortsToRedirectInbound []int
@@ -58,13 +58,14 @@ type FirewallConfiguration struct {
 	UseWaitFlag            bool
 	BinPath                string
 	SaveBinPath            string
+	ContinueOnError        bool
 }
 
-// ConfigureFirewall configures a pod's internal iptables to redirect all desired traffic through the proxy, allowing for
-// the pod to join the service mesh. A lot of this logic was based on
+// ConfigureFirewall configures iptables to redirect all desired traffic through the proxy, allowing for
+// the workload to join the service mesh. A lot of this logic was based on
 // https://github.com/istio/istio/blob/e83411e/pilot/docker/prepare_proxy.sh
 func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
-	log.Debugf("tracing script execution as [%s]", ExecutionTraceID)
+	log.Debugf("tracing script execution as [%s]", executionTraceID)
 	log.Debugf("using '%s' to set-up firewall rules", firewallConfiguration.BinPath)
 	log.Debugf("using '%s' to list all available rules", firewallConfiguration.SaveBinPath)
 
@@ -90,7 +91,11 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 		}
 
 		if _, err := executeCommand(firewallConfiguration, cmd); err != nil {
-			return err
+			if !firewallConfiguration.ContinueOnError {
+				return err
+			}
+
+			log.Debugf("continuing despite error: %s", err)
 		}
 	}
 
@@ -99,10 +104,73 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	return nil
 }
 
+// CleanupFirewallConfig removed the iptables rules that have been added as a result of
+// calling ConfigureFirewall.
+func CleanupFirewallConfig(firewallConfiguration FirewallConfiguration) error {
+	log.Debugf("tracing script execution as [%s]", executionTraceID)
+	log.Debugf("using '%s' to clean-up firewall rules", firewallConfiguration.BinPath)
+	log.Debugf("using '%s' to list all available rules", firewallConfiguration.SaveBinPath)
+
+	commands := make([]*exec.Cmd, 0)
+	commands = firewallConfiguration.cleanupRules(commands)
+
+	if firewallConfiguration.UseWaitFlag {
+		log.Debug("'useWaitFlag' set: iptables will wait for xtables to become available")
+	}
+
+	for _, cmd := range commands {
+		if firewallConfiguration.UseWaitFlag {
+			cmd.Args = append(cmd.Args, "-w")
+		}
+
+		if _, err := executeCommand(firewallConfiguration, cmd); err != nil {
+			if !firewallConfiguration.ContinueOnError {
+				return err
+			}
+
+			log.Debugf("continuing despite error: %s", err)
+		}
+	}
+
+	_, _ = executeCommand(firewallConfiguration, firewallConfiguration.makeShowAllRules())
+
+	return nil
+}
+
+func (fc FirewallConfiguration) cleanupRules(commands []*exec.Cmd) []*exec.Cmd {
+	// delete ref from prerouting
+	commands = append(
+		commands,
+		fc.makeJumpFromChainToAnotherForAllProtocols(
+			IptablesPreroutingChainName,
+			redirectChainName,
+			"install-proxy-init-prerouting",
+			true))
+
+	// delete ref from output
+	commands = append(
+		commands,
+		fc.makeJumpFromChainToAnotherForAllProtocols(
+			IptablesOutputChainName,
+			outputChainName,
+			"install-proxy-init-output",
+			true))
+
+	// flush chains
+	commands = append(commands, fc.makeFlushChain(outputChainName))
+	commands = append(commands, fc.makeFlushChain(redirectChainName))
+
+	// delete chains
+	commands = append(commands, fc.makeDeleteChain(outputChainName))
+	commands = append(commands, fc.makeDeleteChain(redirectChainName))
+
+	return commands
+}
+
 // formatComment is used to format iptables comments in such way that it is possible to identify when the rules were added.
 // This helps debug when iptables has some stale rules from previous runs, something that can happen frequently on minikube.
 func formatComment(text string) string {
-	return fmt.Sprintf("proxy-init/%s/%s", text, ExecutionTraceID)
+	return fmt.Sprintf("proxy-init/%s", text)
 }
 
 func (fc FirewallConfiguration) addOutgoingTrafficRules(existingRules []byte, commands []*exec.Cmd) []*exec.Cmd {
@@ -268,6 +336,12 @@ func (fc FirewallConfiguration) makeFlushChain(name string) *exec.Cmd {
 	return exec.Command(fc.BinPath,
 		"-t", "nat",
 		"-F", name)
+}
+
+func (fc FirewallConfiguration) makeDeleteChain(name string) *exec.Cmd {
+	return exec.Command(fc.BinPath,
+		"-t", "nat",
+		"-X", name)
 }
 
 func (fc FirewallConfiguration) makeCreateNewChain(name string) *exec.Cmd {
