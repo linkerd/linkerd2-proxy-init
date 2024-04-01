@@ -111,7 +111,7 @@ proxy-init-lint *flags:
 # Run proxy-init unit tests
 proxy-init-test-unit:
     go test -v ./proxy-init/...
-    go test -v ./internal/...
+    go test -v ./pkg/...
 
 # Run proxy-init integration tests after preparing dependencies
 proxy-init-test-integration: proxy-init-test-integration-deps proxy-init-test-integration-run
@@ -161,7 +161,7 @@ build-cni-plugin-test-image *args='--load':
 
 ##
 ## CNI plugin integration
-## 
+##
 
 
 # Run cni-plugin integration tests after preparing dependencies By default,

@@ -9,8 +9,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/linkerd/linkerd2-proxy-init/iptables"
-	"github.com/linkerd/linkerd2-proxy-init/util"
+	"github.com/linkerd/linkerd2-proxy-init/pkg/iptables"
+	"github.com/linkerd/linkerd2-proxy-init/pkg/util"
 )
 
 const (
