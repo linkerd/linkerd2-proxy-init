@@ -104,7 +104,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	return nil
 }
 
-// CleanupFirewallConfig removed the iptables rules that have been added as a result of
+// CleanupFirewallConfig removes the iptables rules that have been added as a result of
 // calling ConfigureFirewall.
 func CleanupFirewallConfig(firewallConfiguration FirewallConfiguration) error {
 	log.Debugf("tracing script execution as [%s]", executionTraceID)
@@ -167,8 +167,7 @@ func (fc FirewallConfiguration) cleanupRules(commands []*exec.Cmd) []*exec.Cmd {
 	return commands
 }
 
-// formatComment is used to format iptables comments in such way that it is possible to identify when the rules were added.
-// This helps debug when iptables has some stale rules from previous runs, something that can happen frequently on minikube.
+// formatComment is used to format iptables comments
 func formatComment(text string) string {
 	return fmt.Sprintf("proxy-init/%s", text)
 }
