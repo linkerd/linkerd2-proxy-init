@@ -9,7 +9,7 @@ FROM --platform=$BUILDPLATFORM golang:1.21-alpine as go
 WORKDIR /build
 COPY --link go.mod go.sum .
 COPY --link ./proxy-init ./proxy-init
-COPY --link ./internal ./internal
+COPY --link ./pkg ./pkg
 RUN go mod download
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
