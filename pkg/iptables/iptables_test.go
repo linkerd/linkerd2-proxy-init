@@ -32,18 +32,16 @@ var existingRules = []byte(`# iptables-save
 :POSTROUTING ACCEPT [0:0]
 :PROXY_INIT_OUTPUT - [0:0]
 :PROXY_INIT_REDIRECT - [0:0]
--A PREROUTING -m comment --comment "proxy-init/install-proxy-init-prerouting/testExecutionTraceID" -j PROXY_INIT_REDIRECT
--A OUTPUT -m comment --comment "proxy-init/install-proxy-init-output/testExecutionTraceID" -j PROXY_INIT_OUTPUT
--A PROXY_INIT_OUTPUT -o lo -m comment --comment "proxy-init/ignore-loopback/testExecutionTraceID" -j RETURN
--A PROXY_INIT_OUTPUT -p tcp -m comment --comment "proxy-init/redirect-all-outgoing-to-proxy-port/testExecutionTraceID" -j REDIRECT --to-ports 1234
--A PROXY_INIT_REDIRECT -p tcp -m multiport --dports 1234 -m comment --comment "proxy-init/ignore-port-1234/testExecutionTraceID" -j RETURN
+-A PREROUTING -m comment --comment "proxy-init/install-proxy-init-prerouting" -j PROXY_INIT_REDIRECT
+-A OUTPUT -m comment --comment "proxy-init/install-proxy-init-output" -j PROXY_INIT_OUTPUT
+-A PROXY_INIT_OUTPUT -o lo -m comment --comment "proxy-init/ignore-loopback" -j RETURN
+-A PROXY_INIT_OUTPUT -p tcp -m comment --comment "proxy-init/redirect-all-outgoing-to-proxy-port" -j REDIRECT --to-ports 1234
+-A PROXY_INIT_REDIRECT -p tcp -m multiport --dports 1234 -m comment --comment "proxy-init/ignore-port-1234" -j RETURN
 COMMIT
 # Completed on Fri Jan  6 23:00:00 2023
 `)
 
 func TestAddIncomingTrafficRules(t *testing.T) {
-	ExecutionTraceID = "testExecutionTraceID"
-
 	for _, tt := range []struct {
 		name          string
 		existingRules []byte
@@ -53,8 +51,8 @@ func TestAddIncomingTrafficRules(t *testing.T) {
 			name: "no existing rules, create new chain and PREROUTING rule",
 			wantCommands: []*exec.Cmd{
 				exec.Command("<iptables>", "-t", "nat", "-N", "PROXY_INIT_REDIRECT"),
-				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_REDIRECT", "-p", "tcp", "--match", "multiport", "--dports", "1234", "-j", "RETURN", "-m", "comment", "--comment", "proxy-init/ignore-port-1234/testExecutionTraceID"),
-				exec.Command("<iptables>", "-t", "nat", "-A", "PREROUTING", "-j", "PROXY_INIT_REDIRECT", "-m", "comment", "--comment", "proxy-init/install-proxy-init-prerouting/testExecutionTraceID"),
+				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_REDIRECT", "-p", "tcp", "--match", "multiport", "--dports", "1234", "-j", "RETURN", "-m", "comment", "--comment", "proxy-init/ignore-port-1234"),
+				exec.Command("<iptables>", "-t", "nat", "-A", "PREROUTING", "-j", "PROXY_INIT_REDIRECT", "-m", "comment", "--comment", "proxy-init/install-proxy-init-prerouting"),
 			},
 		},
 		{
@@ -62,7 +60,7 @@ func TestAddIncomingTrafficRules(t *testing.T) {
 			existingRules: existingRules,
 			wantCommands: []*exec.Cmd{
 				exec.Command("<iptables>", "-t", "nat", "-F", "PROXY_INIT_REDIRECT"),
-				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_REDIRECT", "-p", "tcp", "--match", "multiport", "--dports", "1234", "-j", "RETURN", "-m", "comment", "--comment", "proxy-init/ignore-port-1234/testExecutionTraceID"),
+				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_REDIRECT", "-p", "tcp", "--match", "multiport", "--dports", "1234", "-j", "RETURN", "-m", "comment", "--comment", "proxy-init/ignore-port-1234"),
 			},
 		},
 	} {
@@ -78,8 +76,6 @@ func TestAddIncomingTrafficRules(t *testing.T) {
 }
 
 func TestAddOutgoingTrafficRules(t *testing.T) {
-	ExecutionTraceID = "testExecutionTraceID"
-
 	for _, tt := range []struct {
 		name          string
 		existingRules []byte
@@ -89,9 +85,9 @@ func TestAddOutgoingTrafficRules(t *testing.T) {
 			name: "no existing rules, create new chain and OUTPUT rule",
 			wantCommands: []*exec.Cmd{
 				exec.Command("<iptables>", "-t", "nat", "-N", "PROXY_INIT_OUTPUT"),
-				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_OUTPUT", "-o", "lo", "-j", "RETURN", "-m", "comment", "--comment", "proxy-init/ignore-loopback/testExecutionTraceID"),
-				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_OUTPUT", "-p", "tcp", "-j", "REDIRECT", "--to-port", "1234", "-m", "comment", "--comment", "proxy-init/redirect-all-outgoing-to-proxy-port/testExecutionTraceID"),
-				exec.Command("<iptables>", "-t", "nat", "-A", "OUTPUT", "-j", "PROXY_INIT_OUTPUT", "-m", "comment", "--comment", "proxy-init/install-proxy-init-output/testExecutionTraceID"),
+				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_OUTPUT", "-o", "lo", "-j", "RETURN", "-m", "comment", "--comment", "proxy-init/ignore-loopback"),
+				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_OUTPUT", "-p", "tcp", "-j", "REDIRECT", "--to-port", "1234", "-m", "comment", "--comment", "proxy-init/redirect-all-outgoing-to-proxy-port"),
+				exec.Command("<iptables>", "-t", "nat", "-A", "OUTPUT", "-j", "PROXY_INIT_OUTPUT", "-m", "comment", "--comment", "proxy-init/install-proxy-init-output"),
 			},
 		},
 		{
@@ -99,8 +95,8 @@ func TestAddOutgoingTrafficRules(t *testing.T) {
 			existingRules: existingRules,
 			wantCommands: []*exec.Cmd{
 				exec.Command("<iptables>", "-t", "nat", "-F", "PROXY_INIT_OUTPUT"),
-				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_OUTPUT", "-o", "lo", "-j", "RETURN", "-m", "comment", "--comment", "proxy-init/ignore-loopback/testExecutionTraceID"),
-				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_OUTPUT", "-p", "tcp", "-j", "REDIRECT", "--to-port", "1234", "-m", "comment", "--comment", "proxy-init/redirect-all-outgoing-to-proxy-port/testExecutionTraceID"),
+				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_OUTPUT", "-o", "lo", "-j", "RETURN", "-m", "comment", "--comment", "proxy-init/ignore-loopback"),
+				exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_OUTPUT", "-p", "tcp", "-j", "REDIRECT", "--to-port", "1234", "-m", "comment", "--comment", "proxy-init/redirect-all-outgoing-to-proxy-port"),
 			},
 		},
 	} {
@@ -113,6 +109,26 @@ func TestAddOutgoingTrafficRules(t *testing.T) {
 			assertEqual(t, cmds, tt.wantCommands)
 		})
 	}
+
+}
+
+func TestCleanupFirewallConfig(t *testing.T) {
+	wantCommands := []*exec.Cmd{
+		exec.Command("<iptables>", "-t", "nat", "-D", "PREROUTING", "-j", "PROXY_INIT_REDIRECT", "-m", "comment", "--comment", "proxy-init/install-proxy-init-prerouting"),
+		exec.Command("<iptables>", "-t", "nat", "-D", "OUTPUT", "-j", "PROXY_INIT_OUTPUT", "-m", "comment", "--comment", "proxy-init/install-proxy-init-output"),
+		exec.Command("<iptables>", "-t", "nat", "-F", "PROXY_INIT_OUTPUT"),
+		exec.Command("<iptables>", "-t", "nat", "-F", "PROXY_INIT_REDIRECT"),
+		exec.Command("<iptables>", "-t", "nat", "-X", "PROXY_INIT_OUTPUT"),
+		exec.Command("<iptables>", "-t", "nat", "-X", "PROXY_INIT_REDIRECT"),
+	}
+
+	fc := &FirewallConfiguration{
+		BinPath:              "<iptables>",
+		InboundPortsToIgnore: []string{"1234"},
+	}
+	cmds := fc.cleanupRules(nil)
+	assertEqual(t, cmds, wantCommands)
+
 }
 
 func assertEqual(t *testing.T, check, expected interface{}) {
