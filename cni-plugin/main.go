@@ -46,6 +46,7 @@ type ProxyInit struct {
 	IncomingProxyPort     int      `json:"incoming-proxy-port"`
 	OutgoingProxyPort     int      `json:"outgoing-proxy-port"`
 	ProxyUID              int      `json:"proxy-uid"`
+	ProxyGID              int      `json:"proxy-gid"`
 	PortsToRedirect       []int    `json:"ports-to-redirect"`
 	InboundPortsToIgnore  []string `json:"inbound-ports-to-ignore"`
 	OutboundPortsToIgnore []string `json:"outbound-ports-to-ignore"`
@@ -214,6 +215,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				IncomingProxyPort:     conf.ProxyInit.IncomingProxyPort,
 				OutgoingProxyPort:     conf.ProxyInit.OutgoingProxyPort,
 				ProxyUserID:           conf.ProxyInit.ProxyUID,
+				ProxyGroupID:          conf.ProxyInit.ProxyGID,
 				PortsToRedirect:       conf.ProxyInit.PortsToRedirect,
 				InboundPortsToIgnore:  conf.ProxyInit.InboundPortsToIgnore,
 				OutboundPortsToIgnore: conf.ProxyInit.OutboundPortsToIgnore,
@@ -277,6 +279,25 @@ func cmdAdd(args *skel.CmdArgs) error {
 				}
 
 				options.ProxyUserID = parsed
+			}
+
+			// Override ProxyGID from annotations.
+			proxyGIDOverride, err := getAnnotationOverride(ctx, client, pod, "config.linkerd.io/proxy-gid")
+			if err != nil {
+				logEntry.Errorf("linkerd-cni: could not retrieve overridden annotations: %s", err)
+				return err
+			}
+
+			if proxyGIDOverride != "" {
+				logEntry.Debugf("linkerd-cni: overriding ProxyGID to %s", proxyGIDOverride)
+
+				parsed, err := strconv.Atoi(proxyGIDOverride)
+				if err != nil {
+					logEntry.Errorf("linkerd-cni: could not parse ProxyGID to integer: %s", err)
+					return err
+				}
+
+				options.ProxyGroupID = parsed
 			}
 
 			if pod.GetLabels()["linkerd.io/control-plane-component"] != "" {

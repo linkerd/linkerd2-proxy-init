@@ -73,7 +73,7 @@ spec:
   - name: iptables-test
     image: test.l5d.io/linkerd/proxy-init:test
     imagePullPolicy: Never
-    args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
+    args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-g", "2102"]
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -90,7 +90,7 @@ spec:
   - name: linkerd-init
     image: test.l5d.io/linkerd/proxy-init:test
     imagePullPolicy: Never
-    args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
+    args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-g", "2102"]
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -144,7 +144,7 @@ spec:
   - name: linkerd-init
     image: test.l5d.io/linkerd/proxy-init:test
     imagePullPolicy: Never
-    args: ["-p", "8080",  "-o", "8080", "-u", "2102"]
+    args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-g", "2102"]
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -201,7 +201,7 @@ spec:
   - name: linkerd-init
     image: test.l5d.io/linkerd/proxy-init:test
     imagePullPolicy: Never
-    args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-r", "9090", "-r", "9099"]
+    args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-g", "2102", "-r", "9090", "-r", "9099"]
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -264,7 +264,7 @@ spec:
   - name: linkerd-init
     image: test.l5d.io/linkerd/proxy-init:test
     imagePullPolicy: Never
-    args: ["-p", "8080",  "-o", "8080", "-u", "2102", "--inbound-ports-to-ignore", "6000-8000"]
+    args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-g", "2102", "--inbound-ports-to-ignore", "6000-8000"]
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -318,7 +318,7 @@ spec:
   - name: linkerd-init
     image: test.l5d.io/linkerd/proxy-init:test
     imagePullPolicy: Never
-    args: ["-p", "8080",  "-o", "8080", "-u", "2102", "--subnets-to-ignore", "0.0.0.0/0"]
+    args: ["-p", "8080",  "-o", "8080", "-u", "2102", "-g", "2102", "--subnets-to-ignore", "0.0.0.0/0"]
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:

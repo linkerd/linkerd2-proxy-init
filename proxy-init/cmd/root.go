@@ -34,6 +34,7 @@ type RootOptions struct {
 	IncomingProxyPort     int
 	OutgoingProxyPort     int
 	ProxyUserID           int
+	ProxyGroupID          int
 	PortsToRedirect       []int
 	InboundPortsToIgnore  []string
 	OutboundPortsToIgnore []string
@@ -55,6 +56,7 @@ func newRootOptions() *RootOptions {
 		IncomingProxyPort:     -1,
 		OutgoingProxyPort:     -1,
 		ProxyUserID:           -1,
+		ProxyGroupID:          -1,
 		PortsToRedirect:       make([]int, 0),
 		InboundPortsToIgnore:  make([]string, 0),
 		OutboundPortsToIgnore: make([]string, 0),
@@ -134,6 +136,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().IntVarP(&options.IncomingProxyPort, "incoming-proxy-port", "p", options.IncomingProxyPort, "Port to redirect incoming traffic")
 	cmd.PersistentFlags().IntVarP(&options.OutgoingProxyPort, "outgoing-proxy-port", "o", options.OutgoingProxyPort, "Port to redirect outgoing traffic")
 	cmd.PersistentFlags().IntVarP(&options.ProxyUserID, "proxy-uid", "u", options.ProxyUserID, "User ID that the proxy is running under. Any traffic coming from this user will be ignored to avoid infinite redirection loops.")
+	cmd.PersistentFlags().IntVarP(&options.ProxyGroupID, "proxy-gid", "g", options.ProxyGroupID, "Group ID that the proxy is running under. Any traffic coming from this group will be ignored to avoid infinite redirection loops.")
 	cmd.PersistentFlags().IntSliceVarP(&options.PortsToRedirect, "ports-to-redirect", "r", options.PortsToRedirect, "Port to redirect to proxy, if no port is specified then ALL ports are redirected")
 	cmd.PersistentFlags().StringSliceVar(&options.InboundPortsToIgnore, "inbound-ports-to-ignore", options.InboundPortsToIgnore, "Inbound ports and/or port ranges (inclusive) to ignore and not redirect to proxy. This has higher precedence than any other parameters.")
 	cmd.PersistentFlags().StringSliceVar(&options.OutboundPortsToIgnore, "outbound-ports-to-ignore", options.OutboundPortsToIgnore, "Outbound ports and/or port ranges (inclusive) to ignore and not redirect to proxy. This has higher precedence than any other parameters.")
@@ -195,6 +198,7 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		ProxyInboundPort:       options.IncomingProxyPort,
 		ProxyOutgoingPort:      options.OutgoingProxyPort,
 		ProxyUID:               options.ProxyUserID,
+		ProxyGID:               options.ProxyGroupID,
 		PortsToRedirectInbound: options.PortsToRedirect,
 		InboundPortsToIgnore:   options.InboundPortsToIgnore,
 		OutboundPortsToIgnore:  options.OutboundPortsToIgnore,
