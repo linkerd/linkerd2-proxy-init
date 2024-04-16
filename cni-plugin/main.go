@@ -193,14 +193,6 @@ func cmdAdd(args *skel.CmdArgs) error {
 			return err
 		}
 
-		containsLinkerdProxy := false
-		for _, container := range pod.Spec.Containers {
-			if container.Name == "linkerd-proxy" {
-				containsLinkerdProxy = true
-				break
-			}
-		}
-
 		containsInitContainer := false
 		for _, container := range pod.Spec.InitContainers {
 			if container.Name == "linkerd-init" {
@@ -209,7 +201,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			}
 		}
 
-		if containsLinkerdProxy && !containsInitContainer {
+		if !containsInitContainer && containsLinkerdProxy(&pod.Spec) {
 			logEntry.Debugf("linkerd-cni: setting up iptables firewall for %s/%s", namespace, pod)
 			options := cmd.RootOptions{
 				IncomingProxyPort:     conf.ProxyInit.IncomingProxyPort,
@@ -364,6 +356,23 @@ func cmdCheck(_ *skel.CmdArgs) error {
 func cmdDel(_ *skel.CmdArgs) error {
 	logrus.Info("linkerd-cni: delete called but not implemented")
 	return nil
+}
+
+func containsLinkerdProxy(spec *v1.PodSpec) bool {
+	for _, container := range spec.Containers {
+		if container.Name == "linkerd-proxy" {
+			return true
+		}
+	}
+
+	// native sidecar proxy
+	for _, container := range spec.InitContainers {
+		if container.Name == "linkerd-proxy" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func getAPIServerPorts(ctx context.Context, api *kubernetes.Clientset) ([]string, error) {
