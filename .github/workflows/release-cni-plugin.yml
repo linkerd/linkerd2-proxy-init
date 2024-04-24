@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 3
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
       - id: meta
         uses: ./.github/actions/version-mode
         with:
@@ -41,7 +41,7 @@ jobs:
 
       - uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3
       - uses: linkerd/dev/actions/setup-tools@v43
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
       - run: |
           just cni-plugin-image='${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}' \
                 build-cni-plugin-image \
@@ -79,7 +79,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
       - if: needs.meta.outputs.mode == 'release'
         uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564
         with:
