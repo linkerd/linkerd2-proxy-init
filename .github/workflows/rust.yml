@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/linkerd/dev:v42-rust
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b
       - run: just rs-fetch
       - run: just rs-fmt-check
       - run: just rs-clippy
@@ -34,7 +34,7 @@ jobs:
     # Prevent sudden announcement of a new advisory from failing Ci.
     continue-on-error: ${{ matrix.checks == 'advisories' }}
     steps:
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b
       - uses: EmbarkStudios/cargo-deny-action@b01e7a8cfb1f496c52d77361e84c1840d8246393
         with:
           command: check ${{ matrix.checks }}
