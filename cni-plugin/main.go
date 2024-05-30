@@ -399,10 +399,7 @@ func buildAndConfigure(logEntry *logrus.Entry, options *cmd.RootOptions) error {
 		return err
 	}
 
-	err = iptables.ConfigureFirewall(*firewallConfiguration)
-	// We couldn't find a robust way of checking IPv6 support besides trying to just call ip6tables-save.
-	// If IPv4 rules worked but not IPv6, let's not fail the container (the actual problem will get logged).
-	if !options.IPv6 && err != nil {
+	if err := iptables.ConfigureFirewall(*firewallConfiguration); err != nil {
 		logEntry.Errorf("linkerd-cni: could not configure firewall: %s", err)
 		return err
 	}
