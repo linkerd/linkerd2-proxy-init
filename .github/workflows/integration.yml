@@ -12,7 +12,6 @@ on:
 
 jobs:
   proxy-init-integration:
-    continue-on-error: true
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:

@@ -125,9 +125,9 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
-			// We couldn't find a robust way of checking IPv6 support besides trying to just call ip6tables-save.
-			// If IPv4 rules worked but not IPv6, let's not fail the container (the actual problem will get logged).
-			_ = iptables.ConfigureFirewall(*config)
+			if err = iptables.ConfigureFirewall(*config); err != nil {
+				return err
+			}
 
 			return nil
 		},
