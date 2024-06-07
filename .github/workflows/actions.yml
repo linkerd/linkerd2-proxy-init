@@ -16,12 +16,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: linkerd/dev/actions/setup-tools@v43
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
       - run: just action-lint
 
   devcontainer-versions:
     runs-on: ubuntu-latest
     steps:
       - uses: linkerd/dev/actions/setup-tools@v43
-      - uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
       - run: just action-dev-check
