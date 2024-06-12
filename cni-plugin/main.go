@@ -88,7 +88,15 @@ type PluginConf struct {
 func main() {
 	// Must log to Stderr because the CNI runtime uses Stdout as its state
 	logrus.SetOutput(os.Stderr)
-	skel.PluginMain(cmdAdd, cmdCheck, cmdDel, version.All, "")
+	skel.PluginMainFuncs(
+		skel.CNIFuncs{
+			Add:   cmdAdd,
+			Check: cmdCheck,
+			Del:   cmdDel,
+		},
+		version.All,
+		"",
+	)
 }
 
 func configureLoggingLevel(logLevel string) {
