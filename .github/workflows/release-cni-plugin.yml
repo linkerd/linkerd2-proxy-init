@@ -39,7 +39,7 @@ jobs:
           key: cni-plugin-${{ needs.meta.outputs.mode }}-${{ needs.meta.outputs.version }}
           restore-keys: cni-plugin-${{ needs.meta.outputs.mode }}-
 
-      - uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3
+      - uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf
       - uses: linkerd/dev/actions/setup-tools@v43
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
       - run: |
