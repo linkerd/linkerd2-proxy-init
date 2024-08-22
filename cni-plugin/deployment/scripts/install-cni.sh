@@ -269,18 +269,24 @@ sync() {
     # previously observed SHA (updated with each file watch) and compare it
     # against the new file's SHA. If they differ, it means something has
     # changed.
-    new_sha=$(sha256sum "${filepath}" | while read -r s _; do echo "$s"; done)
-    if [ "$new_sha" != "$prev_sha" ]; then
-      # Create but don't rm old one since we don't know if this will be configured
-      # to run as _the_ cni plugin.
-      log "New file [$filename] detected; re-installing"
-      install_cni_conf "$filepath"
+    if [[ -n "$prev_sha" ]]; then
+      new_sha=$(sha256sum "${filepath}" | while read -r s _; do echo "$s"; done)
+      if [ "$new_sha" != "$prev_sha" ]; then
+        # Create but don't rm old one since we don't know if this will be configured
+        # to run as _the_ cni plugin.
+        log "New file [$filename] detected; re-installing"
+        install_cni_conf "$filepath"
+      else
+        # If the SHA hasn't changed or we get an unrecognised event, ignore it.
+        # When the SHA is the same, we can get into infinite loops whereby a file has
+        # been created and after re-install the watch keeps triggering CREATE events
+        # that never end.
+        log "Ignoring event: $ev $filepath; no real changes detected"
+      fi
     else
-      # If the SHA hasn't changed or we get an unrecognised event, ignore it.
-      # When the SHA is the same, we can get into infinite loops whereby a file has
-      # been created and after re-install the watch keeps triggering CREATE events
-      # that never end.
-      log "Ignoring event: $ev $filepath; no real changes detected"
+      # If there is no previous SHA (as in the case of the token), reinstall cni.
+      log "Processing event for $filename with no SHA comparison needed."
+      install_cni_conf "$DEFAULT_CNI_CONF_PATH"
     fi
   fi
 }
@@ -298,6 +304,11 @@ monitor() {
           cni_conf_sha="$(sha256sum "$directory/$filename" | while read -r s _; do echo "$s"; done)"
         fi
       fi
+    done &
+  inotifywait -m "/var/run/secrets/kubernetes.io/serviceaccount/token" -e create,delete,moved_to,modify |
+    while read -r directory action filename; do
+      log "Detected change in Service Account token: $action $filename"
+      sync "$DEFAULT_CNI_CONF_PATH" "$action" ""
     done
 }
 
