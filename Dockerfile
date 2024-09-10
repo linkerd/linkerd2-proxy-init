@@ -5,7 +5,7 @@
 ##
 
 # Cross compile from native platform to target arch
-FROM --platform=$BUILDPLATFORM golang:1.22-alpine as go
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine as go
 WORKDIR /build
 COPY --link go.mod go.sum .
 COPY --link ./proxy-init ./proxy-init
