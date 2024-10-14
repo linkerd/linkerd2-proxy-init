@@ -345,10 +345,4 @@ fi
 # the wait builtin to return immediately with an exit status greater than 128,
 # immediately after which the trap is executed."
 monitor &
-while true; do
-  # sleep so script never finishes
-  # we start sleep in bg so we can trap signals
-  sleep infinity &
-  # block
-  wait $!
-done
+wait $!
