@@ -25,7 +25,7 @@
 # - Expects the desired CNI config in the CNI_NETWORK_CONFIG env variable.
 
 # Ensure all variables are defined, and that the script fails when an error is hit.
-set -u -e
+set -u -e -o pipefail
 
 # Helper function for raising errors
 # Usage:
@@ -97,13 +97,13 @@ cleanup() {
   fi
 
   log 'Exiting.'
-  exit 0
 }
 
 # Capture the usual signals and exit from the script
 trap 'log "SIGINT received, simply exiting..."; cleanup' INT
 trap 'log "SIGTERM received, simply exiting..."; cleanup' TERM
 trap 'log "SIGHUP received, simply exiting..."; cleanup' HUP
+trap 'log "ERROR caught, exiting..."; cleanup ' ERR
 
 # Copy the linkerd-cni binary to a known location where CNI will look.
 install_cni_bin() {
