@@ -25,7 +25,7 @@
 # - Expects the desired CNI config in the CNI_NETWORK_CONFIG env variable.
 
 # Ensure all variables are defined, and that the script fails when an error is hit.
-set -u -e
+set -u -e -o pipefail
 
 # Helper function for raising errors
 # Usage:
@@ -97,13 +97,13 @@ cleanup() {
   fi
 
   log 'Exiting.'
-  exit 0
 }
 
 # Capture the usual signals and exit from the script
 trap 'log "SIGINT received, simply exiting..."; cleanup' INT
 trap 'log "SIGTERM received, simply exiting..."; cleanup' TERM
 trap 'log "SIGHUP received, simply exiting..."; cleanup' HUP
+trap 'log "ERROR caught, exiting..."; cleanup ' ERR
 
 # Copy the linkerd-cni binary to a known location where CNI will look.
 install_cni_bin() {
@@ -316,15 +316,20 @@ rm -f "${DEFAULT_CNI_CONF_PATH}"
 install_cni_bin
 
 # Append our config to any existing config file (*.conflist or *.conf)
-config_file_count=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | grep -v linkerd | sort | wc -l)
-if [ "$config_file_count" -eq 0 ]; then
-  log "No active CNI configuration files found"
+config_files=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \))
+if [ -z "$config_files" ]; then
+    log "No active CNI configuration files found"
 else
-  find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
-    while read -r -d $'\0' file; do
-      log "Installing CNI configuration for $file"
-      install_cni_conf "$file"
-    done
+  config_file_count=$(echo "$config_files" | grep -v linkerd | sort | wc -l)
+  if [ "$config_file_count" -eq 0 ]; then
+    log "No active CNI configuration files found"
+  else
+    find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
+      while read -r -d $'\0' file; do
+        log "Installing CNI configuration for $file"
+        install_cni_conf "$file"
+      done
+  fi
 fi
 
 # Compute SHA for first config file found; this will be updated after every iteration.
@@ -345,10 +350,4 @@ fi
 # the wait builtin to return immediately with an exit status greater than 128,
 # immediately after which the trap is executed."
 monitor &
-while true; do
-  # sleep so script never finishes
-  # we start sleep in bg so we can trap signals
-  sleep infinity &
-  # block
-  wait $!
-done
+wait $!
