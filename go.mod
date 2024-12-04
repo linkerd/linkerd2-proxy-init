@@ -1,8 +1,8 @@
 module github.com/linkerd/linkerd2-proxy-init
 
-go 1.22.0
+go 1.23.0
 
-toolchain go1.22.3
+toolchain go1.23.3
 
 require (
 	github.com/containernetworking/cni v1.2.3
