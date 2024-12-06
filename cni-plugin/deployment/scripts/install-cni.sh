@@ -56,6 +56,7 @@ HOST_CNI_NET="${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}"
 # Location of legacy "interface mode" file, to be automatically deleted
 DEFAULT_CNI_CONF_PATH="${HOST_CNI_NET}/01-linkerd-cni.conf"
 KUBECONFIG_FILE_NAME=${KUBECONFIG_FILE_NAME:-ZZZ-linkerd-cni-kubeconfig}
+SERVICEACCOUNT_PATH=/var/run/secrets/kubernetes.io/serviceaccount
 
 ############################
 ### Function definitions ###
@@ -119,56 +120,32 @@ install_cni_bin() {
   log "Wrote linkerd CNI binaries to ${dir}"
 }
 
-create_cni_conf() {
-  # Create temp configuration and kubeconfig files
-  #
-  TMP_CONF='/tmp/linkerd-cni.conf.default'
-  # If specified, overwrite the network configuration file.
-  CNI_NETWORK_CONFIG_FILE="${CNI_NETWORK_CONFIG_FILE:-}"
-  CNI_NETWORK_CONFIG="${CNI_NETWORK_CONFIG:-}"
+create_kubeconfig() {
+  KUBE_CA_FILE=${KUBE_CA_FILE:-${SERVICEACCOUNT_PATH}/ca.crt}
+  SKIP_TLS_VERIFY=${SKIP_TLS_VERIFY:-false}
+  SERVICEACCOUNT_TOKEN=$(cat ${SERVICEACCOUNT_PATH}/token)
 
-  # If the CNI Network Config has been overwritten, then use template from file
-  if [ -e "${CNI_NETWORK_CONFIG_FILE}" ]; then
-    log "Using CNI config template from ${CNI_NETWORK_CONFIG_FILE}."
-    cp "${CNI_NETWORK_CONFIG_FILE}" "${TMP_CONF}"
-  elif [ "${CNI_NETWORK_CONFIG}" ]; then
-    log 'Using CNI config template from CNI_NETWORK_CONFIG environment variable.'
-    cat >"${TMP_CONF}" <<EOF
-${CNI_NETWORK_CONFIG}
-EOF
+  # Check if we're not running as a k8s pod.
+  if [[ ! -f "${SERVICEACCOUNT_PATH}/token" ]]; then
+    return
   fi
 
-  SERVICE_ACCOUNT_PATH=/var/run/secrets/kubernetes.io/serviceaccount
-  KUBE_CA_FILE=${KUBE_CA_FILE:-${SERVICE_ACCOUNT_PATH}/ca.crt}
-  SKIP_TLS_VERIFY=${SKIP_TLS_VERIFY:-false}
-  # Pull out service account token.
-  SERVICEACCOUNT_TOKEN=$(cat ${SERVICE_ACCOUNT_PATH}/token)
+  if [ -z "${KUBERNETES_SERVICE_HOST}" ]; then
+    log 'KUBERNETES_SERVICE_HOST not set'; exit 1;
+  fi
+  if [ -z "${KUBERNETES_SERVICE_PORT}" ]; then
+    log 'KUBERNETES_SERVICE_PORT not set'; exit 1;
+  fi
 
-  # Check if we're running as a k8s pod.
-  # The check will assert whether token exists and is a regular file
-  if [ -f "${SERVICE_ACCOUNT_PATH}/token" ]; then
-    # We're running as a k8d pod - expect some variables.
-    # If the variables are null, exit
-    if [ -z "${KUBERNETES_SERVICE_HOST}" ]; then
-      log 'KUBERNETES_SERVICE_HOST not set'; exit 1;
-    fi
-    if [ -z "${KUBERNETES_SERVICE_PORT}" ]; then
-      log 'KUBERNETES_SERVICE_PORT not set'; exit 1;
-    fi
+  if [ "${SKIP_TLS_VERIFY}" = 'true' ]; then
+    TLS_CFG='insecure-skip-tls-verify: true'
+  elif [ -f "${KUBE_CA_FILE}" ]; then
+    TLS_CFG="certificate-authority-data: $(base64 "${KUBE_CA_FILE}" | tr -d '\n')"
+  fi
 
-    if [ "${SKIP_TLS_VERIFY}" = 'true' ]; then
-      TLS_CFG='insecure-skip-tls-verify: true'
-    elif [ -f "${KUBE_CA_FILE}" ]; then
-      TLS_CFG="certificate-authority-data: $(base64 "${KUBE_CA_FILE}" | tr -d '\n')"
-    fi
-
-    # Write a kubeconfig file for the CNI plugin. Do this
-    # to skip TLS verification for now. We should eventually support
-    # writing more complete kubeconfig files. This is only used
-    # if the provided CNI network config references it.
-    touch "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}"
-    chmod "${KUBECONFIG_MODE:-600}" "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}"
-    cat > "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}" <<EOF
+  touch "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}"
+  chmod "${KUBECONFIG_MODE:-600}" "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}"
+  cat > "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}" <<EOF
 # Kubeconfig file for linkerd CNI plugin.
 apiVersion: v1
 kind: Config
@@ -188,31 +165,36 @@ contexts:
     user: linkerd-cni
 current-context: linkerd-cni-context
 EOF
+}
 
+create_cni_conf() {
+  # Create temp configuration and kubeconfig files
+  #
+  TMP_CONF='/tmp/linkerd-cni.conf.default'
+  # If specified, overwrite the network configuration file.
+  CNI_NETWORK_CONFIG_FILE="${CNI_NETWORK_CONFIG_FILE:-}"
+  CNI_NETWORK_CONFIG="${CNI_NETWORK_CONFIG:-}"
+
+  # If the CNI Network Config has been overwritten, then use template from file
+  if [ -e "${CNI_NETWORK_CONFIG_FILE}" ]; then
+    log "Using CNI config template from ${CNI_NETWORK_CONFIG_FILE}."
+    cp "${CNI_NETWORK_CONFIG_FILE}" "${TMP_CONF}"
+  elif [ "${CNI_NETWORK_CONFIG}" ]; then
+    log 'Using CNI config template from CNI_NETWORK_CONFIG environment variable.'
+    cat >"${TMP_CONF}" <<EOF
+${CNI_NETWORK_CONFIG}
+EOF
   fi
-
-  # Insert any of the supported "auto" parameters.
-  grep '__KUBERNETES_SERVICE_HOST__' ${TMP_CONF} && sed -i s/__KUBERNETES_SERVICE_HOST__/"${KUBERNETES_SERVICE_HOST}"/g ${TMP_CONF}
-  grep '__KUBERNETES_SERVICE_PORT__' ${TMP_CONF} && sed -i s/__KUBERNETES_SERVICE_PORT__/"${KUBERNETES_SERVICE_PORT}"/g ${TMP_CONF}
-  # Check in container
-  sed -i s/__KUBERNETES_NODE_NAME__/"${KUBERNETES_NODE_NAME:-$(hostname)}"/g ${TMP_CONF}
-  sed -i s/__KUBECONFIG_FILENAME__/"${KUBECONFIG_FILE_NAME}"/g ${TMP_CONF}
-  sed -i s/__CNI_MTU__/"${CNI_MTU:-1500}"/g ${TMP_CONF}
 
   # Use alternative command character "~", since these include a "/".
   sed -i s~__KUBECONFIG_FILEPATH__~"${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}"~g ${TMP_CONF}
 
-  # Log the config file before inserting service account token.
-  # This way auth token is not visible in the logs.
   log "CNI config: $(cat ${TMP_CONF})"
-
-  sed -i s/__SERVICEACCOUNT_TOKEN__/"${SERVICEACCOUNT_TOKEN:-}"/g ${TMP_CONF}
 }
 
 install_cni_conf() {
   local cni_conf_path=$1
- 
-  create_cni_conf
+
   local tmp_data=''
   local conf_data=''
   if [ -e "${cni_conf_path}" ]; then
@@ -266,7 +248,9 @@ sync() {
     if [ "$new_sha" != "$prev_sha" ]; then
       # Create but don't rm old one since we don't know if this will be configured
       # to run as _the_ cni plugin.
-      log "New file [$filename] detected; re-installing"
+      log "New/changed file [$filename] detected; re-installing"
+      create_kubeconfig
+      create_cni_conf
       install_cni_conf "$filepath"
     else
       # If the SHA hasn't changed or we get an unrecognised event, ignore it.
@@ -278,8 +262,8 @@ sync() {
   fi
 }
 
-# Monitor will start a watch on host's CNI config directory
-monitor() {
+# monitor_cni_config starts a watch on the host's CNI config directory
+monitor_cni_config() {
   inotifywait -m "${HOST_CNI_NET}" -e create,moved_to,modify |
     while read -r directory action filename; do
       if [[ "$filename" =~ .*.(conflist|conf)$ ]]; then 
@@ -291,6 +275,25 @@ monitor() {
         fi
       fi
     done
+}
+
+# Kubernetes rolls out serviceaccount tokens by creating new directories
+# containing a new token file and re-creating the
+# /var/run/secrets/kubernetes.io/serviceaccount/token symlink pointing to it.
+# This function listens to creation events under the serviceaccount directory,
+# only reacting to direct creation of a "token" file, or creation of
+# directories containing a "token" file.
+monitor_service_account_token() {
+    inotifywait -m "${SERVICEACCOUNT_PATH}" -e create |
+      while read -r directory _ filename; do
+        target=$(realpath "$directory/$filename")
+        if [[ (-f "$target" && "${target##*/}" == "token") || (-d "$target" && -e "$target/token") ]]; then
+          log "Detected creation of file in $directory: $filename; recreating kubeconfig file"
+          create_kubeconfig
+        else
+          log "Detected creation of file in $directory: $filename; ignoring"
+        fi
+      done
 }
 
 log() {
@@ -319,6 +322,8 @@ else
     find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
       while read -r -d $'\0' file; do
         log "Installing CNI configuration for $file"
+        create_kubeconfig
+        create_cni_conf
         install_cni_conf "$file"
       done
   fi
@@ -341,5 +346,7 @@ fi
 # builtin, the reception of a signal for which a trap has been set will cause
 # the wait builtin to return immediately with an exit status greater than 128,
 # immediately after which the trap is executed."
-monitor &
-wait $!
+monitor_cni_config &
+monitor_service_account_token &
+# uses -n so that we exit when the first background job exits (when there's an error)
+wait -n
