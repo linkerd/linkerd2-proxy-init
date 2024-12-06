@@ -48,7 +48,6 @@ COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
 COPY --from=cni-repair-controller /build/linkerd-cni-repair-controller /usr/lib/linkerd/
 COPY LICENSE .
 COPY cni-plugin/deployment/scripts/install-cni.sh .
-COPY cni-plugin/deployment/linkerd-cni.conf.default .
 COPY cni-plugin/deployment/scripts/filter.jq .
 ENV PATH=/linkerd:/opt/cni/bin:$PATH
 CMD ["install-cni.sh"]
