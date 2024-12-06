@@ -18,7 +18,7 @@ var (
 
 func returnHostAndPortHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Got request [%v] returning [%s]\n", r, response())
-	fmt.Fprintln(w, response())
+	_, _ = fmt.Fprintln(w, response())
 }
 
 func callOtherServiceHandler(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +35,7 @@ func callOtherServiceHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), 500)
 		} else {
 			response := fmt.Sprintf("me:[%s]downstream:[%s]", response(), strings.TrimSpace(string(body)))
-			fmt.Fprintln(w, response)
+			_, _ = fmt.Fprintln(w, response)
 		}
 	}
 }

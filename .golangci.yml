@@ -1,8 +1,8 @@
 linters:
   enable:
+    # TODO - copyloopvar.
     - errcheck
     - errorlint
-    - exportloopref
     - goconst
     - gocritic
     - gosec
@@ -31,7 +31,6 @@ linters:
   # Disabled for generics https://github.com/golangci/golangci-lint/issues/2649
   disable:
     - bodyclose
-    - structcheck
     - unparam
 
 
