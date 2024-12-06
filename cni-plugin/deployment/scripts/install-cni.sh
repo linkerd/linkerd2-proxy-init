@@ -257,14 +257,7 @@ sync() {
 
   local config_file_count
   local new_sha
-  if [ "$ev" = 'DELETE' ]; then
-    # When the event type is 'DELETE', we check to see if there are any `*conf` or `*conflist`
-    # files on the host's filesystem.
-    config_file_count=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | sort | wc -l)
-    if [ "$config_file_count" -eq 0 ]; then
-      log "No active CNI configuration file found after $ev event"
-    fi
-  elif [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ] || [ "$ev" = 'MODIFY' ]; then
+  if [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ] || [ "$ev" = 'MODIFY' ]; then
     # When the event type is 'CREATE', 'MOVED_TO' or 'MODIFY', we check the
     # previously observed SHA (updated with each file watch) and compare it
     # against the new file's SHA. If they differ, it means something has
@@ -287,14 +280,13 @@ sync() {
 
 # Monitor will start a watch on host's CNI config directory
 monitor() {
-  inotifywait -m "${HOST_CNI_NET}" -e create,delete,moved_to,modify |
+  inotifywait -m "${HOST_CNI_NET}" -e create,moved_to,modify |
     while read -r directory action filename; do
       if [[ "$filename" =~ .*.(conflist|conf)$ ]]; then 
         log "Detected change in $directory: $action $filename"
         sync "$filename" "$action" "$cni_conf_sha"
-        # When file exists (i.e we didn't deal with a DELETE ev)
-        # then calculate its sha to be used the next turn.
-        if [[ -e "$directory/$filename" && "$action" != 'DELETE' ]]; then
+        # calculate file SHA to use in the next iteration
+        if [[ -e "$directory/$filename" ]]; then
           cni_conf_sha="$(sha256sum "$directory/$filename" | while read -r s _; do echo "$s"; done)"
         fi
       fi
