@@ -27,8 +27,8 @@ RUN apk add iptables-legacy iptables libcap && \
 COPY --link --from=go /out/linkerd2-proxy-init /usr/local/bin/proxy-init
 
 # Set sys caps for iptables utilities and proxy-init
-RUN setcap cap_net_raw,cap_net_admin+eip /sbin/xtables-legacy-multi && \
-    setcap cap_net_raw,cap_net_admin+eip /sbin/xtables-nft-multi && \
+RUN setcap cap_net_raw,cap_net_admin+eip /usr/sbin/xtables-legacy-multi && \
+    setcap cap_net_raw,cap_net_admin+eip /usr/sbin/xtables-nft-multi && \
     setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/proxy-init
 
 USER 65534
