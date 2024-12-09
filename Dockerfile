@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
 ## Runtime
 ##
 
-FROM --platform=$TARGETPLATFORM alpine:3.20.3 as runtime
+FROM --platform=$TARGETPLATFORM alpine:3.21.0 as runtime
 RUN apk add iptables-legacy iptables libcap && \
     touch /run/xtables.lock && \
     chmod 0666 /run/xtables.lock
@@ -27,8 +27,8 @@ RUN apk add iptables-legacy iptables libcap && \
 COPY --link --from=go /out/linkerd2-proxy-init /usr/local/bin/proxy-init
 
 # Set sys caps for iptables utilities and proxy-init
-RUN setcap cap_net_raw,cap_net_admin+eip /sbin/xtables-legacy-multi && \
-    setcap cap_net_raw,cap_net_admin+eip /sbin/xtables-nft-multi && \
+RUN setcap cap_net_raw,cap_net_admin+eip /usr/sbin/xtables-legacy-multi && \
+    setcap cap_net_raw,cap_net_admin+eip /usr/sbin/xtables-nft-multi && \
     setcap cap_net_raw,cap_net_admin+eip /usr/local/bin/proxy-init
 
 USER 65534
