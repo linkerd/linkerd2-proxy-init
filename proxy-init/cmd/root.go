@@ -18,15 +18,22 @@ const (
 	IPTablesModeLegacy = "legacy"
 	// IPTablesModeNFT signals the usage of the iptables-nft commands
 	IPTablesModeNFT = "nft"
+	// IPTablesModeDefault signals the usage of the iptables commands, which
+	// can be either legacy or nft
+	IPTablesModeDefault = "default"
 
-	cmdLegacy         = "iptables-legacy"
-	cmdLegacySave     = "iptables-legacy-save"
-	cmdLegacyIPv6     = "ip6tables-legacy"
-	cmdLegacyIPv6Save = "ip6tables-legacy-save"
-	cmdNFT            = "iptables-nft"
-	cmdNFTSave        = "iptables-nft-save"
-	cmdNFTIPv6        = "ip6tables-nft"
-	cmdNFTIPv6Save    = "ip6tables-nft-save"
+	cmdLegacy          = "iptables-legacy"
+	cmdLegacySave      = "iptables-legacy-save"
+	cmdLegacyIPv6      = "ip6tables-legacy"
+	cmdLegacyIPv6Save  = "ip6tables-legacy-save"
+	cmdNFT             = "iptables-nft"
+	cmdNFTSave         = "iptables-nft-save"
+	cmdNFTIPv6         = "ip6tables-nft"
+	cmdNFTIPv6Save     = "ip6tables-nft-save"
+	cmdDefault         = "iptables"
+	cmdDefaultSave     = "iptables-save"
+	cmdDefaultIPv6     = "ip6tables"
+	cmdDefaultIPv6Save = "ip6tables-save"
 )
 
 // RootOptions provides the information that will be used to build a firewall configuration.
@@ -147,7 +154,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().IntVar(&options.TimeoutCloseWaitSecs, "timeout-close-wait-secs", options.TimeoutCloseWaitSecs, "Sets nf_conntrack_tcp_timeout_close_wait")
 	cmd.PersistentFlags().StringVar(&options.LogFormat, "log-format", options.LogFormat, "Configure log format ('plain' or 'json')")
 	cmd.PersistentFlags().StringVar(&options.LogLevel, "log-level", options.LogLevel, "Configure log level")
-	cmd.PersistentFlags().StringVar(&options.IPTablesMode, "iptables-mode", options.IPTablesMode, "Variant of iptables command to use (\"legacy\" or \"nft\"); overrides --firewall-bin-path and --firewall-save-bin-path")
+	cmd.PersistentFlags().StringVar(&options.IPTablesMode, "iptables-mode", options.IPTablesMode, "Variant of iptables command to use (\"legacy\", \"nft\" or \"default\"); overrides --firewall-bin-path and --firewall-save-bin-path")
 	cmd.PersistentFlags().BoolVar(&options.IPv6, "ipv6", options.IPv6, "Set rules both via iptables and ip6tables to support dual-stack networking")
 
 	// these two flags are kept for backwards-compatibility, but --iptables-mode is preferred
@@ -158,8 +165,8 @@ func NewRootCmd() *cobra.Command {
 
 // BuildFirewallConfiguration returns an iptables FirewallConfiguration suitable to use to configure iptables.
 func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfiguration, error) {
-	if options.IPTablesMode != "" && options.IPTablesMode != IPTablesModeLegacy && options.IPTablesMode != IPTablesModeNFT {
-		return nil, fmt.Errorf("--iptables-mode valid values are only \"%s\" and \"%s\"", IPTablesModeLegacy, IPTablesModeNFT)
+	if options.IPTablesMode != "" && options.IPTablesMode != IPTablesModeLegacy && options.IPTablesMode != IPTablesModeNFT && options.IPTablesMode != IPTablesModeDefault {
+		return nil, fmt.Errorf("--iptables-mode valid values are only \"%s\", \"%s\" and \"%s\"", IPTablesModeLegacy, IPTablesModeNFT, IPTablesModeDefault)
 	}
 
 	if options.IPTablesMode == "" {
@@ -168,8 +175,10 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 			options.IPTablesMode = IPTablesModeLegacy
 		case cmdNFT:
 			options.IPTablesMode = IPTablesModeNFT
+		case cmdDefault:
+			options.IPTablesMode = IPTablesModeDefault
 		default:
-			return nil, fmt.Errorf("--firewall-bin-path valid values are only \"%s\" and \"%s\"", cmdLegacy, cmdNFT)
+			return nil, fmt.Errorf("--firewall-bin-path valid values are only \"%s\", \"%s\" and \"%s\"", cmdLegacy, cmdNFT, cmdDefault)
 		}
 	}
 
@@ -229,18 +238,23 @@ func getFormatter(format string) log.Formatter {
 }
 
 func getCommands(options *RootOptions) (string, string) {
-	if options.IPTablesMode == IPTablesModeLegacy {
+	switch options.IPTablesMode {
+	case IPTablesModeLegacy:
 		if options.IPv6 {
 			return cmdLegacyIPv6, cmdLegacyIPv6Save
 		}
 		return cmdLegacy, cmdLegacySave
+	case IPTablesModeNFT:
+		if options.IPv6 {
+			return cmdNFTIPv6, cmdNFTIPv6Save
+		}
+		return cmdNFT, cmdNFTSave
+	default:
+		if options.IPv6 {
+			return cmdDefaultIPv6, cmdDefaultIPv6Save
+		}
+		return cmdDefault, cmdDefaultSave
 	}
-
-	if options.IPv6 {
-		return cmdNFTIPv6, cmdNFTIPv6Save
-	}
-
-	return cmdNFT, cmdNFTSave
 }
 
 func setLogLevel(logLevel string) error {
