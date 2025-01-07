@@ -34,7 +34,7 @@ RUN --mount=type=cache,target=target \
     just cni-repair-controller arch="$TARGETARCH" profile=release build && \
     mv "target/$target/release/linkerd-cni-repair-controller" .
 
-FROM --platform=$TARGETPLATFORM alpine:3.21.0 as runtime
+FROM --platform=$TARGETPLATFORM alpine:3.21.1 as runtime
 WORKDIR /linkerd
 RUN apk add \
     # For inotifywait
