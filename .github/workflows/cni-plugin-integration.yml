@@ -42,4 +42,23 @@ jobs:
       - uses: linkerd/dev/actions/setup-tools@v45
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Run repair-controller tests
-        run: just cni-repair-controller-integration
+        run: |
+          set -xeuo pipefail
+          echo $?
+          #apt list --installed
+          sudo apt-get install -y clang-19
+          echo $?
+          #ls -l /usr/lib/llvm*
+          just cni-repair-controller-integration
+          echo $?
+  repair-controller-old-ubuntu:
+    timeout-minutes: 15
+    runs-on: ubuntu-22.04
+    #container: ghcr.io/linkerd/dev:v45-rust
+    steps:
+      - uses: linkerd/dev/actions/setup-rust@v45
+      - uses: linkerd/dev/actions/setup-tools@v45
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Run repair-controller tests
+        run: |
+          just cni-repair-controller-integration
