@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - .github/workflows/cni-plugin-integration.yml
       - Dockerfile-cni-plugin
       - cni-plugin/integration/flannel/Dockerfile-tester
       - cni-plugin/integration/run.sh
