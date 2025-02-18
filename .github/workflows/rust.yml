@@ -13,7 +13,7 @@ on:
 jobs:
   check:
     timeout-minutes: 5
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     container: ghcr.io/linkerd/dev:v44-rust
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -25,7 +25,7 @@ jobs:
 
   audit:
     timeout-minutes: 5
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         checks:
