@@ -27,6 +27,9 @@ go-fmt-check:
 ## rust
 ##
 
+CC := "clang-19"
+CXX := "clang++-19"
+
 # By default we compile in development mode because it's faster
 rs-profile := "debug"
 
