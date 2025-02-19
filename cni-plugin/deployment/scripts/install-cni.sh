@@ -239,7 +239,7 @@ sync() {
 
   local config_file_count
   local new_sha
-  if [ "$ev" = 'CREATE' -o "$ev" = 'MOVED_TO' -o "$ev" = 'MODIFY' ]; then
+  if [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ] || [ "$ev" = 'MODIFY' ]; then
     # When the event type is 'CREATE', 'MOVED_TO' or 'MODIFY', we check the
     # previously observed SHA (updated with each file watch) and compare it
     # against the new file's SHA. If they differ, it means something has
