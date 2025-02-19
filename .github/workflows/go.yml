@@ -13,24 +13,24 @@ permissions:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
-    container: ghcr.io/linkerd/dev:v44-go
+    runs-on: ubuntu-24.04
+    container: ghcr.io/linkerd/dev:v45-go
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - run: git config --global --add safe.directory "$PWD" # actions/runner#2033
       - run: just go-lint --verbose --timeout=10m
 
   fmt:
-    runs-on: ubuntu-latest
-    container: ghcr.io/linkerd/dev:v44-go
+    runs-on: ubuntu-24.04
+    container: ghcr.io/linkerd/dev:v45-go
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - run: git config --global --add safe.directory "$PWD" # actions/runner#2033
       - run: just go-fmt-check
 
   unit-test:
-    runs-on: ubuntu-latest
-    container: ghcr.io/linkerd/dev:v44-go
+    runs-on: ubuntu-24.04
+    container: ghcr.io/linkerd/dev:v45-go
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - run: git config --global --add safe.directory "$PWD" # actions/runner#2033
