@@ -79,7 +79,7 @@ validator *args:
 ##
 
 cni-repair-controller *args:
-    TARGETCRATE=linkerd-cni-repair-controller \
+    TARGETCRATE=linkerd-cni-repair-controller GITHUB_ACTIONS= \
       {{ just_executable() }} --justfile=justfile-rust {{ args }}
 
 # The K3S_IMAGES_JSON file used instructs the creation of a cluster on version
