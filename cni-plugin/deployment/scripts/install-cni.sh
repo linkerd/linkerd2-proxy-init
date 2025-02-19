@@ -284,7 +284,7 @@ monitor_cni_config() {
 # > Consumers of the target directory can monitor the ..data symlink using
 # > inotify or fanotify to receive events when the content in the volume is
 # > updated.
-# Indeed, as per atomic writer's Write function docs, in the finaly steps the
+# Indeed, as per atomic writer's Write function docs, in the final steps the
 # ..data_tmp symlink points to a new timestamped directory containing the new
 # files, which is then atomically renamed to ..data:
 # >  8. A symlink to the new timestamped directory ..data_tmp is created that will
