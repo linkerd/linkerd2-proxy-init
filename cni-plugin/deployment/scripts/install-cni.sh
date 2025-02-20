@@ -289,21 +289,26 @@ monitor_cni_config() {
     done
 }
 
-# Kubernetes rolls out serviceaccount tokens by creating new directories
-# containing a new token file and re-creating the
-# /var/run/secrets/kubernetes.io/serviceaccount/token symlink pointing to it.
-# This function listens to creation events under the serviceaccount directory,
-# only reacting to direct creation of a "token" file, or creation of
-# directories containing a "token" file.
+# This function detects whether the service account token was rotated by
+# listening to MOVED_TO events under the directory
+# /var/run/secrets/kubernetes.io/serviceaccount, detecting whether the ..data
+# directory was moved to, as recommended by k8s' atomic writer:
+# > Consumers of the target directory can monitor the ..data symlink using
+# > inotify or fanotify to receive events when the content in the volume is
+# > updated.
+# Indeed, as per atomic writer's Write function docs, in the final steps the
+# ..data_tmp symlink points to a new timestamped directory containing the new
+# files, which is then atomically renamed to ..data:
+# >  8. A symlink to the new timestamped directory ..data_tmp is created that will
+# >     become the new data directory.
+# >  9. The new data directory symlink is renamed to the data directory; rename is atomic.
+# See https://github.com/kubernetes/kubernetes/blob/release-1.32/pkg/volume/util/atomic_writer.go
 monitor_service_account_token() {
-    inotifywait -m "${SERVICEACCOUNT_PATH}" -e create |
-      while read -r directory _ filename; do
-        target=$(realpath "$directory/$filename")
-        if [[ (-f "$target" && "${target##*/}" == "token") || (-d "$target" && -e "$target/token") ]]; then
-          log "Detected creation of file in $directory: $filename; recreating kubeconfig file"
-          create_kubeconfig
-        else
-          log "Detected creation of file in $directory: $filename; ignoring"
+    inotifywait -m "${SERVICEACCOUNT_PATH}" -e moved_to |
+      while read -r _ _ filename; do
+        if [[ "$filename" == "..data" ]]; then
+        log "Detected change in service account files; recreating kubeconfig file"
+        create_kubeconfig
         fi
       done
 }
