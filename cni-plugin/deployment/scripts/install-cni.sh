@@ -244,7 +244,7 @@ sync() {
     # previously observed SHA (updated with each file watch) and compare it
     # against the new file's SHA. If they differ, it means something has
     # changed.
-    new_sha=$(sha256sum "${filepath}" | awk '{print $1}')
+    new_sha=$(sha256sum "${filepath}" | while read -r s _; do echo "$s"; done)
     if [ "$new_sha" != "$prev_sha" ]; then
       # Create but don't rm old one since we don't know if this will be configured
       # to run as _the_ cni plugin.
@@ -271,7 +271,7 @@ monitor_cni_config() {
         sync "$filename" "$action" "$cni_conf_sha"
         # calculate file SHA to use in the next iteration
         if [[ -e "$directory/$filename" ]]; then
-          cni_conf_sha=$(sha256sum "$directory/$filename" | awk '{print $1}')
+          cni_conf_sha="$(sha256sum "$directory/$filename" | while read -r s _; do echo "$s"; done)"
         fi
       fi
     done
@@ -321,7 +321,7 @@ monitor_cni_config &
 # Append our config to any existing config file (*.conflist or *.conf)
 config_files=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \))
 if [ -z "$config_files" ]; then
-  log "No active CNI configuration files found"
+    log "No active CNI configuration files found"
 else
   config_file_count=$(echo "$config_files" | grep -v linkerd | sort | wc -l)
   if [ "$config_file_count" -eq 0 ]; then
