@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - .github/workflows/cni-plugin-integration.yml
       - Dockerfile-cni-plugin
       - cni-plugin/integration/flannel/Dockerfile-tester
       - cni-plugin/integration/run.sh
@@ -18,7 +19,7 @@ jobs:
         cni: [flannel, calico, cilium]
         iptables-mode: [legacy, nft]
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: linkerd/dev/actions/setup-tools@v45
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -29,7 +30,7 @@ jobs:
   ordering-test:
     continue-on-error: true
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: linkerd/dev/actions/setup-tools@v45
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -37,8 +38,9 @@ jobs:
         run: just cni-plugin-test-ordering
   repair-controller:
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
+      - uses: linkerd/dev/actions/setup-rust@v45
       - uses: linkerd/dev/actions/setup-tools@v45
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Run repair-controller tests
