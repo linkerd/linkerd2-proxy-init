@@ -22,19 +22,6 @@ jobs:
       - run: just rs-clippy
       - run: just rs-test-build
       - run: just rs-test
-
-  audit:
-    timeout-minutes: 5
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        checks:
-          - advisories
-          - bans licenses sources
-    # Prevent sudden announcement of a new advisory from failing Ci.
-    continue-on-error: ${{ matrix.checks == 'advisories' }}
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: EmbarkStudios/cargo-deny-action@0484eedcba649433ebd03d9b7c9c002746bbc4b9
-        with:
-          command: check ${{ matrix.checks }}
+      - run: cargo deny --all-features check bans licenses sources
+      - run: cargo deny --all-features check advisories
+        continue-on-error: true
