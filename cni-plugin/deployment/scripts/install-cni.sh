@@ -66,10 +66,13 @@ SERVICEACCOUNT_PATH=/var/run/secrets/kubernetes.io/serviceaccount
 # *conflist files, then linkerd-cni configuration parameters will be removed
 # from them.
 cleanup() {
-  # First, kill 'inotifywait' so we don't process any DELETE/CREATE events
-  if [ "$(pgrep inotifywait)" ]; then
-    log 'Sending SIGKILL to inotifywait'
-    kill -s KILL "$(pgrep inotifywait)"
+  # First, kill both 'inotifywait' processes so we don't process any DELETE/CREATE events
+  pids=$(pgrep inotifywait)
+  if [ -n "$pids" ]; then
+    while read -r pid; do
+      log "Sending SIGKILL to inotifywait (PID: $pid)"
+      kill -s KILL "$pid"
+    done <<< "$pids"
   fi
 
   log 'Removing linkerd-cni artifacts.'
