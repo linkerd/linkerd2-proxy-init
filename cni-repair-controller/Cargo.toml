@@ -18,7 +18,7 @@ anyhow = "1"
 futures = "0.3"
 k8s-openapi = { version = "0.20", features = ["v1_22"] }
 kube = { version = "0.87", features = ["runtime"] }
-openssl = { version = "0.10.66", optional = true }
+openssl = { version = "0.10.72", optional = true }
 prometheus-client = "0.22"
 tracing = "0.1"
 
