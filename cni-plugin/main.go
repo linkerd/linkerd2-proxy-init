@@ -247,7 +247,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 			if inboundSkipOverride != "" {
 				logEntry.Debugf("linkerd-cni: overriding InboundPortsToIgnore to %s", inboundSkipOverride)
-				options.InboundPortsToIgnore = strings.Split(inboundSkipOverride, ",")
+				options.InboundPortsToIgnore = append(options.InboundPortsToIgnore, strings.Split(inboundSkipOverride, ",")...)
 			}
 
 			// Check if there are any subnets to skip

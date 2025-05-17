@@ -25,6 +25,9 @@ kubectl apply -f https://k3d.io/v5.1.0/usage/advanced/calico.yaml
 kubectl	--namespace=kube-system wait --for=condition=available --timeout=120s \
   deploy/calico-kube-controllers
 
+# Install gateway API
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/experimental-install.yaml
+
 step 'Installing latest linkerd edge'
 scurl https://run.linkerd.io/install-edge | sh
 export PATH=$PATH:$HOME/.linkerd2/bin
