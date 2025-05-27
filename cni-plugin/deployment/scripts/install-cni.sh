@@ -239,7 +239,7 @@ sync() {
 
   local config_file_count
   local new_sha
-  if [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ] || [ "$ev" = 'MODIFY' ]; then
+  if [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ] || [ "$ev" = 'MODIFY' ] || [ "$ev" = 'ATTRIB' ]; then
     # When the event type is 'CREATE', 'MOVED_TO' or 'MODIFY', we check the
     # previously observed SHA (updated with each file watch) and compare it
     # against the new file's SHA. If they differ, it means something has
@@ -264,7 +264,7 @@ sync() {
 
 # monitor_cni_config starts a watch on the host's CNI config directory
 monitor_cni_config() {
-  inotifywait -m "${HOST_CNI_NET}" -e create,moved_to,modify |
+  inotifywait -m "${HOST_CNI_NET}" -e create,moved_to,modify,attrib |
     while read -r directory action filename; do
       if [[ "$filename" =~ .*.(conflist|conf)$ ]]; then 
         log "Detected change in $directory: $action $filename"
@@ -330,11 +330,9 @@ else
     find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
       while read -r -d $'\0' file; do
         log "Trigger CNI config detection for $file"
-        tmp_file="$(mktemp -u /tmp/linkerd-cni.patch-candidate.XXXXXX)"
-        cp -fp "$file" "$tmp_file"
         # The following will trigger the `sync()` function via `inotifywait` in
         # `monitor_cni_config()`.
-        mv -f "$tmp_file" "$file"
+        touch "$file"
       done
   fi
 fi
