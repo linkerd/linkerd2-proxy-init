@@ -242,7 +242,7 @@ sync() {
 
   local config_file_count
   local new_sha
-  if [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ] || [ "$ev" = 'MODIFY' ]; then
+  if [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ] || [ "$ev" = 'MODIFY' ] || [ "$ev" = 'ATTRIB' ]; then
     # When the event type is 'CREATE', 'MOVED_TO' or 'MODIFY', we check the
     # previously observed SHA (updated with each file watch) and compare it
     # against the new file's SHA. If they differ, it means something has
@@ -267,7 +267,7 @@ sync() {
 
 # monitor_cni_config starts a watch on the host's CNI config directory
 monitor_cni_config() {
-  inotifywait -m "${HOST_CNI_NET}" -e create,moved_to,modify |
+  inotifywait -m "${HOST_CNI_NET}" -e create,moved_to,modify,attrib |
     while read -r directory action filename; do
       if [[ "$filename" =~ .*.(conflist|conf)$ ]]; then 
         log "Detected change in $directory: $action $filename"
@@ -318,6 +318,14 @@ rm -f "${DEFAULT_CNI_CONF_PATH}"
 
 install_cni_bin
 
+# The CNI config monitor must be set up _before_ we start patching CNI config
+# files!
+# Otherwise, new CNI config files can be created just _after_ the initial round
+# of patching and just _before_ we set up the `inotifywait` loop to detect new
+# CNI config files.
+cni_conf_sha="__init__"
+monitor_cni_config &
+
 # Append our config to any existing config file (*.conflist or *.conf)
 config_files=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \))
 if [ -z "$config_files" ]; then
@@ -329,21 +337,12 @@ else
   else
     find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
       while read -r -d $'\0' file; do
-        log "Installing CNI configuration for $file"
-        create_kubeconfig
-        create_cni_conf
-        install_cni_conf "$file"
+        log "Trigger CNI config detection for $file"
+        # The following will trigger the `sync()` function via `inotifywait` in
+        # `monitor_cni_config()`.
+        touch "$file"
       done
   fi
-fi
-
-# Compute SHA for first config file found; this will be updated after every iteration.
-# First config file is likely to be chosen as the de facto CNI config by the
-# host.
-conf="$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | sort | head -n 1)"
-cni_conf_sha=""
-if [[ -n "$conf" ]]; then
-  cni_conf_sha="$(sha256sum "$conf" | while read -r s _; do echo "$s"; done)"
 fi
 
 # Watch in bg so we can receive interrupt signals through 'trap'. From 'man
@@ -354,7 +353,6 @@ fi
 # builtin, the reception of a signal for which a trap has been set will cause
 # the wait builtin to return immediately with an exit status greater than 128,
 # immediately after which the trap is executed."
-monitor_cni_config &
 monitor_service_account_token &
 # uses -n so that we exit when the first background job exits (when there's an error)
 wait -n
