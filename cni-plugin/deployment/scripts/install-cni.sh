@@ -195,13 +195,13 @@ EOF
 install_cni_conf() {
   local cni_conf_path=$1
 
+  # Add the linkerd-cni plugin to the existing list.
   local tmp_data=$(cat "$TMP_CONF")
   local conf_data=$(jq --argjson CNI_TMP_CONF_DATA "$tmp_data" -f /linkerd/filter.jq "$cni_conf_path" || true)
 
   # Ensure that CNI config file did not disappear during processing.
   [ -n "$conf_data" ] || return 0
 
-  # Add the linkerd-cni plugin to the existing list.
   echo "$conf_data" > "$TMP_CONF"
 
   # If the old config filename ends with .conf, rename it to .conflist because
@@ -265,7 +265,7 @@ sync() {
   # If the `current_sha` variable is blank then the detected CNI config file has
   # disappeared and no further action is required.
   # There exists an unhandled (highly improbable) edge case where a CNI plugin
-  # creates a config file and them _immediately_ removes it again _while_ we are
+  # creates a config file and then _immediately_ removes it again _while_ we are
   # in the process of patching it. If this happens, we may create a patched CNI
   # config file that should *not* exist.
   if [ -n "$current_sha" ] && [ "$current_sha" != "$previous_sha" ]; then
