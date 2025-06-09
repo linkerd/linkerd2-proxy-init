@@ -25,7 +25,7 @@
 # - Expects the desired CNI config in the CNI_NETWORK_CONFIG env variable.
 
 # Ensure all variables are defined, and that the script fails when an error is hit.
-set -u -e -o pipefail +o noclobber
+set -u -e -o pipefail
 
 # Helper function for raising errors
 # Usage:
@@ -77,7 +77,7 @@ cleanup() {
   # Find all conflist files and print them out using a NULL separator instead of
   # writing each file in a new line. We will subsequently read each string and
   # attempt to rm linkerd config from it using jq helper.
-  local cni_data
+  local cni_data=''
   find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' \) -print0 |
     while read -r -d $'\0' file; do
       log "Removing linkerd-cni config from $file"
@@ -176,20 +176,20 @@ create_cni_conf() {
   CNI_NETWORK_CONFIG="${CNI_NETWORK_CONFIG:-}"
 
   # If the CNI Network Config has been overwritten, then use template from file
-  if [ -e "$CNI_NETWORK_CONFIG_FILE" ]; then
-    log "Using CNI config template from $CNI_NETWORK_CONFIG_FILE."
-    cp -fp "$CNI_NETWORK_CONFIG_FILE" "$TMP_CONF"
-  elif [ "$CNI_NETWORK_CONFIG" ]; then
+  if [ -e "${CNI_NETWORK_CONFIG_FILE}" ]; then
+    log "Using CNI config template from ${CNI_NETWORK_CONFIG_FILE}."
+    cp "${CNI_NETWORK_CONFIG_FILE}" "${TMP_CONF}"
+  elif [ "${CNI_NETWORK_CONFIG}" ]; then
     log 'Using CNI config template from CNI_NETWORK_CONFIG environment variable.'
-    cat <<EOF > "$TMP_CONF"
-$CNI_NETWORK_CONFIG
+    cat >"${TMP_CONF}" <<EOF
+${CNI_NETWORK_CONFIG}
 EOF
   fi
 
   # Use alternative command character "~", since these include a "/".
-  sed -i s~__KUBECONFIG_FILEPATH__~"$DEST_CNI_NET_DIR/$KUBECONFIG_FILE_NAME"~g "$TMP_CONF"
+  sed -i s~__KUBECONFIG_FILEPATH__~"${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}"~g ${TMP_CONF}
 
-  log "CNI config: $(cat "$TMP_CONF")"
+  log "CNI config: $(cat ${TMP_CONF})"
 }
 
 install_cni_conf() {
@@ -204,16 +204,15 @@ install_cni_conf() {
 
   echo "$conf_data" > "$TMP_CONF"
 
-  # If the old config filename ends with .conf, rename it to .conflist because
-  # it has changed to be a list.
-  local filename=${cni_conf_path##*/}
-  local extension=${filename##*.}
+  # If the old config filename ends with .conf, rename it to .conflist, because it has changed to be a list
+  filename=${cni_conf_path##*/}
+  extension=${filename##*.}
   # When this variable has a file, we must delete it later.
   old_file_path=
-  if [ "$filename" != '01-linkerd-cni.conf' ] && [ "$extension" = 'conf' ]; then
-    old_file_path=$cni_conf_path
-    log "Renaming $cni_conf_path extension to .conflist"
-    cni_conf_path="${cni_conf_path}list"
+  if [ "${filename}" != '01-linkerd-cni.conf' ] && [ "${extension}" = 'conf' ]; then
+   old_file_path=${cni_conf_path}
+   log "Renaming ${cni_conf_path} extension to .conflist"
+   cni_conf_path="${cni_conf_path}list"
   fi
 
   # Store SHA of each patched file in global `CNI_CONF_SHA` variable.
@@ -233,19 +232,18 @@ install_cni_conf() {
   CNI_CONF_SHA=$(jq -c --arg f "$cni_conf_path" --arg sha "$new_sha" '. * {$f: $sha}' <<< "$CNI_CONF_SHA")
 
   # Move the temporary CNI config into place.
-  mv "$TMP_CONF" "$cni_conf_path" || exit_with_error 'Failed to mv files.'
-  [ -n "$old_file_path" ] && rm -f "$old_file_path" && log "Removing unwanted .conf file"
+  mv "${TMP_CONF}" "${cni_conf_path}" || exit_with_error 'Failed to mv files.'
+  [ -n "$old_file_path" ] && rm -f "${old_file_path}" && log "Removing unwanted .conf file"
 
-  log "Created CNI config $cni_conf_path"
+  log "Created CNI config ${cni_conf_path}"
 }
 
-# `sync()` is responsible for reacting to file system changes. It is used in
-# conjunction with inotify events; `sync()` is called with the event type (which
-# can be either 'CREATE', 'DELETE', 'MOVED_TO', 'MODIFY' or 'DELETE') and the
-# name of the file that has changed 
+# Sync() is responsible for reacting to file system changes. It is used in
+# conjunction with inotify events; sync() is called with the event type (which
+# can be either 'CREATE', 'MOVED_TO' or 'MODIFY'), and the name of the file that
+# has changed.
 #
-# Based on the changed file and event type, `sync()` might re-install the CNI
-# plugin's configuration file.
+# Based on the changed file, sync() might re-install the CNI configuration file.
 sync() {
   local ev=$1
   local file=${2//\/\//\/} # replace "//" with "/"
@@ -280,7 +278,7 @@ sync() {
 
 # monitor_cni_config starts a watch on the host's CNI config directory
 monitor_cni_config() {
-  inotifywait -m "$HOST_CNI_NET" -e create,moved_to,modify |
+  inotifywait -m "${HOST_CNI_NET}" -e create,moved_to,modify |
     while read -r directory action filename; do
       sync "$action" "$directory/$filename"
     done
@@ -293,16 +291,16 @@ monitor_cni_config() {
 # only reacting to direct creation of a "token" file, or creation of
 # directories containing a "token" file.
 monitor_service_account_token() {
-  inotifywait -m "$SERVICEACCOUNT_PATH" -e create |
-    while read -r directory _ filename; do
-      target=$(realpath "$directory/$filename")
-      if [[ (-f "$target" && "${target##*/}" == "token") || (-d "$target" && -e "$target/token") ]]; then
-        log "Detected creation of file in $directory: $filename; recreating kubeconfig file"
-        create_kubeconfig
-      else
-        log "Detected creation of file in $directory: $filename; ignoring"
-      fi
-    done
+    inotifywait -m "${SERVICEACCOUNT_PATH}" -e create |
+      while read -r directory _ filename; do
+        target=$(realpath "$directory/$filename")
+        if [[ (-f "$target" && "${target##*/}" == "token") || (-d "$target" && -e "$target/token") ]]; then
+          log "Detected creation of file in $directory: $filename; recreating kubeconfig file"
+          create_kubeconfig
+        else
+          log "Detected creation of file in $directory: $filename; ignoring"
+        fi
+      done
 }
 
 log() {
@@ -315,7 +313,7 @@ log() {
 
 # Delete old "interface mode" file, possibly left over from previous versions
 # TODO(alpeb): remove this on stable-2.15
-rm -f "$DEFAULT_CNI_CONF_PATH"
+rm -f "${DEFAULT_CNI_CONF_PATH}"
 
 install_cni_bin
 
@@ -328,19 +326,24 @@ CNI_CONF_SHA='{}'
 monitor_cni_config &
 
 # Append our config to any existing config file (*.conflist or *.conf)
-config_files=$(find "$HOST_CNI_NET" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | grep -v linkerd || true)
+config_files=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \))
 if [ -z "$config_files" ]; then
-  log "No active CNI configuration files found"
+    log "No active CNI configuration files found"
 else
-  find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
-    while read -r -d $'\0' file; do
-      log "Trigger CNI config detection for $file"
-      tmp_file="$(mktemp -u /tmp/linkerd-cni.patch-candidate.XXXXXX)"
-      cp -fp "$file" "$tmp_file"
-      # The following will trigger the `sync()` function via filesystem event.
-      # This requires `monitor_cni_config()` to be up and running!
-      mv "$tmp_file" "$file" || exit_with_error 'Failed to mv files.'
-    done
+  config_file_count=$(echo "$config_files" | grep -v linkerd | sort | wc -l)
+  if [ "$config_file_count" -eq 0 ]; then
+    log "No active CNI configuration files found"
+  else
+    find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
+      while read -r -d $'\0' file; do
+        log "Trigger CNI config detection for $file"
+        tmp_file="$(mktemp -u /tmp/linkerd-cni.patch-candidate.XXXXXX)"
+        cp -fp "$file" "$tmp_file"
+        # The following will trigger the `sync()` function via filesystem event.
+        # This requires `monitor_cni_config()` to be up and running!
+        mv "$tmp_file" "$file" || exit_with_error 'Failed to mv files.'
+      done
+  fi
 fi
 
 # Watch in bg so we can receive interrupt signals through 'trap'. From 'man
