@@ -346,7 +346,7 @@ CNI_CONF_SHA='{}'
 monitor_cni_config &
 
 # Append our config to any existing config file (*.conflist or *.conf)
-config_files=$(find "$HOST_CNI_NET" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | grep -v linkerd || true)
+config_files=$(find "$HOST_CNI_NET" -maxdepth 1 -type f ! -name '*linkerd*' \( -iname '*conflist' -o -iname '*conf' \))
 if [ -z "$config_files" ]; then
   log "No active CNI configuration files found"
 else
