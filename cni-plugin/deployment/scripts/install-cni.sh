@@ -20,11 +20,12 @@
 # 2) https://github.com/istio/cni/blob/c63a509539b5ed165a6617548c31b686f13c2133/deployments/kubernetes/install/scripts/install-cni.sh
 
 # Script to install Linkerd CNI on a Kubernetes host.
-# - Expects the host CNI binary path to be mounted at /host/opt/cni/bin.
-# - Expects the host CNI network config path to be mounted at /host/etc/cni/net.d.
-# - Expects the desired CNI config in the CNI_NETWORK_CONFIG env variable.
+# - Expects the host CNI binary path to be mounted at /host/opt/cni/bin
+# - Expects the host CNI network config path to be mounted at /host/etc/cni/net.d
+# - Expects the desired CNI config in the CNI_NETWORK_CONFIG env variable
 
-# Ensure all variables are defined, and that the script fails when an error is hit.
+# Ensure all variables are defined, and that the script fails when an error is
+# hit.
 set -u -e -o pipefail +o noclobber
 
 # Helper function for raising errors
@@ -66,7 +67,8 @@ SERVICEACCOUNT_PATH=/var/run/secrets/kubernetes.io/serviceaccount
 # *conflist files, then linkerd-cni configuration parameters will be removed
 # from them.
 cleanup() {
-  # First, kill both 'inotifywait' processes so we don't process any DELETE/CREATE events
+  # First, kill both 'inotifywait' processes so we don't process any
+  # DELETE/CREATE events.
   pids=$(pgrep inotifywait)
   if [ -n "$pids" ]; then
     while read -r pid; do
@@ -306,9 +308,10 @@ monitor_cni_config() {
 # Indeed, as per atomic writer's Write function docs, in the final steps the
 # ..data_tmp symlink points to a new timestamped directory containing the new
 # files, which is then atomically renamed to ..data:
-# >  8. A symlink to the new timestamped directory ..data_tmp is created that will
-# >     become the new data directory.
-# >  9. The new data directory symlink is renamed to the data directory; rename is atomic.
+# >  8. A symlink to the new timestamped directory ..data_tmp is created that
+# >     will become the new data directory.
+# >  9. The new data directory symlink is renamed to the data directory; rename
+# >     is atomic.
 # See https://github.com/kubernetes/kubernetes/blob/release-1.32/pkg/volume/util/atomic_writer.go
 monitor_service_account_token() {
   inotifywait -m "$SERVICEACCOUNT_PATH" -e moved_to |
@@ -367,5 +370,6 @@ fi
 # the wait builtin to return immediately with an exit status greater than 128,
 # immediately after which the trap is executed."
 monitor_service_account_token &
-# uses -n so that we exit when the first background job exits (when there's an error)
+# uses -n so that we exit when the first background job exits (when there's an
+# error)
 wait -n
