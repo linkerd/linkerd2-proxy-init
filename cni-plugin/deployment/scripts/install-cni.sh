@@ -198,14 +198,16 @@ EOF
 install_cni_conf() {
   local cni_conf_path=$1
 
-  local tmp_data=''
-  local conf_data=''
-  if [ -e "${cni_conf_path}" ]; then
-   # Add the linkerd-cni plugin to the existing list
-   tmp_data=$(cat "${TMP_CONF}")
-   conf_data=$(jq --argjson CNI_TMP_CONF_DATA "${tmp_data}" -f /linkerd/filter.jq "${cni_conf_path}")
-   echo "${conf_data}" > ${TMP_CONF}
-  fi
+  # Add the linkerd-cni plugin to the existing list.
+  local tmp_data
+  local conf_data
+  tmp_data=$(cat "$TMP_CONF")
+  conf_data=$(jq --argjson CNI_TMP_CONF_DATA "$tmp_data" -f /linkerd/filter.jq "$cni_conf_path" || true)
+
+  # Ensure that CNI config file did not disappear during processing.
+  [ -n "$conf_data" ] || return 0
+
+  echo "$conf_data" > "$TMP_CONF"
 
   # If the old config filename ends with .conf, rename it to .conflist, because it has changed to be a list
   filename=${cni_conf_path##*/}
@@ -218,6 +220,23 @@ install_cni_conf() {
    cni_conf_path="${cni_conf_path}list"
   fi
 
+  # Store SHA of each patched file in global `CNI_CONF_SHA` variable.
+  #
+  # This must happen in a non-concurrent access context!
+  #
+  # The below logic assumes that the `CNI_CONF_SHA` variable is already a
+  # valid JSON object. So this variable must be initialized with '{}'!
+  #
+  # E.g. (pretty-printed; actual variable stores compact JSON object)
+  #
+  # {
+  #   "/etc/cni/net.d/05-foo.conflist": "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c",
+  #   "/etc/cni/net.d/10-bar.conflist": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730"
+  # }
+  local new_sha
+  new_sha=$( (sha256sum "$TMP_CONF" || true) | awk '{print $1}' )
+  CNI_CONF_SHA=$(jq -c --arg f "$cni_conf_path" --arg sha "$new_sha" '. * {$f: $sha}' <<< "$CNI_CONF_SHA")
+
   # Move the temporary CNI config into place.
   mv "${TMP_CONF}" "${cni_conf_path}" || exit_with_error 'Failed to mv files.'
   [ -n "$old_file_path" ] && rm -f "${old_file_path}" && log "Removing unwanted .conf file"
@@ -226,42 +245,42 @@ install_cni_conf() {
 }
 
 # Sync() is responsible for reacting to file system changes. It is used in
-# conjunction with inotify events; sync() is called with the name of the file
-# that has changed, the event type (which can be either 'CREATE', 'DELETE',
-# 'MOVED_TO' or 'MODIFY', and the previously observed SHA of the configuration
-# file.
+# conjunction with inotify events; sync() is called with the event type (which
+# can be either 'CREATE', 'MOVED_TO' or 'MODIFY'), and the name of the file that
+# has changed.
 #
-# Based on the changed file and event type, sync() might re-install the CNI
-# plugin's configuration file.
+# Based on the changed file, sync() might re-install the CNI configuration file.
 sync() {
-  local filename=$1
-  local ev=$2
-  local filepath="${HOST_CNI_NET}/$filename"
+  local ev=$1
+  local file=${2//\/\//\/} # replace "//" with "/"
 
-  local prev_sha=$3
+  [[ "$file" =~ .*.(conflist|conf)$ ]] || return 0
 
-  local config_file_count
-  local new_sha
-  if [ "$ev" = 'CREATE' ] || [ "$ev" = 'MOVED_TO' ] || [ "$ev" = 'MODIFY' ]; then
-    # When the event type is 'CREATE', 'MOVED_TO' or 'MODIFY', we check the
-    # previously observed SHA (updated with each file watch) and compare it
-    # against the new file's SHA. If they differ, it means something has
-    # changed.
-    new_sha=$(sha256sum "${filepath}" | while read -r s _; do echo "$s"; done)
-    if [ "$new_sha" != "$prev_sha" ]; then
-      # Create but don't rm old one since we don't know if this will be configured
-      # to run as _the_ cni plugin.
-      log "New/changed file [$filename] detected; re-installing"
-      create_kubeconfig
-      create_cni_conf
-      install_cni_conf "$filepath"
-    else
-      # If the SHA hasn't changed or we get an unrecognised event, ignore it.
-      # When the SHA is the same, we can get into infinite loops whereby a file has
-      # been created and after re-install the watch keeps triggering CREATE events
-      # that never end.
-      log "Ignoring event: $ev $filepath; no real changes detected"
-    fi
+  log "Detected event: $ev $file"
+
+  # Retrieve previous SHA of detected file (if any) and compute current SHA.
+  local previous_sha
+  local current_sha
+  previous_sha=$(jq -r --arg f "$file" '.[$f] | select(.)' <<< "$CNI_CONF_SHA")
+  current_sha=$( (sha256sum "$file" || true) | awk '{print $1}' )
+
+  # If the SHA hasn't changed or the detected file has disappeared, ignore it.
+  # When the SHA is the same, we can get into infinite loops whereby a file
+  # has been created and after re-install the watch keeps triggering MOVED_TO
+  # events that never end.
+  # If the `current_sha` variable is blank then the detected CNI config file has
+  # disappeared and no further action is required.
+  # There exists an unhandled (highly improbable) edge case where a CNI plugin
+  # creates a config file and then _immediately_ removes it again _while_ we are
+  # in the process of patching it. If this happens, we may create a patched CNI
+  # config file that should *not* exist.
+  if [ -n "$current_sha" ] && [ "$current_sha" != "$previous_sha" ]; then
+    log "New/changed file [$file] detected; re-installing"
+    create_kubeconfig
+    create_cni_conf
+    install_cni_conf "$file"
+  else
+    log "Ignoring event: $ev $file; no real changes detected or file disappeared"
   fi
 }
 
@@ -269,14 +288,7 @@ sync() {
 monitor_cni_config() {
   inotifywait -m "${HOST_CNI_NET}" -e create,moved_to,modify |
     while read -r directory action filename; do
-      if [[ "$filename" =~ .*.(conflist|conf)$ ]]; then 
-        log "Detected change in $directory: $action $filename"
-        sync "$filename" "$action" "$cni_conf_sha"
-        # calculate file SHA to use in the next iteration
-        if [[ -e "$directory/$filename" ]]; then
-          cni_conf_sha="$(sha256sum "$directory/$filename" | while read -r s _; do echo "$s"; done)"
-        fi
-      fi
+      sync "$action" "$directory/$filename"
     done
 }
 
@@ -318,6 +330,14 @@ rm -f "${DEFAULT_CNI_CONF_PATH}"
 
 install_cni_bin
 
+# The CNI config monitor must be set up _before_ we start patching existing CNI
+# config files!
+# Otherwise, new CNI config files can be created just _after_ the initial round
+# of patching and just _before_ we set up the `inotifywait` loop to detect new
+# CNI config files.
+CNI_CONF_SHA='{}'
+monitor_cni_config &
+
 # Append our config to any existing config file (*.conflist or *.conf)
 config_files=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \))
 if [ -z "$config_files" ]; then
@@ -329,21 +349,14 @@ else
   else
     find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
       while read -r -d $'\0' file; do
-        log "Installing CNI configuration for $file"
-        create_kubeconfig
-        create_cni_conf
-        install_cni_conf "$file"
+        log "Trigger CNI config detection for $file"
+        tmp_file="$(mktemp -u /tmp/linkerd-cni.patch-candidate.XXXXXX)"
+        cp -fp "$file" "$tmp_file"
+        # The following will trigger the `sync()` function via filesystem event.
+        # This requires `monitor_cni_config()` to be up and running!
+        mv "$tmp_file" "$file" || exit_with_error 'Failed to mv files.'
       done
   fi
-fi
-
-# Compute SHA for first config file found; this will be updated after every iteration.
-# First config file is likely to be chosen as the de facto CNI config by the
-# host.
-conf="$(find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) | sort | head -n 1)"
-cni_conf_sha=""
-if [[ -n "$conf" ]]; then
-  cni_conf_sha="$(sha256sum "$conf" | while read -r s _; do echo "$s"; done)"
 fi
 
 # Watch in bg so we can receive interrupt signals through 'trap'. From 'man
@@ -354,7 +367,6 @@ fi
 # builtin, the reception of a signal for which a trap has been set will cause
 # the wait builtin to return immediately with an exit status greater than 128,
 # immediately after which the trap is executed."
-monitor_cni_config &
 monitor_service_account_token &
 # uses -n so that we exit when the first background job exits (when there's an error)
 wait -n
