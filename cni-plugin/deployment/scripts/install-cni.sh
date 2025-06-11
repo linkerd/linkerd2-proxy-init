@@ -211,8 +211,10 @@ install_cni_conf() {
 
   # If the old config filename ends with .conf, rename it to .conflist because
   # it has changed to be a list.
-  local filename=${cni_conf_path##*/}
-  local extension=${filename##*.}
+  local filename
+  local extension
+  filename=${cni_conf_path##*/}
+  extension=${filename##*.}
   # When this variable has a file, we must delete it later.
   old_file_path=
   if [ "$filename" != '01-linkerd-cni.conf' ] && [ "$extension" = 'conf' ]; then
