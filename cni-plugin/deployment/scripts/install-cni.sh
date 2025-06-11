@@ -196,8 +196,10 @@ install_cni_conf() {
   local cni_conf_path=$1
 
   # Add the linkerd-cni plugin to the existing list.
-  local tmp_data=$(cat "$TMP_CONF")
-  local conf_data=$(jq --argjson CNI_TMP_CONF_DATA "$tmp_data" -f /linkerd/filter.jq "$cni_conf_path" || true)
+  local tmp_data
+  local conf_data
+  tmp_data=$(cat "$TMP_CONF")
+  conf_data=$(jq --argjson CNI_TMP_CONF_DATA "$tmp_data" -f /linkerd/filter.jq "$cni_conf_path" || true)
 
   # Ensure that CNI config file did not disappear during processing.
   [ -n "$conf_data" ] || return 0
@@ -228,7 +230,8 @@ install_cni_conf() {
   #   "/etc/cni/net.d/05-foo.conflist": "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c",
   #   "/etc/cni/net.d/10-bar.conflist": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730"
   # }
-  local new_sha=$( (sha256sum "$TMP_CONF" || true) | awk '{print $1}' )
+  local new_sha
+  new_sha=$( (sha256sum "$TMP_CONF" || true) | awk '{print $1}' )
   CNI_CONF_SHA=$(jq -c --arg f "$cni_conf_path" --arg sha "$new_sha" '. * {$f: $sha}' <<< "$CNI_CONF_SHA")
 
   # Move the temporary CNI config into place.
@@ -253,8 +256,10 @@ sync() {
   log "Detected event: $ev $file"
 
   # Retrieve previous SHA of detected file (if any) and compute current SHA.
-  local previous_sha=$(jq -r --arg f "$file" '.[$f] | select(.)' <<< "$CNI_CONF_SHA")
-  local current_sha=$( (sha256sum "$file" || true) | awk '{print $1}' )
+  local previous_sha
+  local current_sha
+  previous_sha=$(jq -r --arg f "$file" '.[$f] | select(.)' <<< "$CNI_CONF_SHA")
+  current_sha=$( (sha256sum "$file" || true) | awk '{print $1}' )
 
   # If the SHA hasn't changed or the detected file has disappeared, ignore it.
   # When the SHA is the same, we can get into infinite loops whereby a file
