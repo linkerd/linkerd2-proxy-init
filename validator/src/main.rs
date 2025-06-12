@@ -6,7 +6,6 @@ use std::{net::SocketAddr, process::exit, time};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
-    signal::unix as signal,
 };
 use tracing::{debug, error, info, Instrument};
 
@@ -63,10 +62,6 @@ async fn main() {
         .try_init(log_level)
         .expect("must configure logging");
 
-    let mut sigint = signal::signal(signal::SignalKind::interrupt()).expect("must register SIGINT");
-    let mut sigterm =
-        signal::signal(signal::SignalKind::terminate()).expect("must register SIGTERM");
-
     tokio::select! {
         biased;
 
@@ -83,17 +78,13 @@ async fn main() {
         // error.
         () = tokio::time::sleep(timeout) => {
             error!(?timeout, "Failed to validate networking configuration. \
-            Please ensure iptables rules are rewriting traffic as expected.");
+            Please ensure traffic redirection rules are rewriting traffic as expected.");
             exit(UNSUCCESSFUL_EXIT_CODE);
         }
 
         // If the process is terminated by a signal, exit with an error.
-        _ = sigint.recv() => {
-            error!("Killed by SIGINT");
-            exit(UNSUCCESSFUL_EXIT_CODE);
-        }
-        _ = sigterm.recv() => {
-            error!("Killed by SIGTERM");
+        // Signal handling
+        _ = handle_signals() => {
             exit(UNSUCCESSFUL_EXIT_CODE);
         }
     }
@@ -142,6 +133,40 @@ async fn validate(listen_addr: SocketAddr, connect_addr: SocketAddr) -> Result<(
         String::from_utf8_lossy(&data),
     );
     Ok(())
+}
+
+async fn handle_signals() {
+    #[cfg(unix)]
+    handle_unix_signals().await;
+
+    #[cfg(windows)]
+    handle_windows_signals().await;
+}
+
+#[cfg(unix)]
+async fn handle_unix_signals() {
+    use tokio::signal::unix::{signal, SignalKind};
+
+    let mut sigint = signal(SignalKind::interrupt()).expect("must register SIGINT");
+    let mut sigterm = signal(SignalKind::terminate()).expect("must register SIGTERM");
+
+    tokio::select! {
+        _ = sigint.recv() => error!("Killed by SIGINT"),
+        _ = sigterm.recv() => error!("Killed by SIGTERM"),
+    }
+}
+
+#[cfg(windows)]
+async fn handle_windows_signals() {
+    use tokio::signal::windows::{ctrl_break, ctrl_c};
+
+    let mut ctrl_break = ctrl_break().expect("must register Ctrl-Break");
+    let mut ctrl_c = ctrl_c().expect("must register  Ctrl-C");
+
+    tokio::select! {
+        _ = ctrl_break.recv() => error!("Killed by Ctrl-Break"),
+        _ = ctrl_c.recv() => error!("Killed by Ctrl-C"),
+    }
 }
 
 /// Accepts connections from `listener`, writes `token` to the socket, and then closes the
