@@ -83,7 +83,6 @@ async fn main() {
         }
 
         // If the process is terminated by a signal, exit with an error.
-        // Signal handling
         _ = handle_signals() => {
             exit(UNSUCCESSFUL_EXIT_CODE);
         }
