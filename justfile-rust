@@ -34,9 +34,9 @@ _cargo-target := if os + '-' + arch == "linux-amd64" {
     }
 
 _target-dir := "target" / _cargo-target / profile
-_target-bin := _target-dir / crate
+_target-bin := _target-dir / crate + if os == 'windows' { '.exe' } else { '' }
 
-_package-name := crate + "-" + version + "-" + arch
+_package-name := crate + "-" + version + "-" + arch + "-" + os
 _package-tgz := "target/package" / _package-name + ".tgz"
 _package-dir := "target/package" / _package-name
 _package-bin := _package-dir / crate + if os == 'windows' { '.exe' } else { '' }
@@ -57,4 +57,4 @@ package: build
 
 build *flags:
     {{ _cargo }} fetch --locked
-    {{ _cargo }} build --workspace -p {{ crate }} {{ flags }}
+    {{ _cargo }} build {{ if crate == "" { "--workspace" } else { "-p " + crate } }} {{ flags }}
