@@ -32,7 +32,7 @@ set -u -e -o pipefail +o noclobber
 # Usage:
 # some_command || exit_with_error "some_command_failed: maybe try..."
 exit_with_error() {
-  log "$1"
+  log "${1}"
   exit 1
 }
 
@@ -55,7 +55,7 @@ CONTAINER_CNI_BIN_DIR=${CONTAINER_CNI_BIN_DIR:-/opt/cni/bin}
 # Directory path where CNI configuration should live on the host
 HOST_CNI_NET="${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}"
 # Location of legacy "interface mode" file, to be automatically deleted
-DEFAULT_CNI_CONF_PATH="$HOST_CNI_NET/01-linkerd-cni.conf"
+DEFAULT_CNI_CONF_PATH="${HOST_CNI_NET}/01-linkerd-cni.conf"
 KUBECONFIG_FILE_NAME=${KUBECONFIG_FILE_NAME:-ZZZ-linkerd-cni-kubeconfig}
 SERVICEACCOUNT_PATH=/var/run/secrets/kubernetes.io/serviceaccount
 
@@ -70,11 +70,11 @@ cleanup() {
   # First, kill both 'inotifywait' processes so we don't process any
   # DELETE/CREATE events.
   pids=$(pgrep inotifywait)
-  if [ -n "$pids" ]; then
+  if [ -n "${pids}" ]; then
     while read -r pid; do
-      log "Sending SIGKILL to inotifywait (PID: $pid)"
-      kill -s KILL "$pid"
-    done <<< "$pids"
+      log "Sending SIGKILL to inotifywait (PID: ${pid})"
+      kill -s KILL "${pid}"
+    done <<< "${pids}"
   fi
 
   log 'Removing linkerd-cni artifacts.'
@@ -83,19 +83,19 @@ cleanup() {
   # writing each file in a new line. We will subsequently read each string and
   # attempt to rm linkerd config from it using jq helper.
   local cni_data
-  find "$HOST_CNI_NET" -maxdepth 1 -type f \( -iname '*conflist' \) -print0 |
+  find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' \) -print0 |
     while read -r -d $'\0' file; do
-      log "Removing linkerd-cni config from $file"
-      cni_data=$(jq 'del( .plugins[]? | select( .type == "linkerd-cni" ))' "$file")
+      log "Removing linkerd-cni config from ${file}"
+      cni_data=$(jq 'del( .plugins[]? | select( .type == "linkerd-cni" ))' "${file}")
       # TODO (matei): we should write this out to a temp file and then do a `mv`
       # to be atomic. 
-      echo "$cni_data" > "$file"
+      echo "${cni_data}" > "${file}"
     done
 
   # Remove binary and kubeconfig file
-  if [ -e "$HOST_CNI_NET/$KUBECONFIG_FILE_NAME" ]; then
-    log "Removing linkerd-cni kubeconfig: $HOST_CNI_NET/$KUBECONFIG_FILE_NAME"
-    rm -f "$HOST_CNI_NET/$KUBECONFIG_FILE_NAME"
+  if [ -e "${HOST_CNI_NET}/${KUBECONFIG_FILE_NAME}" ]; then
+    log "Removing linkerd-cni kubeconfig: ${HOST_CNI_NET}/${KUBECONFIG_FILE_NAME}"
+    rm -f "${HOST_CNI_NET}/${KUBECONFIG_FILE_NAME}"
   fi
   if [ -e "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_BIN_DIR}/linkerd-cni" ]; then
     log "Removing linkerd-cni binary: ${CONTAINER_MOUNT_PREFIX}${DEST_CNI_BIN_DIR}/linkerd-cni"
@@ -115,54 +115,54 @@ trap 'log "ERROR caught, exiting..."; cleanup ' ERR
 install_cni_bin() {
   # Place the new binaries if the mounted directory is writeable.
   dir="${CONTAINER_MOUNT_PREFIX}${DEST_CNI_BIN_DIR}"
-  if [ ! -w "$dir" ]; then
-    exit_with_error "$dir is non-writeable, failure"
+  if [ ! -w "${dir}" ]; then
+    exit_with_error "${dir} is non-writeable, failure"
   fi
-  for path in "$CONTAINER_CNI_BIN_DIR"/*; do
-    cp "$path" "$dir/" || exit_with_error "Failed to copy $path to $dir."
+  for path in "${CONTAINER_CNI_BIN_DIR}"/*; do
+    cp "${path}" "${dir}/" || exit_with_error "Failed to copy ${path} to ${dir}."
   done
 
-  log "Wrote linkerd CNI binaries to $dir"
+  log "Wrote linkerd CNI binaries to ${dir}"
 }
 
 create_kubeconfig() {
-  KUBE_CA_FILE=${KUBE_CA_FILE:-$SERVICEACCOUNT_PATH/ca.crt}
+  KUBE_CA_FILE=${KUBE_CA_FILE:-${SERVICEACCOUNT_PATH}/ca.crt}
   SKIP_TLS_VERIFY=${SKIP_TLS_VERIFY:-false}
-  SERVICEACCOUNT_TOKEN=$(cat "$SERVICEACCOUNT_PATH/token")
+  SERVICEACCOUNT_TOKEN=$(cat "${SERVICEACCOUNT_PATH}/token")
 
   # Check if we're not running as a k8s pod.
-  if [[ ! -f "$SERVICEACCOUNT_PATH/token" ]]; then
+  if [[ ! -f "${SERVICEACCOUNT_PATH}/token" ]]; then
     return
   fi
 
-  if [ -z "$KUBERNETES_SERVICE_HOST" ]; then
+  if [ -z "${KUBERNETES_SERVICE_HOST}" ]; then
     log 'KUBERNETES_SERVICE_HOST not set'; exit 1;
   fi
-  if [ -z "$KUBERNETES_SERVICE_PORT" ]; then
+  if [ -z "${KUBERNETES_SERVICE_PORT}" ]; then
     log 'KUBERNETES_SERVICE_PORT not set'; exit 1;
   fi
 
-  if [ "$SKIP_TLS_VERIFY" = 'true' ]; then
+  if [ "${SKIP_TLS_VERIFY}" = 'true' ]; then
     TLS_CFG='insecure-skip-tls-verify: true'
-  elif [ -f "$KUBE_CA_FILE" ]; then
-    TLS_CFG="certificate-authority-data: $(base64 "$KUBE_CA_FILE" | tr -d '\n')"
+  elif [ -f "${KUBE_CA_FILE}" ]; then
+    TLS_CFG="certificate-authority-data: $(base64 "${KUBE_CA_FILE}" | tr -d '\n')"
   fi
 
-  touch "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/$KUBECONFIG_FILE_NAME"
-  chmod "${KUBECONFIG_MODE:-600}" "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/$KUBECONFIG_FILE_NAME"
-  cat > "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/$KUBECONFIG_FILE_NAME" <<EOF
+  touch "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}"
+  chmod "${KUBECONFIG_MODE:-600}" "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}"
+  cat > "${CONTAINER_MOUNT_PREFIX}${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}" <<EOF
 # Kubeconfig file for linkerd CNI plugin.
 apiVersion: v1
 kind: Config
 clusters:
 - name: local
   cluster:
-    server: ${KUBERNETES_SERVICE_PROTOCOL:-https}://[$KUBERNETES_SERVICE_HOST]:$KUBERNETES_SERVICE_PORT
-    $TLS_CFG
+    server: ${KUBERNETES_SERVICE_PROTOCOL:-https}://[${KUBERNETES_SERVICE_HOST}]:${KUBERNETES_SERVICE_PORT}
+    ${TLS_CFG}
 users:
 - name: linkerd-cni
   user:
-    token: $SERVICEACCOUNT_TOKEN
+    token: ${SERVICEACCOUNT_TOKEN}
 contexts:
 - name: linkerd-cni-context
   context:
@@ -181,35 +181,35 @@ create_cni_conf() {
   CNI_NETWORK_CONFIG="${CNI_NETWORK_CONFIG:-}"
 
   # If the CNI Network Config has been overwritten, then use template from file
-  if [ -e "$CNI_NETWORK_CONFIG_FILE" ]; then
-    log "Using CNI config template from $CNI_NETWORK_CONFIG_FILE."
-    cp "$CNI_NETWORK_CONFIG_FILE" "$TMP_CONF"
-  elif [ "$CNI_NETWORK_CONFIG" ]; then
+  if [ -e "${CNI_NETWORK_CONFIG_FILE}" ]; then
+    log "Using CNI config template from ${CNI_NETWORK_CONFIG_FILE}."
+    cp "${CNI_NETWORK_CONFIG_FILE}" "${TMP_CONF}"
+  elif [ "${CNI_NETWORK_CONFIG}" ]; then
     log 'Using CNI config template from CNI_NETWORK_CONFIG environment variable.'
-    cat <<EOF > "$TMP_CONF"
-$CNI_NETWORK_CONFIG
+    cat <<EOF > "${TMP_CONF}"
+${CNI_NETWORK_CONFIG}
 EOF
   fi
 
   # Use alternative command character "~", since these include a "/".
-  sed -i s~__KUBECONFIG_FILEPATH__~"$DEST_CNI_NET_DIR/$KUBECONFIG_FILE_NAME"~g "$TMP_CONF"
+  sed -i s~__KUBECONFIG_FILEPATH__~"${DEST_CNI_NET_DIR}/${KUBECONFIG_FILE_NAME}"~g "${TMP_CONF}"
 
-  log "CNI config: $(cat "$TMP_CONF")"
+  log "CNI config: $(cat "${TMP_CONF}")"
 }
 
 install_cni_conf() {
-  local cni_conf_path=$1
+  local cni_conf_path=${1}
 
   # Add the linkerd-cni plugin to the existing list.
   local tmp_data
   local conf_data
-  tmp_data=$(cat "$TMP_CONF")
-  conf_data=$(jq --argjson CNI_TMP_CONF_DATA "$tmp_data" -f /linkerd/filter.jq "$cni_conf_path" || true)
+  tmp_data=$(cat "${TMP_CONF}")
+  conf_data=$(jq --argjson CNI_TMP_CONF_DATA "${tmp_data}" -f /linkerd/filter.jq "${cni_conf_path}" || true)
 
   # Ensure that CNI config file did not disappear during processing.
-  [ -n "$conf_data" ] || return 0
+  [ -n "${conf_data}" ] || return 0
 
-  echo "$conf_data" > "$TMP_CONF"
+  echo "${conf_data}" > "${TMP_CONF}"
 
   # If the old config filename ends with .conf, rename it to .conflist because
   # it has changed to be a list.
@@ -219,9 +219,9 @@ install_cni_conf() {
   extension=${filename##*.}
   # When this variable has a file, we must delete it later.
   old_file_path=
-  if [ "$filename" != '01-linkerd-cni.conf' ] && [ "$extension" = 'conf' ]; then
-    old_file_path=$cni_conf_path
-    log "Renaming $cni_conf_path extension to .conflist"
+  if [ "${filename}" != '01-linkerd-cni.conf' ] && [ "${extension}" = 'conf' ]; then
+    old_file_path=${cni_conf_path}
+    log "Renaming ${cni_conf_path} extension to .conflist"
     cni_conf_path=${cni_conf_path}list
   fi
 
@@ -239,14 +239,14 @@ install_cni_conf() {
   #   "/etc/cni/net.d/10-bar.conflist": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730"
   # }
   local new_sha
-  new_sha=$( (sha256sum "$TMP_CONF" || true) | awk '{print $1}' )
-  CNI_CONF_SHA=$(jq -c --arg f "$cni_conf_path" --arg sha "$new_sha" '. * {$f: $sha}' <<< "$CNI_CONF_SHA")
+  new_sha=$( (sha256sum "${TMP_CONF}" || true) | awk '{print $1}' )
+  CNI_CONF_SHA=$(jq -c --arg f "${cni_conf_path}" --arg sha "${new_sha}" '. * {$f: $sha}' <<< "${CNI_CONF_SHA}")
 
   # Move the temporary CNI config into place.
-  mv "$TMP_CONF" "$cni_conf_path" || exit_with_error 'Failed to mv files.'
-  [ -n "$old_file_path" ] && rm -f "$old_file_path" && log "Removing unwanted .conf file"
+  mv "${TMP_CONF}" "${cni_conf_path}" || exit_with_error 'Failed to mv files.'
+  [ -n "${old_file_path}" ] && rm -f "${old_file_path}" && log "Removing unwanted .conf file"
 
-  log "Created CNI config $cni_conf_path"
+  log "Created CNI config ${cni_conf_path}"
 }
 
 # `sync()` is responsible for reacting to file system changes. It is used in
@@ -257,18 +257,18 @@ install_cni_conf() {
 # Based on the changed file, `sync()` might re-install the CNI configuration
 # file.
 sync() {
-  local ev=$1
+  local ev=${1}
   local file=${2//\/\//\/} # replace "//" with "/"
 
-  [[ "$file" =~ .*.(conflist|conf)$ ]] || return 0
+  [[ "${file}" =~ .*.(conflist|conf)$ ]] || return 0
 
-  log "Detected event: $ev $file"
+  log "Detected event: ${ev} ${file}"
 
   # Retrieve previous SHA of detected file (if any) and compute current SHA.
   local previous_sha
   local current_sha
-  previous_sha=$(jq -r --arg f "$file" '.[$f] | select(.)' <<< "$CNI_CONF_SHA")
-  current_sha=$( (sha256sum "$file" || true) | awk '{print $1}' )
+  previous_sha=$(jq -r --arg f "${file}" '.[$f] | select(.)' <<< "${CNI_CONF_SHA}")
+  current_sha=$( (sha256sum "${file}" || true) | awk '{print $1}' )
 
   # If the SHA hasn't changed or the detected file has disappeared, ignore it.
   # When the SHA is the same, we can get into infinite loops whereby a file
@@ -280,21 +280,21 @@ sync() {
   # creates a config file and then _immediately_ removes it again _while_ we are
   # in the process of patching it. If this happens, we may create a patched CNI
   # config file that should *not* exist.
-  if [ -n "$current_sha" ] && [ "$current_sha" != "$previous_sha" ]; then
-    log "New/changed file [$file] detected; re-installing"
+  if [ -n "${current_sha}" ] && [ "${current_sha}" != "${previous_sha}" ]; then
+    log "New/changed file [${file}] detected; re-installing"
     create_kubeconfig
     create_cni_conf
-    install_cni_conf "$file"
+    install_cni_conf "${file}"
   else
-    log "Ignoring event: $ev $file; no real changes detected or file disappeared"
+    log "Ignoring event: ${ev} ${file}; no real changes detected or file disappeared"
   fi
 }
 
 # monitor_cni_config starts a watch on the host's CNI config directory
 monitor_cni_config() {
-  inotifywait -m "$HOST_CNI_NET" -e create,moved_to,modify |
+  inotifywait -m "${HOST_CNI_NET}" -e create,moved_to,modify |
     while read -r directory action filename; do
-      sync "$action" "$directory/$filename"
+      sync "${action}" "${directory}/${filename}"
     done
 }
 
@@ -314,9 +314,9 @@ monitor_cni_config() {
 # >     is atomic.
 # See https://github.com/kubernetes/kubernetes/blob/release-1.32/pkg/volume/util/atomic_writer.go
 monitor_service_account_token() {
-  inotifywait -m "$SERVICEACCOUNT_PATH" -e moved_to |
+  inotifywait -m "${SERVICEACCOUNT_PATH}" -e moved_to |
     while read -r _ _ filename; do
-      if [[ "$filename" == "..data" ]]; then
+      if [[ "${filename}" == "..data" ]]; then
         log "Detected change in service account files; recreating kubeconfig file"
         create_kubeconfig
       fi
@@ -324,7 +324,7 @@ monitor_service_account_token() {
 }
 
 log() {
-  printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1"
+  printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${1}"
 }
 
 ################################
@@ -333,7 +333,7 @@ log() {
 
 # Delete old "interface mode" file, possibly left over from previous versions
 # TODO(alpeb): remove this on stable-2.15
-rm -f "$DEFAULT_CNI_CONF_PATH"
+rm -f "${DEFAULT_CNI_CONF_PATH}"
 
 install_cni_bin
 
@@ -346,18 +346,18 @@ CNI_CONF_SHA='{}'
 monitor_cni_config &
 
 # Append our config to any existing config file (*.conflist or *.conf)
-config_files=$(find "$HOST_CNI_NET" -maxdepth 1 -type f ! -name '*linkerd*' \( -iname '*conflist' -o -iname '*conf' \))
-if [ -z "$config_files" ]; then
+config_files=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f ! -name '*linkerd*' \( -iname '*conflist' -o -iname '*conf' \))
+if [ -z "${config_files}" ]; then
   log "No active CNI configuration files found"
 else
-  find "$HOST_CNI_NET" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
+  find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
     while read -r -d $'\0' file; do
-      log "Trigger CNI config detection for $file"
+      log "Trigger CNI config detection for ${file}"
       tmp_file="$(mktemp -u /tmp/linkerd-cni.patch-candidate.XXXXXX)"
-      cp -fp "$file" "$tmp_file"
+      cp -fp "${file}" "${tmp_file}"
       # The following will trigger the `sync()` function via filesystem event.
       # This requires `monitor_cni_config()` to be up and running!
-      mv "$tmp_file" "$file" || exit_with_error 'Failed to mv files.'
+      mv "${tmp_file}" "${file}" || exit_with_error 'Failed to mv files.'
     done
 fi
 
