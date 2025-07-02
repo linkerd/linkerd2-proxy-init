@@ -16,7 +16,7 @@ tracing = "0.1"
 [dependencies.clap]
 version = "4"
 default-features = false
-features = ["derive", "env", "std"]
+features = ["derive", "env", "std", "help"]
 
 [dependencies.tokio]
 version = "1"
