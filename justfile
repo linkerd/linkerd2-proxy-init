@@ -208,7 +208,7 @@ cni-plugin-test-integration-cilium:
 cni-plugin-test-ordering: build-cni-plugin-image
     @{{ just_executable() }} K3D_CLUSTER_NAME='l5d-calico-ordering-test' _cni-plugin-test-ordering-run
 
-_cni-plugin-test-ordering-run:
+_cni-plugin-test-ordering-run $K3S_IMAGES_JSON='./cni-plugin/integration/calico-k3s-images.json':
     @{{ just_executable() }} K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI }}' _k3d-cni-create
     @just-k3d import {{ cni-plugin-image }}
     ./cni-plugin/integration/run-ordering.sh
