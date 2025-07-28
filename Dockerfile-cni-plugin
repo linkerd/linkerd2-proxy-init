@@ -20,6 +20,7 @@ COPY --link validator validator
 COPY --link cni-repair-controller cni-repair-controller
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo fetch
+env CARGO="cargo auditable"
 ARG TARGETARCH
 # Enable tokio runtime metrics
 ENV RUSTFLAGS="--cfg tokio_unstable"
