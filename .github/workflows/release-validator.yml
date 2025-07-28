@@ -13,7 +13,7 @@ permissions:
 jobs:
   meta:
     timeout-minutes: 15
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container: ghcr.io/linkerd/dev:v47-rust
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -39,7 +39,7 @@ jobs:
           - os: windows
             arch: arm  
     timeout-minutes: 10
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container: ghcr.io/linkerd/dev:v47-rust-musl
     steps:
       - name: Install MinGW
@@ -59,7 +59,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
