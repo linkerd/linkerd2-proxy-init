@@ -14,7 +14,7 @@ jobs:
   meta:
     timeout-minutes: 15
     runs-on: ubuntu-22.04
-    container: ghcr.io/linkerd/dev:v46-rust
+    container: ghcr.io/linkerd/dev:v47-rust
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: ./.github/actions/version-mode
@@ -40,13 +40,15 @@ jobs:
             arch: arm  
     timeout-minutes: 10
     runs-on: ubuntu-22.04
-    container: ghcr.io/linkerd/dev:v46-rust-musl
+    container: ghcr.io/linkerd/dev:v47-rust-musl
     steps:
       - name: Install MinGW
         if: matrix.os == 'windows'
         run: apt-get update && apt-get install mingw-w64 -y
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - run: just validator arch=${{ matrix.arch }} os=${{ matrix.os }} profile=release version=${{ needs.meta.outputs.version }} package
+        env:
+          CARGO: "cargo auditable"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.arch }}-${{ matrix.os }}-artifacts
