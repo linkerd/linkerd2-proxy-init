@@ -73,7 +73,7 @@ async fn process_events(
     tokio::pin!(pod_evts);
     while let Some(evt) = pod_evts.next().await {
         tracing::trace!(?evt);
-        if let watcher::Event::Applied(pod) = evt {
+        if let watcher::Event::Apply(pod) = evt {
             let status = if let Some(ref status) = pod.status {
                 status.clone()
             } else {
@@ -180,15 +180,18 @@ async fn publish_k8s_event(
         controller: "linkerd-cni-repair-controller".into(),
         instance: Some(controller_pod_name),
     };
-    let recorder = Recorder::new(client, reporter, object_ref);
+    let recorder = Recorder::new(client, reporter);
     recorder
-        .publish(Event {
-            action: EVENT_ACTION.into(),
-            reason: EVENT_REASON.into(),
-            note: Some("Deleting pod to create a new one with proper CNI config".into()),
-            type_: EventType::Normal,
-            secondary: None,
-        })
+        .publish(
+            &Event {
+                action: EVENT_ACTION.into(),
+                reason: EVENT_REASON.into(),
+                note: Some("Deleting pod to create a new one with proper CNI config".into()),
+                type_: EventType::Normal,
+                secondary: None,
+            },
+            &object_ref,
+        )
         .await
 }
 
@@ -335,9 +338,9 @@ mod test {
 
         let (tx, mut rx) = mpsc::channel(EVENT_CHANNEL_CAPACITY);
         let stream = futures::stream::iter(vec![
-            watcher::Event::Applied(pod1),
-            watcher::Event::Applied(pod2),
-            watcher::Event::Applied(pod3),
+            watcher::Event::Apply(pod1),
+            watcher::Event::Apply(pod2),
+            watcher::Event::Apply(pod3),
         ]);
 
         let process_events_handle = tokio::spawn(process_events(stream, tx, metrics));

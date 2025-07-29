@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use kubert::Runtime;
 use linkerd_cni_repair_controller::Metrics;
+use prometheus_client::registry::Registry;
 
 /// Scan the pods in the current node to find those that have been injected by linkerd, and whose
 /// linkerd-network-validator container has failed, and proceed to evict them so they can restart
@@ -39,6 +40,13 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    if rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .is_err()
+    {
+        anyhow::bail!("No other crypto provider should be installed yet");
+    }
+
     let Args {
         log_level,
         log_format,
@@ -48,7 +56,7 @@ async fn main() -> Result<()> {
         admin,
     } = Args::parse();
 
-    let mut prom = prometheus_client::registry::Registry::default();
+    let mut prom = <Registry>::default();
     let metrics = Metrics::register(prom.sub_registry_with_prefix("linkerd_cni_repair_controller"));
     let mut rt = Runtime::builder()
         .with_log(log_level, log_format)

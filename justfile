@@ -85,7 +85,7 @@ cni-repair-controller *args:
 # The K3S_IMAGES_JSON file used instructs the creation of a cluster on version
 # v1.27.6-k3s1, because after that Calico won't work.
 # See https://github.com/k3d-io/k3d/issues/1375
-cni-repair-controller-integration $K3S_IMAGES_JSON='./cni-plugin/integration/calico-k3s-images.json': (cni-repair-controller "package") build-cni-plugin-image
+cni-repair-controller-integration $K3S_IMAGES_JSON='./cni-plugin/integration/calico-k3s-images.json': build-cni-plugin-image
     @{{ just_executable() }} K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI }}' _k3d-cni-create
     @just-k3d use
     @just-k3d import {{ cni-plugin-image }}

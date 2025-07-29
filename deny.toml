@@ -15,15 +15,9 @@ ignore = [
 ]
 
 [licenses]
-allow = ["Apache-2.0", "BSD-3-Clause", "ISC", "MIT"]
+allow = ["Apache-2.0", "BSD-3-Clause", "ISC", "MIT", "Zlib"]
 confidence-threshold = 0.8
 exceptions = [
-    { allow = [
-        "ISC",
-        "MIT",
-        "OpenSSL",
-    ], name = "ring", version = "*" },
-
     # The Unicode-DFS--2016 license is necessary for unicode-ident because they
     # use data from the unicode tables to generate the tables which are
     # included in the application. We do not distribute those data files so
@@ -35,15 +29,11 @@ exceptions = [
         "Unicode-DFS-2016",
     ], name = "unicode-ident" },
     { allow = [
-        "Zlib",
-    ], name = "adler32" },
+        "ISC",
+        "Apache-2.0",
+        "OpenSSL"
+    ], name = "aws-lc-sys"}
 ]
-
-[[licenses.clarify]]
-name = "ring"
-version = "*"
-expression = "MIT AND ISC AND OpenSSL"
-license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 
 [bans]
 multiple-versions = "deny"
@@ -54,13 +44,14 @@ skip = [
     # https://github.com/hawkw/matchers/pull/4
     { name = "regex-automata", version = "0.1" },
     { name = "regex-syntax", version = "0.6" },
-    # syn v2 has been released and some libraries are slower to adopt it
-    { name = "syn", version = "1.0" },
 ]
 skip-tree = [
     # `serde_json` and `h2` depend on diverged versions of `indexmap` (2.0.x and
     # 1.9.x, respectively)
     { name = "indexmap" },
+    # thiserror v2 is still making its way through the ecosystem
+    { name = "thiserror", version = "1" },
+    { name = "socket2", version = "0.5" },
 ]
 
 [sources]
