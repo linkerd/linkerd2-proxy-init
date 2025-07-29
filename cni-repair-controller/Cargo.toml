@@ -6,20 +6,13 @@ edition = "2018"
 license = "Apache-2.0"
 publish = false
 
-[features]
-default = ["openssl-tls", "openssl-vendored"]
-openssl-tls = ["kube/openssl-tls"]
-# Vendor openssl to statically link lib
-openssl-vendored = ["openssl/vendored"]
-rustls-tls = ["kube/rustls-tls"]
-
 [dependencies]
 anyhow = "1"
 futures = "0.3"
 k8s-openapi = { version = "0.20", features = ["v1_22"] }
-kube = { version = "0.87", features = ["runtime"] }
-openssl = { version = "0.10.66", optional = true }
+kube = { version = "0.87", features = ["runtime", "rustls-tls"] }
 prometheus-client = "0.22"
+rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs"] }
 tracing = "0.1"
 
 [dependencies.clap]
@@ -30,7 +23,7 @@ features = ["derive", "env", "help", "std"]
 [dependencies.kubert]
 version = "0.21"
 default-features = false
-features = ["admin", "clap", "prometheus-client", "runtime"]
+features = ["admin", "clap", "prometheus-client", "runtime", "rustls-tls"]
 
 [dependencies.tokio]
 version = "1"
