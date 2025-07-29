@@ -39,6 +39,13 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    if rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .is_err()
+    {
+        anyhow::bail!("No other crypto provider should be installed yet");
+    }
+
     let Args {
         log_level,
         log_format,
