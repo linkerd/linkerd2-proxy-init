@@ -9,9 +9,9 @@ publish = false
 [dependencies]
 anyhow = "1"
 futures = "0.3"
-k8s-openapi = { version = "0.20", features = ["v1_22"] }
-kube = { version = "0.87", features = ["runtime", "rustls-tls"] }
-prometheus-client = "0.22"
+k8s-openapi = { version = "0.25", features = ["v1_33"] }
+kube = { version = "1.1", default-features = false, features = ["runtime", "rustls-tls"] }
+prometheus-client = { version = "0.23", default-features = false }
 rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs"] }
 tracing = "0.1"
 
@@ -21,7 +21,7 @@ default-features = false
 features = ["derive", "env", "help", "std"]
 
 [dependencies.kubert]
-version = "0.21"
+version = "0.25"
 default-features = false
 features = ["admin", "clap", "prometheus-client", "runtime", "rustls-tls"]
 
