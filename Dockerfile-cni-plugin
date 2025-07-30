@@ -29,10 +29,14 @@ RUN --mount=type=cache,target=target \
     target=$(case "$TARGETARCH" in \
         amd64) echo x86_64-unknown-linux-musl ;; \
         arm64) echo aarch64-unknown-linux-musl ;; \
-        arm) echo armv7-unknown-linux-musleabihf ;; \
         *) echo "unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
     esac) && \
-    just cni-repair-controller arch="$TARGETARCH" profile=release build && \
+    cflags=$(case "$TARGETARCH" in \
+        amd64) echo '' ;; \
+        arm64) echo '-fuse-ld=/usr/aarch64-linux-gnu/bin/ld' ;; \
+        *) echo "unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
+    esac) && \
+    AWS_LC_SYS_CFLAGS=$cflags just cni-repair-controller arch="$TARGETARCH" profile=release build && \
     mv "target/$target/release/linkerd-cni-repair-controller" .
 
 FROM --platform=$TARGETPLATFORM alpine:3.22.1 as runtime

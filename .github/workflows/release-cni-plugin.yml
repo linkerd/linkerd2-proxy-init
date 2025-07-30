@@ -47,7 +47,7 @@ jobs:
                 build-cni-plugin-image \
                   --cache-from type=local,src="$RUNNER_TEMP/.buildx-cache" \
                   --cache-to type=local,dest="$RUNNER_TEMP/.buildx-cache",mode=max \
-                  --platform linux/amd64,linux/arm64,linux/arm/v7
+                  --platform linux/amd64,linux/arm64
       - run: just-dev prune-action-cache "$RUNNER_TEMP/.buildx-cache"
 
       # Only publish images on release
@@ -63,7 +63,7 @@ jobs:
                 build-cni-plugin-image \
                   --cache-from type=local,src="$RUNNER_TEMP/.buildx-cache" \
                   --cache-to type=local,dest="$RUNNER_TEMP/.buildx-cache",mode=max \
-                  --platform linux/amd64,linux/arm64,linux/arm/v7 \
+                  --platform linux/amd64,linux/arm64 \
                   --output type=registry
       - if: needs.meta.outputs.mode == 'release'
         uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159
