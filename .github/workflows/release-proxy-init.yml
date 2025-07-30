@@ -13,7 +13,7 @@ permissions:
 jobs:
   meta:
     timeout-minutes: 3
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: ./.github/actions/version-mode
@@ -27,7 +27,7 @@ jobs:
 
   docker-publish:
     needs: meta
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       id-token: write # needed for signing the images with GitHub OIDC token
@@ -40,7 +40,7 @@ jobs:
           restore-keys: proxy-init-${{ needs.meta.outputs.mode }}-
 
       - uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392
-      - uses: linkerd/dev/actions/setup-tools@v46
+      - uses: linkerd/dev/actions/setup-tools@v47
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - run: |
           just proxy-init-image='${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}' \
@@ -77,7 +77,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - if: needs.meta.outputs.mode == 'release'
