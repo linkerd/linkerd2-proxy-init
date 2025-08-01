@@ -13,7 +13,7 @@ version := `just-cargo crate-version $TARGETCRATE`
 
 profile := 'debug'
 
-# The architecture name to use for packages. Either 'amd64', 'arm64', or 'arm'.
+# The architecture name to use for packages. Either 'amd64' or 'arm64'.
 arch := env_var_or_default("TARGETARCH", "amd64")
 
 # The OS name to use for packages. Either 'linux' or 'windows'.
@@ -25,8 +25,6 @@ _cargo-target := if os + '-' + arch == "linux-amd64" {
         "x86_64-unknown-linux-musl"
     } else if os + '-' + arch == "linux-arm64" {
         "aarch64-unknown-linux-musl"
-    } else if os + '-' + arch == "linux-arm" {
-        "armv7-unknown-linux-musleabihf"
     } else if os + '-' + arch == "windows-amd64" {
         "x86_64-pc-windows-gnu"
     } else {

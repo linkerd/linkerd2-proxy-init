@@ -31,13 +31,11 @@ jobs:
     needs: meta
     strategy:
       matrix:
-        arch: [amd64, arm64, arm]
+        arch: [amd64, arm64]
         os: [windows, linux]
         exclude:
           - os: windows
             arch: arm64
-          - os: windows
-            arch: arm  
     timeout-minutes: 10
     runs-on: ubuntu-24.04
     container: ghcr.io/linkerd/dev:v47-rust-musl
