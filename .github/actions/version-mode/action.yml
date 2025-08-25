@@ -11,7 +11,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+    - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
     - id: meta
       shell: bash
       run: |
