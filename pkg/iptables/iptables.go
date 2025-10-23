@@ -67,8 +67,9 @@ type FirewallConfiguration struct {
 // https://github.com/istio/istio/blob/e83411e/pilot/docker/prepare_proxy.sh
 func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	log.Debugf("tracing script execution as [%s]", executionTraceID)
-	log.Debugf("using '%s' to set-up firewall rules", firewallConfiguration.BinPath)
-	log.Debugf("using '%s' to list all available rules", firewallConfiguration.SaveBinPath)
+
+	// Before executing, ensure the configured iptables binaries exist; if not, attempt a fallback.
+	resolveBinFallback(&firewallConfiguration)
 
 	existingRules, err := executeCommand(firewallConfiguration, firewallConfiguration.makeShowAllRules())
 	if err != nil {
@@ -111,6 +112,9 @@ func CleanupFirewallConfig(firewallConfiguration FirewallConfiguration) error {
 	log.Debugf("tracing script execution as [%s]", executionTraceID)
 	log.Debugf("using '%s' to clean-up firewall rules", firewallConfiguration.BinPath)
 	log.Debugf("using '%s' to list all available rules", firewallConfiguration.SaveBinPath)
+
+	// Ensure binaries exist before attempting cleanup as well
+	resolveBinFallback(&firewallConfiguration)
 
 	commands := make([]*exec.Cmd, 0)
 	commands = firewallConfiguration.cleanupRules(commands)
@@ -447,4 +451,63 @@ func asDestination(portRange util.PortRange) string {
 	}
 
 	return fmt.Sprintf("%d:%d", portRange.LowerBound, portRange.UpperBound)
+}
+
+// resolveBinFallback ensures the configured BinPath and SaveBinPath exist on PATH; if not, it
+// tries reasonable alternatives of the same family (ip6tables vs iptables). Returns true if a
+// fallback was applied.
+func resolveBinFallback(fc *FirewallConfiguration) {
+	// helper to check presence
+	has := func(name string) bool {
+		_, err := exec.LookPath(name)
+		return err == nil
+	}
+
+	// Both present? nothing to do
+	if has(fc.BinPath) && has(fc.SaveBinPath) {
+		log.WithFields(log.Fields{
+			"requestedBin":     fc.BinPath,
+			"requestedSaveBin": fc.SaveBinPath,
+		}).Debug("iptables: using configured binaries")
+		return
+	}
+
+	// Decide family based on current name
+	ipv6 := strings.Contains(fc.BinPath, "ip6tables") || strings.Contains(fc.SaveBinPath, "ip6tables")
+
+	// Candidate orders: prefer nft, then plain, then legacy
+	var candidates [][2]string
+	if ipv6 {
+		candidates = [][2]string{
+			{"ip6tables-nft", "ip6tables-nft-save"},
+			{"ip6tables", "ip6tables-save"},
+			{"ip6tables-legacy", "ip6tables-legacy-save"},
+		}
+	} else {
+		candidates = [][2]string{
+			{"iptables-nft", "iptables-nft-save"},
+			{"iptables", "iptables-save"},
+			{"iptables-legacy", "iptables-legacy-save"},
+		}
+	}
+
+	// Use first candidate where both exist
+	for _, pair := range candidates {
+		if has(pair[0]) && has(pair[1]) {
+			if pair[0] != fc.BinPath || pair[1] != fc.SaveBinPath {
+				log.WithFields(log.Fields{
+					"requestedBin":     fc.BinPath,
+					"requestedSaveBin": fc.SaveBinPath,
+					"fallbackBin":      pair[0],
+					"fallbackSaveBin":  pair[1],
+				}).Warn("iptables: configured binaries not found; applying fallback to available binaries")
+			}
+			fc.BinPath = pair[0]
+			fc.SaveBinPath = pair[1]
+			return
+		}
+	}
+
+	// No candidates found; keep as-is and let execution fail with a clear error later
+	log.WithFields(log.Fields{"binPath": fc.BinPath, "saveBinPath": fc.SaveBinPath}).Error("iptables: no suitable binaries found on PATH; commands may fail")
 }

@@ -22,7 +22,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -81,6 +83,7 @@ type PluginConf struct {
 	PrevResult    *cniv1.Result           `json:"-"`
 
 	LogLevel   string     `json:"log_level"`
+	LogFile    string     `json:"log_file"`
 	ProxyInit  ProxyInit  `json:"linkerd"`
 	Kubernetes Kubernetes `json:"kubernetes"`
 }
@@ -99,7 +102,9 @@ func main() {
 	)
 }
 
-func configureLoggingLevel(logLevel string) {
+// configureLogging sets log level and configures outputs to both stderr and a file.
+// If logFilePath is empty, a sensible default is used.
+func configureLogging(logLevel, logFilePath string) {
 	switch strings.ToLower(logLevel) {
 	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
@@ -108,6 +113,29 @@ func configureLoggingLevel(logLevel string) {
 	default:
 		logrus.SetLevel(logrus.WarnLevel)
 	}
+
+	// Default log file path
+	if strings.TrimSpace(logFilePath) == "" {
+		logFilePath = "/var/log/linkerd-cni-plugin.log"
+	}
+
+	// Ensure directory exists
+	if dir := filepath.Dir(logFilePath); dir != "" && dir != "." {
+		_ = os.MkdirAll(dir, 0o755)
+	}
+
+	// Open file for append, create if missing
+	f, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		// If we cannot open the log file, continue logging only to stderr
+		logrus.SetOutput(os.Stderr)
+		logrus.WithError(err).Warnf("linkerd-cni: failed to open log file %q; continuing with stderr only", logFilePath)
+		return
+	}
+
+	// Tee logs to both stderr and the file
+	mw := io.MultiWriter(os.Stderr, f)
+	logrus.SetOutput(mw)
 }
 
 // parseConfig parses the supplied configuration (and prevResult) from stdin.
@@ -147,7 +175,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 		logrus.Errorf("error parsing config: %e", err)
 		return err
 	}
-	configureLoggingLevel(conf.LogLevel)
+	// Configure logging level and outputs
+	configureLogging(conf.LogLevel, conf.LogFile)
 
 	if conf.PrevResult != nil {
 		logrus.WithFields(logrus.Fields{
