@@ -36,6 +36,7 @@ import (
 	"github.com/linkerd/linkerd2-proxy-init/proxy-init/cmd"
 
 	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -82,10 +83,13 @@ type PluginConf struct {
 	RawPrevResult *map[string]interface{} `json:"prevResult"`
 	PrevResult    *cniv1.Result           `json:"-"`
 
-	LogLevel   string     `json:"log_level"`
-	LogFile    string     `json:"log_file"`
-	ProxyInit  ProxyInit  `json:"linkerd"`
-	Kubernetes Kubernetes `json:"kubernetes"`
+	LogLevel          string     `json:"log_level"`
+	LogFile           string     `json:"log_file"`
+	LogFileMaxSizeMB  int        `json:"log_file_max_size_mb"`
+	LogFileMaxAgeDays int        `json:"log_file_max_age_days"`
+	LogFileMaxCount   int        `json:"log_file_max_count"`
+	ProxyInit         ProxyInit  `json:"linkerd"`
+	Kubernetes        Kubernetes `json:"kubernetes"`
 }
 
 func main() {
@@ -102,9 +106,10 @@ func main() {
 	)
 }
 
-// configureLogging sets log level and configures outputs to both stderr and a file.
+// configureLogging sets log level and configures outputs to both stderr and a file with rotation.
 // If logFilePath is empty, a sensible default is used.
-func configureLogging(logLevel, logFilePath string) {
+// maxSizeMB, maxAgeDays, and maxCount configure the log rotation behavior.
+func configureLogging(logLevel, logFilePath string, maxSizeMB, maxAgeDays, maxCount int) {
 	switch strings.ToLower(logLevel) {
 	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
@@ -119,22 +124,33 @@ func configureLogging(logLevel, logFilePath string) {
 		logFilePath = "/var/log/linkerd-cni-plugin.log"
 	}
 
+	// Default rotation parameters if not specified (matching Calico CNI defaults)
+	if maxSizeMB <= 0 {
+		maxSizeMB = 100 // 100 MB default
+	}
+	if maxAgeDays <= 0 {
+		maxAgeDays = 30 // 30 days default
+	}
+	if maxCount <= 0 {
+		maxCount = 10 // 10 files default
+	}
+
 	// Ensure directory exists
 	if dir := filepath.Dir(logFilePath); dir != "" && dir != "." {
 		_ = os.MkdirAll(dir, 0o755)
 	}
 
-	// Open file for append, create if missing
-	f, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
-	if err != nil {
-		// If we cannot open the log file, continue logging only to stderr
-		logrus.SetOutput(os.Stderr)
-		logrus.WithError(err).Warnf("linkerd-cni: failed to open log file %q; continuing with stderr only", logFilePath)
-		return
+	// Configure log rotation with lumberjack
+	logger := &lumberjack.Logger{
+		Filename:   logFilePath,
+		MaxSize:    maxSizeMB,  // megabytes
+		MaxBackups: maxCount,   // number of backups
+		MaxAge:     maxAgeDays, // days
+		Compress:   true,       // compress rotated files
 	}
 
-	// Tee logs to both stderr and the file
-	mw := io.MultiWriter(os.Stderr, f)
+	// Tee logs to both stderr and the rotating log file
+	mw := io.MultiWriter(os.Stderr, logger)
 	logrus.SetOutput(mw)
 }
 
@@ -175,8 +191,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 		logrus.Errorf("error parsing config: %e", err)
 		return err
 	}
-	// Configure logging level and outputs
-	configureLogging(conf.LogLevel, conf.LogFile)
+	// Configure logging level and outputs with rotation
+	configureLogging(conf.LogLevel, conf.LogFile, conf.LogFileMaxSizeMB, conf.LogFileMaxAgeDays, conf.LogFileMaxCount)
 
 	if conf.PrevResult != nil {
 		logrus.WithFields(logrus.Fields{
