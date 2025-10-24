@@ -69,7 +69,7 @@ func ConfigureFirewall(firewallConfiguration FirewallConfiguration) error {
 	log.Debugf("tracing script execution as [%s]", executionTraceID)
 
 	// Before executing, ensure the configured iptables binaries exist; if not, attempt a fallback.
-	resolveBinFallback(&firewallConfiguration)
+	resolveBinFallback(&firewallConfiguration, exec.LookPath)
 
 	existingRules, err := executeCommand(firewallConfiguration, firewallConfiguration.makeShowAllRules())
 	if err != nil {
@@ -114,7 +114,7 @@ func CleanupFirewallConfig(firewallConfiguration FirewallConfiguration) error {
 	log.Debugf("using '%s' to list all available rules", firewallConfiguration.SaveBinPath)
 
 	// Ensure binaries exist before attempting cleanup as well
-	resolveBinFallback(&firewallConfiguration)
+	resolveBinFallback(&firewallConfiguration, exec.LookPath)
 
 	commands := make([]*exec.Cmd, 0)
 	commands = firewallConfiguration.cleanupRules(commands)
@@ -454,12 +454,11 @@ func asDestination(portRange util.PortRange) string {
 }
 
 // resolveBinFallback ensures the configured BinPath and SaveBinPath exist on PATH; if not, it
-// tries reasonable alternatives of the same family (ip6tables vs iptables). Returns true if a
-// fallback was applied.
-func resolveBinFallback(fc *FirewallConfiguration) {
+// tries reasonable alternatives of the same family (ip6tables vs iptables).
+func resolveBinFallback(fc *FirewallConfiguration, lookPath func(string) (string, error)) {
 	// helper to check presence
 	has := func(name string) bool {
-		_, err := exec.LookPath(name)
+		_, err := lookPath(name)
 		return err == nil
 	}
 
