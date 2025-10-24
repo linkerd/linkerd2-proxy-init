@@ -137,7 +137,7 @@ func configureLogging(logLevel, logFilePath string, maxSizeMB, maxAgeDays, maxCo
 
 	// Ensure directory exists
 	if dir := filepath.Dir(logFilePath); dir != "" && dir != "." {
-		_ = os.MkdirAll(dir, 0o755)
+		_ = os.MkdirAll(dir, 0o750)
 	}
 
 	// Configure log rotation with lumberjack
