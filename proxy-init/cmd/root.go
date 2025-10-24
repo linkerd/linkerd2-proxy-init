@@ -21,8 +21,6 @@ const (
 	// IPTablesModePlain signals the usage of the iptables commands, which
 	// can be either legacy or nft
 	IPTablesModePlain = "plain"
-	// IPTablesModeAuto signals automatic detection of the iptables backend
-	IPTablesModeAuto = "auto"
 
 	cmdLegacy         = "iptables-legacy"
 	cmdLegacySave     = "iptables-legacy-save"
@@ -167,11 +165,21 @@ func NewRootCmd() *cobra.Command {
 
 // BuildFirewallConfiguration returns an iptables FirewallConfiguration suitable to use to configure iptables.
 func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfiguration, error) {
-	if options.IPTablesMode != "" &&
-		options.IPTablesMode != IPTablesModeLegacy &&
-		options.IPTablesMode != IPTablesModeNFT &&
-		options.IPTablesMode != IPTablesModePlain {
-		return nil, fmt.Errorf("--iptables-mode valid values are only \"%s\", \"%s\", \"%s\", and \"%s\"", IPTablesModeLegacy, IPTablesModeNFT, IPTablesModeAuto, IPTablesModePlain)
+	if options.IPTablesMode != "" && options.IPTablesMode != IPTablesModeLegacy && options.IPTablesMode != IPTablesModeNFT && options.IPTablesMode != IPTablesModePlain {
+		return nil, fmt.Errorf("--iptables-mode valid values are only \"%s\", \"%s\" and \"%s\"", IPTablesModeLegacy, IPTablesModeNFT, IPTablesModePlain)
+	}
+
+	if options.IPTablesMode == "" {
+		switch options.FirewallBinPath {
+		case "", cmdLegacy:
+			options.IPTablesMode = IPTablesModeLegacy
+		case cmdNFT:
+			options.IPTablesMode = IPTablesModeNFT
+		case cmdPlain:
+			options.IPTablesMode = IPTablesModePlain
+		default:
+			return nil, fmt.Errorf("--firewall-bin-path valid values are only \"%s\", \"%s\" and \"%s\"", cmdLegacy, cmdNFT, cmdPlain)
+		}
 	}
 
 	if !util.IsValidPort(options.IncomingProxyPort) {
@@ -181,6 +189,8 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 	if !util.IsValidPort(options.OutgoingProxyPort) {
 		return nil, fmt.Errorf("--outgoing-proxy-port must be a valid TCP port number")
 	}
+
+	cmd, cmdSave := getCommands(options)
 
 	sanitizedSubnets := []string{}
 	for _, subnet := range options.SubnetsToIgnore {
@@ -205,22 +215,14 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 		SimulateOnly:           options.SimulateOnly,
 		NetNs:                  options.NetNs,
 		UseWaitFlag:            options.UseWaitFlag,
+		BinPath:                cmd,
+		SaveBinPath:            cmdSave,
 	}
 
 	if len(options.PortsToRedirect) > 0 {
 		firewallConfiguration.Mode = iptables.RedirectListedMode
 	} else {
 		firewallConfiguration.Mode = iptables.RedirectAllMode
-	}
-
-	// For backwards-compatibility, if IPTablesMode is not set, use the FirewallBinPath
-	// explicitly set by the user.
-	if options.IPTablesMode == "" {
-		firewallConfiguration.BinPath = options.FirewallBinPath
-		firewallConfiguration.SaveBinPath = options.FirewallSaveBinPath
-	} else {
-		// Otherwise, detect and set the appropriate backend.
-		iptables.DetectBackend(firewallConfiguration, exec.LookPath, options.IPv6, options.IPTablesMode)
 	}
 
 	return firewallConfiguration, nil
@@ -232,6 +234,26 @@ func getFormatter(format string) log.Formatter {
 		return &log.JSONFormatter{}
 	default:
 		return &log.TextFormatter{FullTimestamp: true}
+	}
+}
+
+func getCommands(options *RootOptions) (string, string) {
+	switch options.IPTablesMode {
+	case IPTablesModeLegacy:
+		if options.IPv6 {
+			return cmdLegacyIPv6, cmdLegacyIPv6Save
+		}
+		return cmdLegacy, cmdLegacySave
+	case IPTablesModeNFT:
+		if options.IPv6 {
+			return cmdNFTIPv6, cmdNFTIPv6Save
+		}
+		return cmdNFT, cmdNFTSave
+	default:
+		if options.IPv6 {
+			return cmdPlainIPv6, cmdPlainIPv6Save
+		}
+		return cmdPlain, cmdPlainSave
 	}
 }
 
