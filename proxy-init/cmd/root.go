@@ -23,6 +23,19 @@ const (
 	IPTablesModePlain = "plain"
 	// IPTablesModeAuto signals automatic detection of the iptables backend
 	IPTablesModeAuto = "auto"
+
+	cmdLegacy         = "iptables-legacy"
+	cmdLegacySave     = "iptables-legacy-save"
+	cmdLegacyIPv6     = "ip6tables-legacy"
+	cmdLegacyIPv6Save = "ip6tables-legacy-save"
+	cmdNFT            = "iptables-nft"
+	cmdNFTSave        = "iptables-nft-save"
+	cmdNFTIPv6        = "ip6tables-nft"
+	cmdNFTIPv6Save    = "ip6tables-nft-save"
+	cmdPlain          = "iptables"
+	cmdPlainSave      = "iptables-save"
+	cmdPlainIPv6      = "ip6tables"
+	cmdPlainIPv6Save  = "ip6tables-save"
 )
 
 // RootOptions provides the information that will be used to build a firewall configuration.
