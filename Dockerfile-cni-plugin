@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 
 # Cross compile from native platform to target arch
-FROM --platform=$BUILDPLATFORM golang:1.24-alpine as go
+FROM --platform=$BUILDPLATFORM golang:1.25.1-alpine as go
 WORKDIR /build
 COPY --link go.mod go.sum ./
 COPY --link ./cni-plugin ./cni-plugin
@@ -12,7 +12,7 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
     go build -o /go/bin/linkerd-cni -mod=readonly -ldflags "-s -w" -v ./cni-plugin/
 
-FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v47-rust-musl as cni-repair-controller
+FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v48-rust-musl as cni-repair-controller
 WORKDIR /build
 COPY --link justfile justfile-rust .
 COPY --link Cargo.toml Cargo.lock .
