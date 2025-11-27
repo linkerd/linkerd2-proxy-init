@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 3
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
       - uses: ./.github/actions/version-mode
         id: meta
         with:
@@ -41,7 +41,7 @@ jobs:
 
       - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130
       - uses: linkerd/dev/actions/setup-tools@v47
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
       - run: |
           just proxy-init-image='${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}' \
                 build-proxy-init-image \
@@ -79,7 +79,7 @@ jobs:
       contents: write
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
       - if: needs.meta.outputs.mode == 'release'
         uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
         with:
