@@ -39,7 +39,7 @@ RUN --mount=type=cache,target=target \
     AWS_LC_SYS_CFLAGS=$cflags just cni-repair-controller arch="$TARGETARCH" profile=release build && \
     mv "target/$target/release/linkerd-cni-repair-controller" .
 
-FROM --platform=$TARGETPLATFORM alpine:3.22.1 as runtime
+FROM --platform=$TARGETPLATFORM alpine:3.22.2 as runtime
 WORKDIR /linkerd
 RUN apk add \
     # For inotifywait
