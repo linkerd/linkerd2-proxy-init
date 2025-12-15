@@ -157,7 +157,7 @@ kind: Config
 clusters:
 - name: local
   cluster:
-    server: ${KUBERNETES_SERVICE_PROTOCOL:-https}://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}
+    server: ${KUBERNETES_SERVICE_PROTOCOL:-https}://[${KUBERNETES_SERVICE_HOST}]:${KUBERNETES_SERVICE_PORT}
     ${TLS_CFG}
 users:
 - name: linkerd-cni
@@ -344,6 +344,21 @@ install_cni_bin
 # CNI config files.
 CNI_CONF_SHA='{}'
 monitor_cni_config &
+monitor_pid=$!
+
+# The following logic waits (indefinitely if need be) for `inotifywait` in the
+# forked `monitor_cni_config()` function to enter "interruptible sleep" state.
+# This state indicates that `inotifywait` is fully up and ready to respond to
+# filesystem events.
+log "Wait for CNI config monitor to become ready"
+while true; do
+  monitor_state=$(
+    (ps --ppid=$monitor_pid -o comm=,state= || true) |
+    awk '$1 == "inotifywait" && $2 == "S" {print "ok"}'
+  )
+  [ -z "$monitor_state" ] || break
+  sleep .1 # 100ms
+done
 
 # Append our config to any existing config file (*.conflist or *.conf)
 config_files=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f ! -name '*linkerd*' \( -iname '*conflist' -o -iname '*conf' \))
