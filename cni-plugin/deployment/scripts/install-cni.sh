@@ -142,6 +142,17 @@ create_kubeconfig() {
     log 'KUBERNETES_SERVICE_PORT not set'; exit 1;
   fi
 
+  # Format the host properly for URLs
+  # Strip any existing brackets first
+  local host="${KUBERNETES_SERVICE_HOST}"
+  host="${host#\[}"
+  host="${host%\]}"
+
+  # Add brackets only for IPv6 addresses (contain colons)
+  if [[ "${host}" == *:* ]]; then
+    host="[${host}]"
+  fi
+
   if [ "${SKIP_TLS_VERIFY}" = 'true' ]; then
     TLS_CFG='insecure-skip-tls-verify: true'
   elif [ -f "${KUBE_CA_FILE}" ]; then
@@ -157,7 +168,7 @@ kind: Config
 clusters:
 - name: local
   cluster:
-    server: ${KUBERNETES_SERVICE_PROTOCOL:-https}://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}
+    server: ${KUBERNETES_SERVICE_PROTOCOL:-https}://${host}:${KUBERNETES_SERVICE_PORT}
     ${TLS_CFG}
 users:
 - name: linkerd-cni
