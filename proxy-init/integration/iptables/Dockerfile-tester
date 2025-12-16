@@ -1,4 +1,4 @@
-FROM golang:1.25.4-alpine
+FROM golang:1.25.5-alpine
 ENV GOCACHE=/tmp/
 WORKDIR /src
 COPY go.mod go.sum .
