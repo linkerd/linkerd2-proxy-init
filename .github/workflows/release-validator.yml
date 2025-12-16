@@ -47,7 +47,7 @@ jobs:
       - run: just validator arch=${{ matrix.arch }} os=${{ matrix.os }} profile=release version=${{ needs.meta.outputs.version }} package
         env:
           CARGO: "cargo auditable"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.arch }}-${{ matrix.os }}-artifacts
           path: target/package/
