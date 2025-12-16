@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 3
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
       - id: meta
         uses: ./.github/actions/version-mode
         with:
@@ -39,9 +39,9 @@ jobs:
           key: cni-plugin-${{ needs.meta.outputs.mode }}-${{ needs.meta.outputs.version }}
           restore-keys: cni-plugin-${{ needs.meta.outputs.mode }}-
 
-      - uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130
       - uses: linkerd/dev/actions/setup-tools@v47
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
       - run: |
           just cni-plugin-image='${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}' \
                 build-cni-plugin-image \
@@ -52,7 +52,7 @@ jobs:
 
       # Only publish images on release
       - if: needs.meta.outputs.mode == 'release'
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
         with:
           registry: ghcr.io
           username: ${{ secrets.DOCKER_GHCR_USERNAME }}
@@ -66,7 +66,7 @@ jobs:
                   --platform linux/amd64,linux/arm64 \
                   --output type=registry
       - if: needs.meta.outputs.mode == 'release'
-        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62
+        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad
       - if: needs.meta.outputs.mode == 'release'
         run: cosign sign -y "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
         env:
@@ -79,8 +79,8 @@ jobs:
       contents: write
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
       - if: needs.meta.outputs.mode == 'release'
-        uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
         with:
           name: cni-plugin ${{ needs.meta.outputs.version }}
