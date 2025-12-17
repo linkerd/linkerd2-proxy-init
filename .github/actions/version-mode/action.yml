@@ -36,7 +36,7 @@ runs:
         version=$(just ${{ inputs.package }} --evaluate version)
         # shellcheck disable=SC2193
         if [[ "${version}" != '${{ steps.meta.outputs.version }}' ]]; then
-          echo "::error ::Crate version v${version} does not match tag ${{ steps.meta.outputs.version }}"
+          echo "::error ::Crate version ${version} does not match tag ${{ steps.meta.outputs.version }}"
           exit 1
         fi
 
