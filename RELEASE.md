@@ -25,7 +25,11 @@ a single line. See `git show proxy-init/v2.2.0` as an example the format we use.
 Note: currently `validator` doesn't rely on `internal`, while `cni-plugin` and
 `proxy-init` do.
 
-## Step 2: Tag the release
+## Step 2: Update version in Cargo.toml (only for validator)
+
+Update the version number in `validator/Cargo.toml` (without the `v` prefix).
+
+## Step 3: Tag the release
 
 First, find the current latest version tag for the subproject
 
@@ -37,7 +41,7 @@ Increase the version with a major, minor, or patch according to the changes made
 
 For the commit message, use what you created in Step 1.
 
-## Step 3: Push the tag
+## Step 4: Push the tag
 
 By default in git, tags are local so we'll need to push the tag to `origin`.
 

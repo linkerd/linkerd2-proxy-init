@@ -1,6 +1,6 @@
 [package]
 name = "linkerd-network-validator"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Linkerd Authors <cncf-linkerd-dev@lists.cncf.io>"]
 edition = "2018"
 license = "Apache-2.0"
