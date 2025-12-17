@@ -10,6 +10,7 @@ on:
       - cni-plugin/integration/run.sh
       - cni-plugin/**
       - cni-repair-controller/**
+      - Cargo.lock
       - justfile*
 
 jobs:
