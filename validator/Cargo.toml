@@ -10,7 +10,7 @@ publish = false
 anyhow = "1"
 bytes = "1"
 kubert = { version = "0.25", default-features = false, features = ["log"] }
-rand = "0.8"
+rand = "0.9"
 tracing = "0.1"
 
 [dependencies.clap]
