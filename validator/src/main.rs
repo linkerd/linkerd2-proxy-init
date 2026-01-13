@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use bytes::{Bytes, BytesMut};
 use clap::Parser;
-use rand::distributions::{Alphanumeric, DistString};
+use rand::distr::{Alphanumeric, SampleString};
 use std::{net::SocketAddr, process::exit, time};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -105,10 +105,7 @@ async fn validate(listen_addr: SocketAddr, connect_addr: SocketAddr) -> Result<(
 
     // Generate a random token to be sent from the server. Clients use the
     // server response to ensure that it is connecting to this process.
-    let token = format!(
-        "{}\n",
-        Alphanumeric.sample_string(&mut rand::thread_rng(), 63)
-    );
+    let token = format!("{}\n", Alphanumeric.sample_string(&mut rand::rng(), 63));
     debug!(?token);
     let token = Bytes::from(token);
 
