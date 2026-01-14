@@ -260,9 +260,18 @@ sync() {
   local ev=${1}
   local file=${2//\/\//\/} # replace "//" with "/"
 
+  # We can't just add a * after the conflist extension otherwise there will be
+  # a lot of noise caused by atomic‑write temp files created by the CNI plugin.
   [[ "${file}" =~ .*.(conflist|conf)$ ]] || return 0
 
   log "Detected event: ${ev} ${file}"
+
+  # If the file is a symlink, resolve it to the original file
+  if [ -L "${file}" ]; then
+    local original_file=$(readlink -f "${file}")
+    log "File ${file} is a symlink, resolving to ${original_file}"
+    file="${original_file}"
+  fi
 
   # Retrieve previous SHA of detected file (if any) and compute current SHA.
   local previous_sha
