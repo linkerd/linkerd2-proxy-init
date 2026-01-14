@@ -249,6 +249,45 @@ install_cni_conf() {
   log "Created CNI config ${cni_conf_path}"
 }
 
+# Resolve a CNI config path, following symlinks and mapping absolute targets
+# back into the host mount (e.g. /etc/... -> /host/etc/...).
+# We need to /etc -> /host/etc when the symlink points to an absolute path as
+# net.d is the container’s filesystem, not the host mount, so when cp -L follows 
+# that absolute target it lands on a path that doesn’t.
+# The mapping rewrites that absolute host path to /host/etc/..., which is where
+# the real file lives through the mount.
+resolve_cni_config_path() {
+  local path=${1}
+  local resolved=${path}
+
+  if [ -L "${path}" ]; then
+    local target
+    target=$(readlink "${path}" || true)
+    if [ -n "${target}" ]; then
+      if [[ "${target}" = /* ]]; then
+        # it means the target is not empty and is an absolute path. 
+        # It treats it as a host path.
+        resolved="${target}"
+        if [[ "${resolved}" != "${CONTAINER_MOUNT_PREFIX}"* ]]; then
+          local host_resolved="${CONTAINER_MOUNT_PREFIX}${resolved}"
+          resolved="${host_resolved}"
+        fi
+      else
+        # it means the target is not empty and is an relative path. 
+        # Resolve it relative to the symlink’s directory
+        local base
+        base=$(dirname "${path}")
+        resolved="${base}/${target}"
+      fi
+    else
+      # The target was empty. It tries to fully resolve the link
+      resolved=$(readlink -f "${path}" 2>/dev/null || echo "${path}")
+    fi
+    resolved=$(readlink -f "${resolved}" 2>/dev/null || echo "${resolved}")
+  fi
+  echo "${resolved}"
+}
+
 # `sync()` is responsible for reacting to file system changes. It is used in
 # conjunction with inotify events; `sync()` is called with the event type (which
 # can be either 'CREATE', 'MOVED_TO', or 'MODIFY') and the name of the file that
@@ -266,11 +305,15 @@ sync() {
 
   log "Detected event: ${ev} ${file}"
 
-  # If the file is a symlink, resolve it to the original file
-  if [ -L "${file}" ]; then
-    local original_file=$(readlink -f "${file}")
-    log "File ${file} is a symlink, resolving to ${original_file}"
-    file="${original_file}"
+  local resolved_file
+  resolved_file=$(resolve_cni_config_path "${file}")
+  if [ "${resolved_file}" != "${file}" ]; then
+    log "File ${file} resolves to ${resolved_file}"
+  fi
+  file="${resolved_file}"
+  if [ ! -e "${file}" ]; then
+    log "Ignoring event: ${ev} ${file}; resolved path missing"
+    return 0
   fi
 
   # Retrieve previous SHA of detected file (if any) and compute current SHA.
@@ -370,15 +413,16 @@ while true; do
 done
 
 # Append our config to any existing config file (*.conflist or *.conf)
-config_files=$(find "${HOST_CNI_NET}" -maxdepth 1 -type f ! -name '*linkerd*' \( -iname '*conflist' -o -iname '*conf' \))
+config_files=$(find "${HOST_CNI_NET}" -maxdepth 1 \( -type f -o -type l \) ! -name '*linkerd*' \( -iname '*conflist' -o -iname '*conf' \))
 if [ -z "${config_files}" ]; then
   log "No active CNI configuration files found"
 else
-  find "${HOST_CNI_NET}" -maxdepth 1 -type f \( -iname '*conflist' -o -iname '*conf' \) -print0 |
+  find "${HOST_CNI_NET}" -maxdepth 1 \( -type f -o -type l \) \( -iname '*conflist' -o -iname '*conf' \) -print0 |
     while read -r -d $'\0' file; do
       log "Trigger CNI config detection for ${file}"
+      file=$(resolve_cni_config_path "${file}")
       tmp_file="$(mktemp -u /tmp/linkerd-cni.patch-candidate.XXXXXX)"
-      cp -fp "${file}" "${tmp_file}"
+      cp -fpL "${file}" "${tmp_file}"
       # The following will trigger the `sync()` function via filesystem event.
       # This requires `monitor_cni_config()` to be up and running!
       mv "${tmp_file}" "${file}" || exit_with_error 'Failed to mv files.'
