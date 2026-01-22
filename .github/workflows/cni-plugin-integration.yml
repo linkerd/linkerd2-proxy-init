@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: linkerd/dev/actions/setup-tools@v48
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: Run CNI integration tests
         env:
           IPTABLES_MODE: ${{ matrix.iptables-mode }}
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: linkerd/dev/actions/setup-tools@v48
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: Run CNI ordering tests
         run: just cni-plugin-test-ordering
   repair-controller:
@@ -42,6 +42,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: linkerd/dev/actions/setup-tools@v48
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: Run repair-controller tests
         run: just cni-repair-controller-integration
