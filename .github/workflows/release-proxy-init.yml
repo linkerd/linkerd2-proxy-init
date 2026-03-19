@@ -67,7 +67,7 @@ jobs:
                   --platform linux/amd64,linux/arm64 \
                   --output type=registry
       - if: needs.meta.outputs.mode == 'release'
-        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad
+        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22
       - if: needs.meta.outputs.mode == 'release'
         run: cosign sign -y "${{ needs.meta.outputs.repo }}:${{ needs.meta.outputs.version }}"
         env:
