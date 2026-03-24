@@ -23,6 +23,8 @@ FROM --platform=$TARGETPLATFORM alpine:3.23.3 as runtime
 RUN apk add iptables-legacy iptables libcap && \
     touch /run/xtables.lock && \
     chmod 0666 /run/xtables.lock
+# TODO: remove when CVE-2026-27171 gets addressed in alpine:3.23.3
+RUN apk upgrade --no-cache zlib
 
 COPY --link --from=go /out/linkerd2-proxy-init /usr/local/bin/proxy-init
 
