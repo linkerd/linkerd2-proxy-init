@@ -1096,7 +1096,7 @@ dependencies = [
 
 [[package]]
 name = "linkerd-network-validator"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "bytes",
