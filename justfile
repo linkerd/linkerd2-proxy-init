@@ -86,6 +86,7 @@ cni-repair-controller-integration: build-cni-plugin-image
     @{{ just_executable() }} K3D_CREATE_FLAGS='{{ _K3D_CREATE_FLAGS_NO_CNI }}' _k3d-cni-create
     @just-k3d use
     @just-k3d import {{ cni-plugin-image }}
+    kubectl version
     ./cni-repair-controller/integration/run.sh {{ cni-plugin-image }}
 
 ##
