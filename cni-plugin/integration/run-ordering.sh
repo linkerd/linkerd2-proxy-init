@@ -28,10 +28,11 @@ kubectl apply -f manifests/calico/linkerd-cni.yaml
 printf '\n# Label node and then add node selectors to calico and linkerd-cni to run only on the current node...\n'
 kubectl label node "k3d-$K3D_CLUSTER_NAME-server-0" allow-calico=true
 kubectl label node "k3d-$K3D_CLUSTER_NAME-server-0" allow-linkerd-cni=true
-kubectl -n calico-system patch daemonsets calico-node --type=json \
-	-p='[{"op": "add", "path": "/spec/template/spec/nodeSelector", "value": {"allow-calico": "true"}}]'
+kubectl patch installation default  --type=json \
+  -p='[{"op":"add","path":"/spec/calicoNodeDaemonSet","value":{"spec":{"template":{"spec":{"nodeSelector":{"allow-calico":"true"}}}}}}]'
 kubectl -n linkerd-cni patch daemonsets linkerd-cni --type=json \
 	-p='[{"op": "add", "path": "/spec/template/spec/nodeSelector", "value": {"allow-linkerd-cni": "true"}}]'
+
 kubectl rollout status daemonset -n calico-system
 kubectl rollout status daemonset -n linkerd-cni
 
