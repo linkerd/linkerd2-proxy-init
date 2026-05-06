@@ -9,17 +9,31 @@ NODE_NAME=l5d-server-extra
 kubectl config use-context "k3d-$K3D_CLUSTER_NAME"
 
 printf '\n# Install calico and linkerd-cni...\n'
-kubectl apply -f manifests/calico/calico-install.yaml
+# Install calico per instructions from https://k3d.io/v5.8.3/usage/advanced/calico/#1-create-the-cluster-without-flannel
+kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.0/manifests/tigera-operator.yaml
+kubectl --namespace tigera-operator rollout status --timeout=5m deploy/tigera-operator
+until kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.0/manifests/custom-resources.yaml; do
+  echo "retrying calico custom resources installation..."
+  sleep 5
+done
+for tigerastatus_name in apiserver calico goldmane ippools whisker; do
+  until kubectl wait --for=condition=available --timeout=120s tigerastatus "$tigerastatus_name"; do
+    echo "retrying tigerastatus/$tigerastatus_name availability check..."
+    sleep 5
+  done
+done
+
 kubectl apply -f manifests/calico/linkerd-cni.yaml
 
 printf '\n# Label node and then add node selectors to calico and linkerd-cni to run only on the current node...\n'
 kubectl label node "k3d-$K3D_CLUSTER_NAME-server-0" allow-calico=true
 kubectl label node "k3d-$K3D_CLUSTER_NAME-server-0" allow-linkerd-cni=true
-kubectl -n kube-system patch daemonsets calico-node --type=json \
-	-p='[{"op": "add", "path": "/spec/template/spec/nodeSelector", "value": {"allow-calico": "true"}}]'
+kubectl patch installation default  --type=json \
+  -p='[{"op":"add","path":"/spec/calicoNodeDaemonSet","value":{"spec":{"template":{"spec":{"nodeSelector":{"allow-calico":"true"}}}}}}]'
 kubectl -n linkerd-cni patch daemonsets linkerd-cni --type=json \
 	-p='[{"op": "add", "path": "/spec/template/spec/nodeSelector", "value": {"allow-linkerd-cni": "true"}}]'
-kubectl rollout status daemonset -n kube-system
+
+kubectl rollout status daemonset -n calico-system
 kubectl rollout status daemonset -n linkerd-cni
 
 printf '\n# Create new node...\n'
@@ -58,7 +72,7 @@ fi
 
 printf '\n# Trigger calico; k8s should now schedule the pod...\n'
 kubectl label node "k3d-$NODE_NAME-0" allow-calico=true
-kubectl rollout status daemonset -n kube-system
+kubectl rollout status daemonset -n calico-system
 sleep 10s
 status=$(kubectl get po nginx -ojson | jq -c .status.containerStatuses[0])
 if [[ "$status" == "null" ]]; then
