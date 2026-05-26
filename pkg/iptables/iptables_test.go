@@ -7,6 +7,7 @@ import (
 )
 
 func TestMakeMultiportDestinations(t *testing.T) {
+	assertEqual(t, makeMultiportDestinations(nil), [][]string{})
 	assertEqual(t, makeMultiportDestinations([]string{}), [][]string{})
 	assertEqual(t, makeMultiportDestinations([]string{"22", "25-27", "33"}), [][]string{{"22", "25:27", "33"}})
 	assertEqual(t, makeMultiportDestinations([]string{"22-22", "25-27", "33"}), [][]string{{"22", "25:27", "33"}})

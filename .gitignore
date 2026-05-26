@@ -1,4 +1,6 @@
 **/.idea
 *.iml
 **/*.swp
+*-test.json
+*-cover.out
 target/
