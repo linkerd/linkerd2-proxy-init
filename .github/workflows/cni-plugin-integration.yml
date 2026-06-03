@@ -25,7 +25,7 @@ jobs:
       - uses: linkerd/dev/actions/setup-tools@v49
         with:
           version: v49
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - name: Run CNI integration tests
         env:
           IPTABLES_MODE: ${{ matrix.iptables-mode }}
@@ -38,7 +38,7 @@ jobs:
       - uses: linkerd/dev/actions/setup-tools@v49
         with:
           version: v49
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - name: Run CNI ordering tests
         run: just cni-plugin-test-ordering
   repair-controller:
@@ -48,6 +48,6 @@ jobs:
       - uses: linkerd/dev/actions/setup-tools@v49
         with:
           version: v49
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - name: Run repair-controller tests
         run: just cni-repair-controller-integration
