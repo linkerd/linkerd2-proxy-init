@@ -14,7 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
 
 FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v49-rust-musl as cni-repair-controller
 WORKDIR /build
-COPY --link justfile justfile-rust .
+COPY --link justfile justfile-rust go.just .
 COPY --link Cargo.toml Cargo.lock .
 COPY --link validator validator
 COPY --link cni-repair-controller cni-repair-controller
