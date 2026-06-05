@@ -1,4 +1,4 @@
-# _setup.sh - Setup a calico cluster as per the instructions:
+# setup.sh - Setup a calico cluster as per the instructions:
 # https://k3d.io/v5.8.3/usage/advanced/calico/#1-create-the-cluster-without-flannel
 #
 # 1. ensure the kube config current context is set
