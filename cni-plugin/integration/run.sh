@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euxo pipefail
+set -euo pipefail
 
 cd "${BASH_SOURCE[0]%/*}"
 
@@ -56,7 +56,7 @@ function wait_rollout() {
     echo "!! $name didn't rollout properly, printing logs";
     k describe "$name" -n "$ns"|| echo "$name not found"
     k logs "$name" -n "$ns" || echo "logs not found for $name"
-    exit $?
+    exit 1
   fi
 }
 
