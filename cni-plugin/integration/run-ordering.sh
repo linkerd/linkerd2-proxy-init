@@ -9,20 +9,7 @@ NODE_NAME=l5d-server-extra
 kubectl config use-context "k3d-$K3D_CLUSTER_NAME"
 
 printf '\n# Install calico and linkerd-cni...\n'
-# Install calico per instructions from https://k3d.io/v5.8.3/usage/advanced/calico/#1-create-the-cluster-without-flannel
-kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.0/manifests/tigera-operator.yaml
-kubectl --namespace tigera-operator rollout status --timeout=5m deploy/tigera-operator
-until kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.0/manifests/custom-resources.yaml; do
-  echo "retrying calico custom resources installation..."
-  sleep 5
-done
-for tigerastatus_name in apiserver calico goldmane ippools whisker; do
-  until kubectl wait --for=condition=available --timeout=120s tigerastatus "$tigerastatus_name"; do
-    echo "retrying tigerastatus/$tigerastatus_name availability check..."
-    sleep 5
-  done
-done
-
+manifests/calico/setup.sh
 kubectl apply -f manifests/calico/linkerd-cni.yaml
 
 printf '\n# Label node and then add node selectors to calico and linkerd-cni to run only on the current node...\n'
