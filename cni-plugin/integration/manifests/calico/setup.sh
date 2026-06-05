@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
 # setup.sh - Setup a calico cluster as per the instructions:
 # https://k3d.io/v5.8.3/usage/advanced/calico/#1-create-the-cluster-without-flannel
 #

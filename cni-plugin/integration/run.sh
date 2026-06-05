@@ -32,7 +32,7 @@ function create_test_lab() {
     then
       # executing the setup file will initialize local kubernetes for the test
       # run as per the scenario.
-      bash -c "set -euo pipefail; ${setup_file}"
+      "${setup_file}"
     fi
 }
 
