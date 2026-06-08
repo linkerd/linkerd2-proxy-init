@@ -13,7 +13,7 @@ printf '# calico/setup.sh\n'
 kube_ctx=$(kubectl config current-context 2>/dev/null)
 if [ -z "${kube_ctx}" ];
 then
-    printf "${BASH_SOURCE[0]} requires current context be set\n"
+    printf "%s requires current context be set\n" "${BASH_SOURCE[0]}"
     exit 1
 fi
 
