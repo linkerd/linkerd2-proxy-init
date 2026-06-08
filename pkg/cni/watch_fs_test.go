@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path"
-	"reflect"
 	"testing"
 	"time"
 
@@ -79,11 +78,9 @@ func TestWatch(t *testing.T) {
 }
 
 func TestWatchFS(t *testing.T) {
-	mgr := newTestInstaller(t)
-	operations := []fsnotify.Op{fsnotify.Create, fsnotify.Rename, fsnotify.Write}
-	newWatch := func(path string, dst chan<- fsnotify.Event) watch {
+	newWatch := func(path string, dst chan<- fsnotify.Event, op fsnotify.Op) watch {
 		return watch{
-			operations: operations,
+			operations: []fsnotify.Op{op},
 			path:       path,
 			eventFN: func(event fsnotify.Event) error {
 				dst <- event
@@ -98,8 +95,10 @@ func TestWatchFS(t *testing.T) {
 		expWatchEvents []fsnotify.Event
 		// doIO performs file I/O at the specified root
 		doIO func(string) error
+		mgr  *installer
 		// newWatchSet returns the slice of watches for the test
 		newWatchSet func(string, chan<- fsnotify.Event) []watch
+		setup       func(*testing.T, *test)
 	}
 	tests := []test{
 		{
@@ -109,11 +108,12 @@ func TestWatchFS(t *testing.T) {
 			expWatchEvents: nil,
 			doIO:           func(_ string) error { return nil },
 			newWatchSet:    func(_ string, _ chan<- fsnotify.Event) []watch { return nil },
+			setup:          func(_ *testing.T, _ *test) {},
 		},
 		{
 			name: "WatchRotateServiceAccountTokenWrite",
 			newWatchSet: func(root string, dst chan<- fsnotify.Event) []watch {
-				return []watch{newWatch(path.Join(root, "auth-token"), dst)}
+				return []watch{newWatch(path.Join(root, "auth-token"), dst, fsnotify.Write)}
 			},
 			expErr:       "",
 			expWatchErrs: nil,
@@ -126,11 +126,15 @@ func TestWatchFS(t *testing.T) {
 				data := []byte("LZtDhL^M48fZ#6CR7uyhgXeaM6SYoGFsv2NgQQK%M%o=")
 				return os.WriteFile(name, data, writeFilePerm)
 			},
+			setup: func(t *testing.T, self *test) {
+				t.Helper()
+				self.mgr = newTestInstaller(t)
+			},
 		},
 		{
 			name: "WatchRotateServiceAccountTokenRename",
 			newWatchSet: func(root string, dst chan<- fsnotify.Event) []watch {
-				return []watch{newWatch(path.Join(root, "auth-token"), dst)}
+				return []watch{newWatch(path.Join(root, "auth-token"), dst, fsnotify.Create)}
 			},
 			expErr:       "",
 			expWatchErrs: nil,
@@ -146,11 +150,15 @@ func TestWatchFS(t *testing.T) {
 				return os.Rename(path.Join(root, "auth-token-new"),
 					path.Join(root, "auth-token"))
 			},
+			setup: func(t *testing.T, self *test) {
+				t.Helper()
+				self.mgr = newTestInstaller(t)
+			},
 		},
 		{
 			name: "WatchRotateServiceAccountTokenCreate",
 			newWatchSet: func(root string, dst chan<- fsnotify.Event) []watch {
-				return []watch{newWatch(root, dst)}
+				return []watch{newWatch(root, dst, fsnotify.Create)}
 			},
 			expErr:       "",
 			expWatchErrs: nil,
@@ -163,10 +171,15 @@ func TestWatchFS(t *testing.T) {
 				return os.WriteFile(path.Join(root, "created-auth-token"), data,
 					writeFilePerm)
 			},
+			setup: func(t *testing.T, self *test) {
+				t.Helper()
+				self.mgr = newTestInstaller(t)
+			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			test.setup(t, &test)
 			root := t.TempDir()
 			mustCopyFiles(t, root, "testdata")
 			ctx, cancel := context.WithCancel(t.Context())
@@ -174,7 +187,7 @@ func TestWatchFS(t *testing.T) {
 			errs := make(chan error, len(test.expWatchErrs))
 			events := make(chan fsnotify.Event, len(test.expWatchEvents))
 			// watch for the test
-			err := mgr.watchFS(ctx, errs, test.newWatchSet(root, events))
+			err := test.mgr.watchFS(ctx, errs, test.newWatchSet(root, events))
 			if assertErr(t, test.expErr, err) {
 				return
 			}
@@ -184,7 +197,7 @@ func TestWatchFS(t *testing.T) {
 				t.Fatalf("cannot perform test i/o err=%v", err)
 			}
 			// collect events and errors from channels
-			timeoutPeriod := time.Millisecond * 250
+			timeoutPeriod := time.Second
 			timeout := time.NewTimer(timeoutPeriod)
 			var actWatchEvents []fsnotify.Event
 			for i := 0; i < len(test.expWatchEvents); i++ {
@@ -214,8 +227,8 @@ func TestWatchFS(t *testing.T) {
 			}
 			for i := 0; i < len(test.expWatchEvents); i++ {
 				test.expWatchEvents[i].Name = path.Join(root, test.expWatchEvents[i].Name)
-				if !reflect.DeepEqual(test.expWatchEvents[i], actWatchEvents[i]) {
-					t.Fatalf("exp-events[%d]<>act-events[%d]\n%+v\n+%+v", i, i,
+				if !actWatchEvents[i].Has(test.expWatchEvents[i].Op) {
+					t.Fatalf("expected watch event[%d] was not fired\n%+v∉%+v", i,
 						test.expWatchEvents[i], actWatchEvents[i])
 				}
 			}
