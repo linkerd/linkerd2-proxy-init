@@ -2,9 +2,9 @@ package cni
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
@@ -24,57 +24,61 @@ import (
 //
 // If an error occurs it is returned.
 func (i *installer) Run(ctx context.Context) error {
-	installed, err := i.installRegularFiles(hostCNIBin(), containerCNIBinDir.get())
+	installed, err := i.installRegularFiles(hostCNIBin(),
+		containerCNIBinDir.get())
 	if err != nil {
 		return err
 	}
-	log.WithFields(log.Fields{
-		"installed-files": installed,
-	}).Debug("cni installed binary files")
+	log.WithField("installed-files", installed).Debug("installed binary files")
 	err = i.reconfigureK8s(kubeConfigFilename(), i.serviceAccountTokenFilename)
 	if err != nil {
 		return err
 	}
-	log.WithFields(log.Fields{
-		"kube-config-filename": kubeConfigFilename(),
-	}).Debug("cni reconfigured kube-config")
+	log.WithField("kube-config-filename", kubeConfigFilename()).
+		Debug("reconfigured k8s")
 	entries, err := os.ReadDir(hostCNIConfig())
 	if err != nil {
 		return err
 	}
 	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), ".conflist") {
+		if isCNIFile(entry.Name()) {
 			configFilename := path.Join(hostCNIConfig(), entry.Name())
 			err = i.reconfigureCNI(configFilename)
 			if err != nil {
 				return err
 			}
-			log.WithFields(log.Fields{
-				"config-filename": configFilename,
-			}).Debug("cni reconfigured cni file")
+			log.WithField("config-filename", configFilename).
+				Debug("reconfigured cni")
 		}
 	}
 	if len(entries) < 1 {
-		log.Warn("cni reconfigured 0 cni config files")
+		log.Warn("reconfigured 0 cni config files")
 	}
 	watchOperations := []fsnotify.Op{
 		fsnotify.Create,
 		fsnotify.Rename,
 		fsnotify.Write,
 	}
-	saDir := path.Dir(i.serviceAccountTokenFilename)
 	watches := []watch{
 		{
 			eventFN: func(event fsnotify.Event) error {
-				return i.reconfigureK8s(
-					kubeConfigFilename(), path.Join(saDir, event.Name))
+				log.WithField("event", fmtEvent(event)).
+					Debug("fsnotify event fired -> reconfigure k8s")
+				return i.reconfigureK8s(kubeConfigFilename(), event.Name)
 			},
 			operations: watchOperations,
 			path:       i.serviceAccountTokenFilename,
 		},
 		{
 			eventFN: func(event fsnotify.Event) error {
-				return i.reconfigureCNI(path.Join(hostCNIConfig(), event.Name))
+				if isCNIFile(event.Name) {
+					log.WithField("event", fmtEvent(event)).
+						Debug("fsnotify event fired -> reconfigure cni")
+					return i.reconfigureCNI(event.Name)
+				}
+				log.WithField("event", fmtEvent(event)).
+					Debug("fsnotify event fired -> ignore non-cni-file")
+				return nil
 			},
 			operations: watchOperations,
 			path:       hostCNIConfig(),
@@ -96,4 +100,16 @@ func (i *installer) Run(ctx context.Context) error {
 	case <-ctx.Done():
 		return nil
 	}
+}
+
+// fmtEvent returns a log friendly string of the event
+func fmtEvent(e fsnotify.Event) string {
+	return fmt.Sprintf("name=%s op=%-13s", e.Name, e.Op.String())
+}
+
+// isCNIFile pulls the file extension from filename and returns true if it
+// matches file target types that can be re-written.
+func isCNIFile(filename string) bool {
+	ext := path.Ext(filename)
+	return ext == ".conflist" || ext == ".conf"
 }

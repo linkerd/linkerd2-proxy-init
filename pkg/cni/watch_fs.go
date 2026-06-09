@@ -2,6 +2,7 @@ package cni
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 
@@ -28,7 +29,7 @@ func (fsw watch) applies(op fsnotify.Op) bool {
 }
 
 func (fsw watch) String() string {
-	return fsw.path
+	return fmt.Sprintf("path=%s operations=%v", fsw.path, fsw.operations)
 }
 
 // fire is called by the event loop below and calls the event function on the

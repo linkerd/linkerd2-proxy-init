@@ -1,14 +1,12 @@
 package cni
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"os"
-	"strings"
 )
 
 const (
@@ -83,7 +81,6 @@ func hashEncode(data []byte) string {
 // fileSource pulls configuration from a local file.
 type fileSource struct {
 	filename string
-	reader   *bytes.Reader
 }
 
 // name implements source.
@@ -91,32 +88,21 @@ func (fs *fileSource) name() string {
 	return fmt.Sprintf("file:%s", fs.filename)
 }
 
-// Read implements io.Reader.
-func (fs *fileSource) Read(p []byte) (n int, err error) {
-	if fs.reader == nil {
-		data, err := os.ReadFile(fs.filename)
-		if err != nil {
-			return 0, err
-		}
-		fs.reader = bytes.NewReader(data)
-	}
-	return fs.reader.Read(p)
+// read implements source.
+func (fs *fileSource) read() ([]byte, error) {
+	return os.ReadFile(fs.filename)
 }
 
 // environmentSource pulls configuration from an environment variable.
 type environmentSource struct {
 	// key used to grab configuration from the environment.
 	key string
-	// reader implements io.Read needed for source.
-	reader *strings.Reader
 }
 
-// Read implements io.Reader.
-func (es *environmentSource) Read(p []byte) (n int, err error) {
-	if es.reader == nil {
-		es.reader = strings.NewReader(os.Getenv(es.key))
-	}
-	return es.reader.Read(p)
+// read implements source.
+func (es *environmentSource) read() ([]byte, error) {
+	val := os.Getenv(es.key)
+	return []byte(val), nil
 }
 
 // name implements source.

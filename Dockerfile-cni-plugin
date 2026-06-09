@@ -4,6 +4,7 @@
 FROM --platform=$BUILDPLATFORM golang:1.25.10-alpine as go
 WORKDIR /build
 COPY --link go.mod go.sum ./
+COPY --link ./cni-install ./cni-install
 COPY --link ./cni-plugin ./cni-plugin
 COPY --link ./proxy-init ./proxy-init
 COPY --link ./pkg ./pkg
@@ -11,6 +12,8 @@ RUN go mod download
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
     go build -o /go/bin/linkerd-cni -mod=readonly -ldflags "-s -w" -v ./cni-plugin/
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
+    go build -o /go/bin/linkerd2-cni-install -mod=readonly -ldflags "-s -w" -v ./cni-install/
 
 FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v49-rust-musl as cni-repair-controller
 WORKDIR /build
@@ -50,9 +53,10 @@ RUN apk add \
     jq
 
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
+COPY --from=go /go/bin/linkerd2-cni-install /usr/bin/
 COPY --from=cni-repair-controller /build/linkerd-cni-repair-controller /usr/lib/linkerd/
 COPY LICENSE .
 COPY cni-plugin/deployment/scripts/install-cni.sh .
 COPY cni-plugin/deployment/scripts/filter.jq .
 ENV PATH=/linkerd:/opt/cni/bin:$PATH
-CMD ["install-cni.sh"]
+CMD ["/linkerd/install-cni.sh"]

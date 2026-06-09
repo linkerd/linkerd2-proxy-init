@@ -22,6 +22,8 @@ func main() {
 	}()
 	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
 
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.Info("running installer")
 	err := cni.NewInstaller().Run(ctx)
 	if err != nil && !errors.Is(err, context.Canceled) {
 		logrus.WithFields(logrus.Fields{"err": err}).Fatal("cannot run cni installer")

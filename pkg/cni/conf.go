@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"text/template"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -50,7 +51,8 @@ var (
 
 // source implements io.Reader and is used to build a configuration document.
 type source interface {
-	io.Reader
+	// read the source and return data or nil and an error
+	read() ([]byte, error)
 	// name is used for observability.
 	name() string
 }
@@ -67,14 +69,18 @@ func (i *installer) configureCNI(sources []source) ([]byte, error) {
 	var data []byte
 	var err error
 	for _, source := range sources {
-		data, err = io.ReadAll(source)
+		data, err = source.read()
 		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"source": source.name(),
+				"err":    err,
+			}).Error("cannot read from source")
 			continue
 		}
 		for _, variable := range variables {
 			data = bytes.ReplaceAll(data, variable[0], variable[1])
 		}
-		if len(data) > 1 {
+		if len(data) > 0 {
 			return data, nil
 		}
 	}
@@ -179,11 +185,17 @@ func (i *installer) reconfigureCNI(configFilename string) error {
 	data, err := os.ReadFile(path.Clean(configFilename))
 	if err != nil {
 		if os.IsNotExist(err) {
+			logrus.WithField("filename", configFilename).
+				Warn("skipping file that does not exist")
 			return nil
 		}
 		return err
 	}
 	if i.fileHashSet[configFilename] == hashEncode(data) {
+		logrus.WithFields(logrus.Fields{
+			"filename": configFilename,
+			"hash":     i.fileHashSet[configFilename],
+		}).Debug("skipping unchanged file")
 		return nil
 	}
 	configuration, err := i.configureCNI(i.sources)
@@ -205,6 +217,10 @@ func (i *installer) reconfigureCNI(configFilename string) error {
 		return err
 	}
 	i.fileHashSet[configFilename] = hashEncode(merged)
+	logrus.WithFields(logrus.Fields{
+		"filename": configFilename,
+		"hash":     i.fileHashSet[configFilename],
+	}).Debug("reconfigured cni")
 	return nil
 }
 
