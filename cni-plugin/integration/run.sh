@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 
-set -euxo pipefail
+set -euo pipefail
 
 cd "${BASH_SOURCE[0]%/*}"
 
 SCENARIO=${CNI_TEST_SCENARIO:-flannel}
 IPTABLES_MODE=${IPTABLES_MODE:-legacy}
 
-# Run kubectl with the correct context.
+# TEST_CTX must be set in the environment prior to running this script
+kubectl config use-context "${TEST_CTX}"
+
+# Run kubectl
 function k() {
-  if [ -n "${TEST_CTX:-}" ]; then
-    kubectl --context="$TEST_CTX" "$@"
-  else
-    kubectl "$@"
-  fi
+   kubectl "$@"
 }
 
 function create_test_lab() {
@@ -28,6 +27,13 @@ function create_test_lab() {
     do
       envsubst < "$f" | k apply -f -
     done
+    setup_file="./manifests/${SCENARIO}/setup.sh"
+    if [ -x "${setup_file}" ];
+    then
+      # executing the setup file will initialize local kubernetes for the test
+      # run as per the scenario.
+      "${setup_file}"
+    fi
 }
 
 function cleanup() {
@@ -56,7 +62,7 @@ function wait_rollout() {
     echo "!! $name didn't rollout properly, printing logs";
     k describe "$name" -n "$ns"|| echo "$name not found"
     k logs "$name" -n "$ns" || echo "logs not found for $name"
-    exit $?
+    exit 1
   fi
 }
 
@@ -68,13 +74,6 @@ if k get ns/cni-plugin-test >/dev/null 2>&1 ; then
 fi
 
 create_test_lab
-
-# If installing Calico, need to wait for it to roll first, otherwise pods will
-# be blocked (e.g pods for linkerd-cni)
-if [ "$SCENARIO" == "calico" ]; then
-  wait_rollout "deploy/calico-kube-controllers" "kube-system" "2m"
-  wait_rollout "daemonset/calico-node" "kube-system" "2m"
-fi
 
 # Wait for linkerd-cni daemonset to complete
 wait_rollout "daemonset/linkerd-cni" "linkerd-cni" "30s"
