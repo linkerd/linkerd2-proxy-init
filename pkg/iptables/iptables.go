@@ -274,7 +274,7 @@ func (fc FirewallConfiguration) addRulesForIgnoredSubnets(chainName string, comm
 func makeMultiportDestinations(portsToIgnore []string) [][]string {
 	destinationSlices := make([][]string, 0)
 	destinationPortCount := 0
-	if portsToIgnore == nil || len(portsToIgnore) < 1 {
+	if len(portsToIgnore) < 1 {
 		return destinationSlices
 	}
 	destinations := make([]string, 0)
@@ -422,9 +422,9 @@ func (fc FirewallConfiguration) makeRedirectChainToPortBasedOnDestinationPort(ch
 		"--comment", formatComment(comment))
 }
 
-func (fc FirewallConfiguration) makeJumpFromChainToAnotherForAllProtocols(chainName string, targetChain string, comment string, delete bool) *exec.Cmd {
+func (fc FirewallConfiguration) makeJumpFromChainToAnotherForAllProtocols(chainName string, targetChain string, comment string, deleteChain bool) *exec.Cmd {
 	action := "-A"
-	if delete {
+	if deleteChain {
 		action = "-D"
 	}
 
