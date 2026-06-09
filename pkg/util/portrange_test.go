@@ -48,7 +48,10 @@ func TestParsePortRange(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			check, _ := ParsePortRange(tt.input)
-			reflect.DeepEqual(tt.expected, check)
+			if !reflect.DeepEqual(tt.expected, check) {
+				t.Fatalf("expected port range does not match check '%v'<>'%v'",
+					tt.expected, check)
+			}
 		})
 	}
 }
