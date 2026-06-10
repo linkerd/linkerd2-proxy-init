@@ -69,7 +69,7 @@ func TestRun(t *testing.T) {
 					&environmentSource{key: "TEST_CONFIGURE_FROM_ENV"},
 				}
 
-				self.expK8sConfig = mustReadUnmarshal(t, "testdata/kubeconfig-exp.yaml", yaml.Unmarshal)
+				self.expK8sConfig = mustReadUnmarshal(t, "testdata/kubeconfig-exp-env.yaml", yaml.Unmarshal)
 				self.expCNIConfig = mustReadUnmarshal(t, "testdata/10-calico-exp.conflist", json.Unmarshal)
 
 				t.Setenv(containerMountPrefix.key, root)

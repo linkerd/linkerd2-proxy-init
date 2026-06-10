@@ -167,7 +167,7 @@ func TestReconfigureK8s(t *testing.T) {
 			},
 		},
 		{
-			name:              "ReconfigureK8s",
+			name:              "ReconfigureK8sSiblingCAFile",
 			dstConfigFilename: "",
 			srcTokenFilename:  "testdata/auth-token",
 			expErr:            "",
@@ -176,12 +176,42 @@ func TestReconfigureK8s(t *testing.T) {
 				t.Helper()
 				root := t.TempDir()
 				self.dstConfigFilename = path.Join(root, "config.yml")
-				self.expConfig = mustReadUnmarshal(t, "testdata/kubeconfig-exp.yaml", yaml.Unmarshal)
+				self.expConfig = mustReadUnmarshal(t, "testdata/kubeconfig-exp-sibling.yaml", yaml.Unmarshal)
+				self.mgr = newTestInstaller(t)
+
+				t.Setenv(svcHost.key, "localhost")
+				t.Setenv(svcPort.key, "8080")
+			},
+		},
+		{
+			name:              "ReconfigureK8sEnvKubeCAFile",
+			dstConfigFilename: "",
+			srcTokenFilename:  "testdata/auth-token",
+			expErr:            "",
+			expConfig:         nil,
+			setup: func(t *testing.T, self *test) {
+				t.Helper()
+				root := t.TempDir()
+				self.dstConfigFilename = path.Join(root, "config.yml")
+				self.expConfig = mustReadUnmarshal(t, "testdata/kubeconfig-exp-env.yaml", yaml.Unmarshal)
 				self.mgr = newTestInstaller(t)
 
 				t.Setenv(kubeCAFile.key, "testdata/k8s/ca.crt")
 				t.Setenv(svcHost.key, "localhost")
 				t.Setenv(svcPort.key, "8080")
+			},
+		},
+		{
+			name:              "ReconfigureK8sEnvZeroAuthorityData",
+			dstConfigFilename: "",
+			srcTokenFilename:  "testdata/auth-token",
+			expErr:            "certificate authority data is zero-length",
+			expConfig:         nil,
+			setup: func(t *testing.T, self *test) {
+				t.Helper()
+				self.mgr = newTestInstaller(t)
+
+				t.Setenv(kubeCAFile.key, "testdata/k8s/ca-zero.crt")
 			},
 		},
 		{

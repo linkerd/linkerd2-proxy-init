@@ -35,7 +35,7 @@ contexts:
     user: linkerd-cni
 current-context: linkerd-cni-context`
 	// writeFilePerm are applied to all config files on write.
-	writeFilePerm     = 0600
+	writeFilePerm     = 0644
 	cniKeyName        = "name"
 	cniKeyPlugins     = "plugins"
 	cniKeyType        = "type"
@@ -125,18 +125,26 @@ func (i *installer) reconfigureK8s(dstConfigFilename string,
 		return fmt.Errorf("token-data is zero-length")
 	}
 	configData := &k8sConfigData{
-		AuthToken:                string(tokenData),
-		CertificateAuthorityData: base64C.EncodeToString([]byte(kubeCAFile.get())),
-		SkipTLSVerify:            skipTLSVerify.get() == "true",
-		ServiceHost:              svcHost.get(),
-		ServicePort:              svcPort.get(),
-		ServiceProtocol:          svcProtocol.get(),
+		AuthToken:       string(tokenData),
+		SkipTLSVerify:   skipTLSVerify.get() == "true",
+		ServiceHost:     svcHost.get(),
+		ServicePort:     svcPort.get(),
+		ServiceProtocol: svcProtocol.get(),
 	}
-	if configData.CertificateAuthorityData == "" {
-		data := path.Join(path.Dir(srcTokenFilename), "ca.crt")
-		configData.CertificateAuthorityData =
-			base64C.EncodeToString([]byte(data))
+	var certFilename string
+	if kubeCAFile.get() == "" {
+		certFilename = path.Join(path.Dir(srcTokenFilename), "ca.crt")
+	} else {
+		certFilename = kubeCAFile.get()
 	}
+	certData, err := os.ReadFile(path.Clean(certFilename))
+	if err != nil {
+		return err
+	}
+	if len(certData) < 1 {
+		return fmt.Errorf("certificate authority data is zero-length")
+	}
+	configData.CertificateAuthorityData = base64C.EncodeToString([]byte(certData))
 	if len(configData.ServiceHost) < 1 {
 		return fmt.Errorf("service-host is zero length")
 	}
