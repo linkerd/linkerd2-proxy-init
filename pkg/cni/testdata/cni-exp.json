@@ -3,7 +3,7 @@
   "type": "linkerd-cni",
   "log_level": "debug",
   "kubernetes": {
-      "kubeconfig": "/media/config/test-linkerd-cni-kubeconfig"
+      "kubeconfig": "/config/test-linkerd-cni-kubeconfig"
   },
   "linkerd": {
     "incoming-proxy-port": 4143,

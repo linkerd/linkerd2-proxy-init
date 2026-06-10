@@ -277,7 +277,7 @@ func TestReconfigureCNI(t *testing.T) {
 			name:           "ConfigureFromEnvironmentSingle",
 			configFilename: "",
 			expErr:         "",
-			expFileHash:    "359027232e5561a414ec1b639e6fb3ffb359fcdf5cb86bfafbbaefb9d809d40f",
+			expFileHash:    "bf997c592ad9e2fbfcd20b537bcc2f25f39cf4663480333c5845c7f3766ea1d0",
 			setup: func(t *testing.T, self *test) {
 				t.Helper()
 				self.configFilename = mustCopyFile(t, t.TempDir(), "testdata/10-calico.conf")
@@ -293,7 +293,7 @@ func TestReconfigureCNI(t *testing.T) {
 			name:           "ConfigureFromEnvironment",
 			configFilename: "",
 			expErr:         "",
-			expFileHash:    "3c8b1e29bbddb441472dd5262a8c9d7a7e2094b5dcf91cb11537770dbf311077",
+			expFileHash:    "e3861068c0aba86e574cf7c0ed20a5d972c2053e132b64ceb1a169ccb47f7f5b",
 			setup: func(t *testing.T, self *test) {
 				t.Helper()
 				self.configFilename = mustCopyFile(t, t.TempDir(), "testdata/10-calico.conflist")
@@ -309,7 +309,7 @@ func TestReconfigureCNI(t *testing.T) {
 			name:           "ConfigureFromFileSingle",
 			configFilename: "",
 			expErr:         "",
-			expFileHash:    "359027232e5561a414ec1b639e6fb3ffb359fcdf5cb86bfafbbaefb9d809d40f",
+			expFileHash:    "bf997c592ad9e2fbfcd20b537bcc2f25f39cf4663480333c5845c7f3766ea1d0",
 			setup: func(t *testing.T, self *test) {
 				t.Helper()
 				self.configFilename = mustCopyFile(t, t.TempDir(), "testdata/10-calico.conf")
@@ -323,7 +323,7 @@ func TestReconfigureCNI(t *testing.T) {
 			name:           "ConfigureFromFile",
 			configFilename: "",
 			expErr:         "",
-			expFileHash:    "3c8b1e29bbddb441472dd5262a8c9d7a7e2094b5dcf91cb11537770dbf311077",
+			expFileHash:    "e3861068c0aba86e574cf7c0ed20a5d972c2053e132b64ceb1a169ccb47f7f5b",
 			setup: func(t *testing.T, self *test) {
 				t.Helper()
 				self.configFilename = mustCopyFile(t, t.TempDir(), "testdata/10-calico.conflist")
@@ -337,7 +337,7 @@ func TestReconfigureCNI(t *testing.T) {
 			name:           "ConfigureFromEnvironmentAndFile",
 			configFilename: "",
 			expErr:         "",
-			expFileHash:    "3c8b1e29bbddb441472dd5262a8c9d7a7e2094b5dcf91cb11537770dbf311077",
+			expFileHash:    "e3861068c0aba86e574cf7c0ed20a5d972c2053e132b64ceb1a169ccb47f7f5b",
 			setup: func(t *testing.T, self *test) {
 				t.Helper()
 				self.configFilename = mustCopyFile(t, t.TempDir(), "testdata/10-calico.conflist")
@@ -356,7 +356,7 @@ func TestReconfigureCNI(t *testing.T) {
 			name:           "ConfigureFromFileAndEnvironment",
 			configFilename: "",
 			expErr:         "",
-			expFileHash:    "3c8b1e29bbddb441472dd5262a8c9d7a7e2094b5dcf91cb11537770dbf311077",
+			expFileHash:    "e3861068c0aba86e574cf7c0ed20a5d972c2053e132b64ceb1a169ccb47f7f5b",
 			setup: func(t *testing.T, self *test) {
 				t.Helper()
 				self.configFilename = mustCopyFile(t, t.TempDir(), "testdata/10-calico.conflist")

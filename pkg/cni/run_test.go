@@ -88,7 +88,7 @@ func TestRun(t *testing.T) {
 
 				// kubeconfig filename is based on the environment set in the
 				// block above
-				self.expCNIConfig["plugins"].([]any)[2].(map[string]any)["kubernetes"].(map[string]any)["kubeconfig"] = kubeConfigFilename()
+				self.expCNIConfig["plugins"].([]any)[2].(map[string]any)["kubernetes"].(map[string]any)["kubeconfig"] = pluginKubeConfigFilename()
 				self.expInstalledFiles = []string{"testdata/bin/cni-binary"}
 			},
 		},

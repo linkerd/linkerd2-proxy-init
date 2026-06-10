@@ -64,7 +64,7 @@ type source interface {
 // or an error.
 func (i *installer) configureCNI(sources []source) ([]byte, error) {
 	variables := [][2][]byte{
-		{[]byte("__KUBECONFIG_FILEPATH__"), []byte(kubeConfigFilename())},
+		{[]byte("__KUBECONFIG_FILEPATH__"), []byte(pluginKubeConfigFilename())},
 	}
 	var data []byte
 	var err error

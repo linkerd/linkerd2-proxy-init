@@ -39,6 +39,12 @@ func kubeConfigFilename() string {
 		kubeConfigFilenameVar.get())
 }
 
+// pluginK<ubeConfigFilename returns the kube config filename as seen from
+// the plugin's perspective (e.g. without the mount prefix).
+func pluginKubeConfigFilename() string {
+	return path.Join(cniConfigDir.get(), kubeConfigFilenameVar.get())
+}
+
 // envVar combines an environment variable name (key) and a default value.
 type envVar struct {
 	key        string
