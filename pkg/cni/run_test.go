@@ -31,14 +31,18 @@ import (
 //	cni config
 func TestRun(t *testing.T) {
 	type test struct {
-		name              string
-		expInstalledFiles []string
-		expK8sConfig      map[string]any
-		expCNIConfig      map[string]any
-		expErr            string
-		mgr               *installer
-		doIO              func(*testing.T, *test)
-		setup             func(*testing.T, *test)
+		name               string
+		expInstalledFiles  []string
+		expK8sConfig       map[string]any
+		expCNIConfig       map[string]any
+		expCNIConfigRevert map[string]any
+		expCNIConfigFile   string
+		expErr             string
+		expLog             []entry
+		expRemoveErr       string
+		mgr                *installer
+		doIO               func(*testing.T, *test)
+		setup              func(*testing.T, *test)
 	}
 	tests := []test{
 		{
@@ -47,6 +51,8 @@ func TestRun(t *testing.T) {
 			expCNIConfig:      nil,
 			expK8sConfig:      nil,
 			expErr:            "",
+			expLog:            nil,
+			expRemoveErr:      "",
 			doIO: func(t *testing.T, self *test) {
 				// write the auth token
 				info, err := os.Stat(self.mgr.serviceAccountTokenFilename)
@@ -71,6 +77,8 @@ func TestRun(t *testing.T) {
 
 				self.expK8sConfig = mustReadUnmarshal(t, "testdata/kubeconfig-exp-env.yaml", yaml.Unmarshal)
 				self.expCNIConfig = mustReadUnmarshal(t, "testdata/10-calico-exp.conflist", json.Unmarshal)
+				self.expCNIConfigRevert = mustReadUnmarshal(t, "testdata/etc/10-calico.conflist", json.Unmarshal)
+				self.expCNIConfigFile = path.Join(root, "etc", "10-calico.conflist")
 
 				t.Setenv(containerMountPrefix.key, root)
 				t.Setenv(cniBinDir.key, "bin")
@@ -90,6 +98,15 @@ func TestRun(t *testing.T) {
 				// block above
 				self.expCNIConfig["plugins"].([]any)[2].(map[string]any)["kubernetes"].(map[string]any)["kubeconfig"] = pluginKubeConfigFilename()
 				self.expInstalledFiles = []string{"testdata/bin/cni-binary"}
+				for _, file := range self.expInstalledFiles {
+					self.expLog = append(self.expLog, &installedFile{
+						name: path.Join(hostCNIBin(), path.Base(file)),
+					})
+				}
+				self.expLog = append(self.expLog,
+					&k8sFile{name: kubeConfigFilename()},
+					&cniFile{name: self.expCNIConfigFile},
+				)
 			},
 		},
 	}
@@ -117,6 +134,37 @@ func TestRun(t *testing.T) {
 
 			actCNIConfig := mustReadUnmarshal(t, path.Join(hostCNIConfig(), "10-calico.conflist"), json.Unmarshal)
 			assertDeepEqual(t, test.expCNIConfig, actCNIConfig)
+
+			// cancel the installer; run remove; check that the log matches
+			// expectations; check that the install files and the k8s config
+			// file are removed, and that the cni config file matches
+			// original spec
+			cancel()
+			err = test.mgr.Remove()
+			if assertErr(t, test.expRemoveErr, err) {
+				return
+			}
+			if len(test.expLog) != len(test.mgr.log) {
+				t.Fatalf("expected log size does not equal actual '%d'<>'%d'",
+					len(test.expLog), len(test.mgr.log))
+			}
+			for i := 0; i < len(test.expLog); i++ {
+				assertDeepEqual(t, test.expLog[i], test.mgr.log[i])
+			}
+			for _, expInstalledFile := range test.expInstalledFiles {
+				actInstalledFile := path.Join(hostCNIBin(), path.Base(expInstalledFile))
+				if _, err := os.Stat(actInstalledFile); !os.IsNotExist(err) {
+					t.Fatalf("expected installed file was not removed")
+				}
+			}
+			if _, err := os.Stat(kubeConfigFilename()); !os.IsNotExist(err) {
+				t.Fatalf("expected k8s config file was not removed")
+			}
+			if _, err := os.Stat(test.expCNIConfigFile); err != nil {
+				t.Fatalf("cannot stat cni config file after revert err=%v", err)
+			}
+			actCNIConfig = mustReadUnmarshal(t, test.expCNIConfigFile, json.Unmarshal)
+			assertDeepEqual(t, test.expCNIConfigRevert, actCNIConfig)
 		})
 	}
 }
