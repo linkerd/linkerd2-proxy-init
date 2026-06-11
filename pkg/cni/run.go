@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
@@ -62,12 +63,18 @@ func (i *installer) Run(ctx context.Context) error {
 	watches := []watch{
 		{
 			eventFN: func(event fsnotify.Event) error {
+				if strings.HasSuffix(event.Name, "..data") {
+					log.WithField("event", fmtEvent(event)).
+						Debug("fsnotify event fired -> reconfigure k8s")
+					return i.reconfigureK8s(kubeConfigFilename(),
+						i.serviceAccountTokenFilename)
+				}
 				log.WithField("event", fmtEvent(event)).
-					Debug("fsnotify event fired -> reconfigure k8s")
-				return i.reconfigureK8s(kubeConfigFilename(), event.Name)
+					Debug("fsnotify event fired -> ignore")
+				return nil
 			},
 			operations: watchOperations,
-			path:       i.serviceAccountTokenFilename,
+			path:       path.Dir(i.serviceAccountTokenFilename),
 		},
 		{
 			eventFN: func(event fsnotify.Event) error {

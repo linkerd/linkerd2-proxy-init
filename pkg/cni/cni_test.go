@@ -117,5 +117,6 @@ func newTestInstaller(t *testing.T) *installer {
 	t.Helper()
 	return &installer{
 		fileHashSet: map[string]string{},
+		logIdx:      map[string]struct{}{},
 	}
 }

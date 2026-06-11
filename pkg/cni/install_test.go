@@ -39,6 +39,7 @@ func TestInstall(t *testing.T) {
 			expErr:   "",
 			setup: func(t *testing.T, self *test) {
 				t.Helper()
+				self.mgr = newTestInstaller(t)
 				self.expFiles = make([]string, len(self.src))
 				copy(self.expFiles, self.src)
 				// write zero-byte file to ensure overwrite behavior

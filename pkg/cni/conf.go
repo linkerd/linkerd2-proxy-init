@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"text/template"
 
 	"github.com/sirupsen/logrus"
@@ -144,7 +145,7 @@ func (i *installer) reconfigureK8s(dstConfigFilename string,
 	if len(certData) < 1 {
 		return fmt.Errorf("certificate authority data is zero-length")
 	}
-	configData.CertificateAuthorityData = base64C.EncodeToString([]byte(certData))
+	configData.CertificateAuthorityData = base64C.EncodeToString(certData)
 	if len(configData.ServiceHost) < 1 {
 		return fmt.Errorf("service-host is zero length")
 	}
@@ -177,7 +178,12 @@ func (i *installer) reconfigureK8s(dstConfigFilename string,
 	if err = dstW.Close(); err != nil {
 		return err
 	}
-	return os.Rename(dstTmpFile, dstConfigFilename)
+	err = os.Rename(dstTmpFile, dstConfigFilename)
+	if err != nil {
+		return err
+	}
+	i.appendEntry(&k8sFile{dstConfigFilename})
+	return nil
 }
 
 // reconfigureCNI reads the config file and merges configuration sourced from
@@ -214,6 +220,13 @@ func (i *installer) reconfigureCNI(configFilename string) error {
 	if err != nil {
 		return err
 	}
+	// cni configuration w/ multiple plugins uses a different suffix
+	var previousConfigFilename string
+	if strings.HasSuffix(configFilename, ".conf") {
+		previousConfigFilename = configFilename
+		// 99-cni-foo.conf -> 99-cni-foo.conflist
+		configFilename = fmt.Sprintf("%slist", configFilename)
+	}
 	tmpFilename := path.Clean(path.Join(path.Dir(configFilename),
 		fmt.Sprintf("%s.install", path.Base(configFilename))))
 	err = os.WriteFile(tmpFilename, merged, writeFilePerm)
@@ -224,11 +237,15 @@ func (i *installer) reconfigureCNI(configFilename string) error {
 	if err != nil {
 		return err
 	}
+	i.appendEntry(&cniFile{configFilename})
 	i.fileHashSet[configFilename] = hashEncode(merged)
 	logrus.WithFields(logrus.Fields{
 		"filename": configFilename,
 		"hash":     i.fileHashSet[configFilename],
 	}).Debug("reconfigured cni")
+	if previousConfigFilename != "" {
+		return os.Remove(previousConfigFilename)
+	}
 	return nil
 }
 

@@ -35,6 +35,8 @@ var (
 //
 // If an error occurs it is returned.
 type Installer interface {
+	// Remove the cni install.
+	Remove() error
 	// Run the cni installer.
 	Run(context.Context) error
 }
@@ -43,6 +45,8 @@ type Installer interface {
 func NewInstaller() Installer {
 	return &installer{
 		fileHashSet:                 map[string]string{},
+		log:                         []entry{},
+		logIdx:                      map[string]struct{}{},
 		serviceAccountTokenFilename: serviceAccountTokenFilename,
 		sources: []source{
 			&environmentSource{
@@ -58,11 +62,25 @@ func NewInstaller() Installer {
 type installer struct {
 	// fileHashSet tracks the hex encoded hash of a file. Indexed by filename.
 	fileHashSet map[string]string
+	// log of entries performed by the installer in order for remove to revert
+	log []entry
+	// track log entries
+	logIdx map[string]struct{}
 	// serviceAccountTokenFilename is the filename in which the kubernetes
 	// service account token is set.
 	serviceAccountTokenFilename string
 	// sources used to configure the plugin.
 	sources []source
+}
+
+// appendEntry to the log.  If the entry filename is already indexed by the log
+// appendEntry is a noop.
+func (i *installer) appendEntry(e entry) {
+	if _, ok := i.logIdx[e.filename()]; ok {
+		return
+	}
+	i.log = append(i.log, e)
+	i.logIdx[e.filename()] = struct{}{}
 }
 
 // hashEncode uses sha256 to create a checksum of a file and returns the hex

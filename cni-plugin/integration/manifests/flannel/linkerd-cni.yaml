@@ -124,6 +124,7 @@ spec:
         kubernetes.io/os: linux
       hostNetwork: true
       serviceAccountName: linkerd-cni
+      automountServiceAccountToken: false
       containers:
       # This container installs the linkerd CNI binaries
       # and CNI network config file on each node. The install
@@ -166,6 +167,9 @@ spec:
           name: cni-net-dir
         - mountPath: /tmp
           name: linkerd-tmp-dir
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: service-account-token
+          readOnly: true
         securityContext:
           readOnlyRootFilesystem: true
           privileged:
@@ -178,3 +182,20 @@ spec:
           path: /var/lib/rancher/k3s/agent/etc/cni/net.d
       - name: linkerd-tmp-dir
         emptyDir: {}
+      - name: service-account-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: 600
+          - configMap:
+              name: kube-root-ca.crt
+              items:
+              - key: ca.crt
+                path: ca.crt
+          - downwardAPI:
+              items:
+              - path: namespace
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace

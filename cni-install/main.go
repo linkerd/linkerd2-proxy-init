@@ -20,12 +20,18 @@ func main() {
 		<-ch
 		cancel()
 	}()
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 
 	logrus.SetLevel(logrus.DebugLevel)
 	logrus.Info("running installer")
-	err := cni.NewInstaller().Run(ctx)
+	installer := cni.NewInstaller()
+	defer func() {
+		if err := installer.Remove(); err != nil {
+			logrus.WithError(err).Fatal("cannot uninstall cni")
+		}
+	}()
+	err := installer.Run(ctx)
 	if err != nil && !errors.Is(err, context.Canceled) {
-		logrus.WithFields(logrus.Fields{"err": err}).Fatal("cannot run cni installer")
+		logrus.WithError(err).Fatal("cannot run cni install")
 	}
 }

@@ -2,7 +2,10 @@ package cni
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -334,6 +337,20 @@ func TestReconfigureCNI(t *testing.T) {
 			},
 		},
 		{
+			name:           "ConfigureFromFileAgain",
+			configFilename: "",
+			expErr:         "",
+			expFileHash:    "e3861068c0aba86e574cf7c0ed20a5d972c2053e132b64ceb1a169ccb47f7f5b",
+			setup: func(t *testing.T, self *test) {
+				t.Helper()
+				self.configFilename = mustCopyFile(t, t.TempDir(), "testdata/10-calico-linkerd.conflist")
+				self.mgr = newTestInstaller(t)
+				self.mgr.sources = append(self.mgr.sources, &fileSource{
+					filename: "testdata/cni-src.json",
+				})
+			},
+		},
+		{
 			name:           "ConfigureFromEnvironmentAndFile",
 			configFilename: "",
 			expErr:         "",
@@ -380,7 +397,18 @@ func TestReconfigureCNI(t *testing.T) {
 			if assertErr(t, test.expErr, err) {
 				return
 			}
-			if test.expFileHash != test.mgr.fileHashSet[test.configFilename] {
+			// .conf files are deleted and re-written as .conflist files
+			key := test.configFilename
+			if strings.HasSuffix(test.configFilename, ".conf") {
+				key = fmt.Sprintf("%slist", test.configFilename)
+				if _, err := os.Stat(test.configFilename); err == nil {
+					t.Fatalf("did not delete .conf file as expected '%s'", test.configFilename)
+				} else if !os.IsNotExist(err) {
+					t.Fatalf("unexpected error stat-ing file '%s' %v",
+						test.configFilename, err)
+				}
+			}
+			if test.expFileHash != test.mgr.fileHashSet[key] {
 				t.Fatalf("configuration file hash is not set as expected '%s'<>'%s'",
 					test.expFileHash,
 					test.mgr.fileHashSet[test.configFilename])

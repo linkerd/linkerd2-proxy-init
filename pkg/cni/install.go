@@ -25,6 +25,7 @@ func (i *installer) install(dst string, src ...string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+		i.appendEntry(&installedFile{dstP})
 		dstFiles = append(dstFiles, dstP)
 	}
 	return dstFiles, nil
