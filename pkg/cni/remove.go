@@ -34,6 +34,8 @@ func (f cniFile) filename() string {
 	return f.name
 }
 
+// revert changes to a cni file.  The linkerd plugin is gracefully removed from
+// the set (e.g. if it does not exist -> revert is a noop).
 func (f cniFile) revert() error {
 	data, err := os.ReadFile(f.name)
 	if err != nil {
