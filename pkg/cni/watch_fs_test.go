@@ -134,16 +134,14 @@ func TestWatchFS(t *testing.T) {
 		{
 			name: "WatchRotateServiceAccountTokenRename",
 			newWatchSet: func(root string, dst chan<- fsnotify.Event) []watch {
-				return []watch{newWatch(path.Join(root, "auth-token"), dst, fsnotify.Create)}
+				return []watch{newWatch(path.Join(root, "auth-token"), dst, fsnotify.Remove)}
 			},
 			expErr:       "",
 			expWatchErrs: nil,
-			// expWatchEvents expects only create as the watch is applied to
+			// expWatchEvents expects only remove as the watch is applied to
 			// the inode vs the file name
-			//
-			// the renamed file's inode is removed and event doesn't fire.
 			expWatchEvents: []fsnotify.Event{
-				{Name: "auth-token", Op: fsnotify.Create},
+				{Name: "auth-token", Op: fsnotify.Remove},
 			},
 			doIO: func(root string) error {
 				// rename one file on top of the watched auth-token file
