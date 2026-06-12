@@ -268,12 +268,12 @@ func TestReconfigureCNI(t *testing.T) {
 			name:           "FileHashExists",
 			configFilename: "",
 			expErr:         "",
-			expFileHash:    "f3a5162f9a1d3c2695a7639d4ca6c862cbf76eae692fa872ad1675c22cc7ccbe",
+			expFileHash:    "341bcfc4025295e880f80537e4c53acb7017f612d02a594b8afd81d226ef606b",
 			setup: func(t *testing.T, self *test) {
 				t.Helper()
 				self.configFilename = mustCopyFile(t, t.TempDir(), "testdata/10-calico.conflist")
 				self.mgr = newTestInstaller(t)
-				self.mgr.fileHashSet[self.configFilename] = "f3a5162f9a1d3c2695a7639d4ca6c862cbf76eae692fa872ad1675c22cc7ccbe"
+				self.mgr.fileHashSet[self.configFilename] = "341bcfc4025295e880f80537e4c53acb7017f612d02a594b8afd81d226ef606b"
 			},
 		},
 		{

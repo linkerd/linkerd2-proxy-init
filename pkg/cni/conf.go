@@ -125,6 +125,7 @@ func (i *installer) reconfigureK8s(dstConfigFilename string,
 	if len(tokenData) < 1 {
 		return fmt.Errorf("token-data is zero-length")
 	}
+	tokenData = bytes.TrimSpace(tokenData)
 	configData := &k8sConfigData{
 		AuthToken:       string(tokenData),
 		SkipTLSVerify:   skipTLSVerify.get() == "true",
@@ -145,6 +146,7 @@ func (i *installer) reconfigureK8s(dstConfigFilename string,
 	if len(certData) < 1 {
 		return fmt.Errorf("certificate authority data is zero-length")
 	}
+	certData = bytes.TrimSpace(certData)
 	configData.CertificateAuthorityData = base64C.EncodeToString(certData)
 	if len(configData.ServiceHost) < 1 {
 		return fmt.Errorf("service-host is zero length")
