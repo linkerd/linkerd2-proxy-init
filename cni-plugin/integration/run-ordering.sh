@@ -9,17 +9,18 @@ NODE_NAME=l5d-server-extra
 kubectl config use-context "k3d-$K3D_CLUSTER_NAME"
 
 printf '\n# Install calico and linkerd-cni...\n'
-kubectl apply -f manifests/calico/calico-install.yaml
+manifests/calico/setup.sh
 kubectl apply -f manifests/calico/linkerd-cni.yaml
 
 printf '\n# Label node and then add node selectors to calico and linkerd-cni to run only on the current node...\n'
 kubectl label node "k3d-$K3D_CLUSTER_NAME-server-0" allow-calico=true
 kubectl label node "k3d-$K3D_CLUSTER_NAME-server-0" allow-linkerd-cni=true
-kubectl -n kube-system patch daemonsets calico-node --type=json \
-	-p='[{"op": "add", "path": "/spec/template/spec/nodeSelector", "value": {"allow-calico": "true"}}]'
+kubectl patch installation default  --type=json \
+  -p='[{"op":"add","path":"/spec/calicoNodeDaemonSet","value":{"spec":{"template":{"spec":{"nodeSelector":{"allow-calico":"true"}}}}}}]'
 kubectl -n linkerd-cni patch daemonsets linkerd-cni --type=json \
 	-p='[{"op": "add", "path": "/spec/template/spec/nodeSelector", "value": {"allow-linkerd-cni": "true"}}]'
-kubectl rollout status daemonset -n kube-system
+
+kubectl rollout status daemonset -n calico-system
 kubectl rollout status daemonset -n linkerd-cni
 
 printf '\n# Create new node...\n'
@@ -58,7 +59,7 @@ fi
 
 printf '\n# Trigger calico; k8s should now schedule the pod...\n'
 kubectl label node "k3d-$NODE_NAME-0" allow-calico=true
-kubectl rollout status daemonset -n kube-system
+kubectl rollout status daemonset -n calico-system
 sleep 10s
 status=$(kubectl get po nginx -ojson | jq -c .status.containerStatuses[0])
 if [[ "$status" == "null" ]]; then
