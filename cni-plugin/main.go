@@ -137,7 +137,11 @@ func configureLogging(logLevel, logFilePath string, maxSizeMB, maxAgeDays, maxCo
 
 	// Ensure directory exists
 	if dir := filepath.Dir(logFilePath); dir != "" && dir != "." {
-		_ = os.MkdirAll(dir, 0o755)
+		err := os.MkdirAll(dir, 0o755) // nolint:gosec
+		if err != nil && !os.IsExist(err) {
+			fmt.Fprintf(os.Stderr, "linkerd-cni: failed to create log dir: %s err=%v",
+				dir, err)
+		}
 	}
 
 	// Configure log rotation with lumberjack
