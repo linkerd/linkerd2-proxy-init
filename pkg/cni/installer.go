@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 const (
@@ -71,6 +73,12 @@ type installer struct {
 	serviceAccountTokenFilename string
 	// sources used to configure the plugin.
 	sources []source
+	// watcherErrors is created by watchFS; it is a copy of the error channel
+	// created by fsnotify.
+	watcherErrors chan error
+	// watcherEvents is created by watchFS; it is a copy of the event channel
+	// created by fsnotify.
+	watcherEvents chan fsnotify.Event
 }
 
 // appendEntry to the log.  If the entry filename is already indexed by the log

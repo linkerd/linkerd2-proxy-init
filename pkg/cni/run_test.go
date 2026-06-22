@@ -42,6 +42,7 @@ func TestRun(t *testing.T) {
 		expRemoveErr       string
 		mgr                *installer
 		doIO               func(*testing.T, *test)
+		root               string
 		setup              func(*testing.T, *test)
 	}
 	tests := []test{
@@ -54,33 +55,51 @@ func TestRun(t *testing.T) {
 			expLog:            nil,
 			expRemoveErr:      "",
 			doIO: func(t *testing.T, self *test) {
-				// write the auth token
-				info, err := os.Stat(self.mgr.serviceAccountTokenFilename)
-				if err != nil {
-					t.Fatalf("cannot stat token file=%s err=%v",
-						self.mgr.serviceAccountTokenFilename, err)
-				}
-				token := mustReadFile(t, "testdata/auth-token-new")
-				mustWriteFile(t, self.mgr.serviceAccountTokenFilename,
-					token, info.Mode())
+				// this mimics what kubernetes is doing with the auth token
+				// directories:
+				//	create a new directory
+				//	write the new token to it
+				//	remove the link ..data -> auth-root
+				//	create the link ..data -> new-auth-root
+				//
+				// this will fire a create event for the auth token file's root
+				newAuthRoot := path.Join(self.root, "..new-auth-root")
+				mustMkdir(t, newAuthRoot)
+				mustCopyFile(t, newAuthRoot, "testdata/auth-token-new")
+				mustRemove(t, path.Join(self.root, "..data"))
+				mustLink(t, newAuthRoot, path.Join(self.root, "..data"))
+				mustRemove(t, path.Join(self.root, "..auth-root"))
 			},
 			setup: func(t *testing.T, self *test) {
 				t.Helper()
-				root := t.TempDir()
-				mustCopyFiles(t, root, "testdata")
+				self.root = t.TempDir()
+				mustCopyFiles(t, self.root, "testdata")
 
 				self.mgr = newTestInstaller(t)
-				self.mgr.serviceAccountTokenFilename = path.Join(root, "auth-token")
+				self.mgr.serviceAccountTokenFilename = path.Join(self.root, "auth-token")
 				self.mgr.sources = []source{
 					&environmentSource{key: "TEST_CONFIGURE_FROM_ENV"},
 				}
+				// mimic the kubernetes file-system:
+				//	root/..auth-root/auth-token <- the auth token file
+				//	root/..data -> root/..auth-root
+				//	root/auth-token -> root/..data/auth-token
+				// when the token is update is is written to a new auth root
+				// directory, and ..data is updated to point at the new root
+				authRoot := path.Join(self.root, "..auth-root")
+				mustMkdir(t, authRoot)
+				mustCopyFile(t, authRoot, self.mgr.serviceAccountTokenFilename)
+				mustRemove(t, self.mgr.serviceAccountTokenFilename)
+				dataDir := path.Join(self.root, "..data")
+				mustLink(t, authRoot, dataDir)
+				mustLink(t, path.Join(dataDir, "auth-token"), self.mgr.serviceAccountTokenFilename)
 
 				self.expK8sConfig = mustReadUnmarshal(t, "testdata/kubeconfig-exp-env.yaml", yaml.Unmarshal)
 				self.expCNIConfig = mustReadUnmarshal(t, "testdata/10-calico-exp.conflist", json.Unmarshal)
 				self.expCNIConfigRevert = mustReadUnmarshal(t, "testdata/etc/10-calico.conflist", json.Unmarshal)
-				self.expCNIConfigFile = path.Join(root, "etc", "10-calico.conflist")
+				self.expCNIConfigFile = path.Join(self.root, "etc", "10-calico.conflist")
 
-				t.Setenv(containerMountPrefix.key, root)
+				t.Setenv(containerMountPrefix.key, self.root)
 				t.Setenv(cniBinDir.key, "bin")
 				t.Setenv(cniConfigDir.key, "etc")
 				// files in this directory are "installed" to the cni bin dir
@@ -113,7 +132,7 @@ func TestRun(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			test.setup(t, &test)
-			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*8)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*16)
 			defer cancel()
 
 			err := test.mgr.Run(ctx)

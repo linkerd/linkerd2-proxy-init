@@ -108,7 +108,10 @@ func TestWatchFS(t *testing.T) {
 			expWatchEvents: nil,
 			doIO:           func(_ string) error { return nil },
 			newWatchSet:    func(_ string, _ chan<- fsnotify.Event) []watch { return nil },
-			setup:          func(_ *testing.T, _ *test) {},
+			setup: func(t *testing.T, self *test) {
+				t.Helper()
+				self.mgr = newTestInstaller(t)
+			},
 		},
 		{
 			name: "WatchRotateServiceAccountTokenWrite",

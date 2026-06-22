@@ -47,6 +47,7 @@ func (i *installer) watchFS(ctx context.Context, errs chan<- error,
 	if err != nil {
 		return err
 	}
+	i.watcherErrors, i.watcherEvents = watcher.Errors, watcher.Events
 	// build an index of path -> watch such that events with a child path
 	// are processed
 	index := map[string]watch{}
@@ -63,9 +64,9 @@ func (i *installer) watchFS(ctx context.Context, errs chan<- error,
 					errs <- err
 				}
 				return
-			case err = <-watcher.Errors:
+			case err = <-i.watcherErrors:
 				errs <- err
-			case event = <-watcher.Events:
+			case event = <-i.watcherEvents:
 				// find the watch by the event name (filesystem path)
 				if watch, ok := index[event.Name]; ok && watch.applies(event.Op) {
 					if err = watch.fire(event); err != nil {

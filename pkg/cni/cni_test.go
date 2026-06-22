@@ -78,6 +78,36 @@ func mustCopyFile(t *testing.T, dst, src string) string {
 	return dstFile
 }
 
+// mustLink creates a symbolic link from newname -> oldname. If an error occurs
+// the test is failed.
+func mustLink(t *testing.T, oldname, newname string) {
+	t.Helper()
+	err := os.Symlink(oldname, newname)
+	if err != nil {
+		t.Fatalf("cannot link newname=%s -> oldname=%s err=%v", newname,
+			oldname, err)
+	}
+}
+
+// mustMkdir creates a directory with default permissions (for testing). If
+// an error occurs the test is failed.
+func mustMkdir(t *testing.T, name string) {
+	t.Helper()
+	err := os.Mkdir(name, 0o700)
+	if err != nil {
+		t.Fatalf("cannot mkdir name=%s err=%v", name, err)
+	}
+}
+
+// mustRemove removes a name. If an error occurs the test is failed.
+func mustRemove(t *testing.T, name string) {
+	t.Helper()
+	err := os.Remove(name)
+	if err != nil {
+		t.Fatalf("cannot remove name=%s err=%v", name, err)
+	}
+}
+
 // mustReadFile reads the file and fails the test if an error occurs. It returns
 // the entire file.
 func mustReadFile(t *testing.T, name string) []byte {
@@ -87,14 +117,6 @@ func mustReadFile(t *testing.T, name string) []byte {
 		t.Fatalf("cannot read file name=%s err=%v", name, err)
 	}
 	return data
-}
-
-func mustWriteFile(t *testing.T, name string, data []byte, perm os.FileMode) {
-	t.Helper()
-	err := os.WriteFile(name, data, perm)
-	if err != nil {
-		t.Fatalf("cannot write file name=%s err=%v", name, err)
-	}
 }
 
 // mustReadUnmarshal reads the file (name) and parses it using the unmarshal

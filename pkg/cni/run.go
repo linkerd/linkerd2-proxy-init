@@ -77,29 +77,19 @@ func (i *installer) Run(ctx context.Context) error {
 	log.WithFields(log.Fields{
 		"watches": watches,
 	}).Debug("watching filesystem changes")
-	err = i.reconfigureK8s(kubeConfigFilename(), i.serviceAccountTokenFilename)
-	if err != nil {
-		return err
-	}
-	log.WithField("kube-config-filename", kubeConfigFilename()).
-		Debug("reconfigured k8s")
+	// send an event to reconfigure the kube config file
+	i.watcherEvents <- fsnotify.Event{
+		Op:   fsnotify.Create,
+		Name: path.Join(path.Dir(i.serviceAccountTokenFilename), "..data")}
+	// send events to reconfigure cni config files
 	entries, err := os.ReadDir(hostCNIConfig())
 	if err != nil {
 		return err
 	}
 	for _, entry := range entries {
-		if isCNIFile(entry.Name()) {
-			configFilename := path.Join(hostCNIConfig(), entry.Name())
-			err = i.reconfigureCNI(configFilename)
-			if err != nil {
-				return err
-			}
-			log.WithField("config-filename", configFilename).
-				Debug("reconfigured cni")
-		}
-	}
-	if len(entries) < 1 {
-		log.Warn("reconfigured 0 cni config files")
+		i.watcherEvents <- fsnotify.Event{
+			Op:   fsnotify.Write,
+			Name: path.Join(hostCNIConfig(), entry.Name())}
 	}
 	select {
 	case err := <-errs:
