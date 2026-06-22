@@ -31,30 +31,6 @@ func (i *installer) Run(ctx context.Context) error {
 		return err
 	}
 	log.WithField("installed-files", installed).Debug("installed binary files")
-	err = i.reconfigureK8s(kubeConfigFilename(), i.serviceAccountTokenFilename)
-	if err != nil {
-		return err
-	}
-	log.WithField("kube-config-filename", kubeConfigFilename()).
-		Debug("reconfigured k8s")
-	entries, err := os.ReadDir(hostCNIConfig())
-	if err != nil {
-		return err
-	}
-	for _, entry := range entries {
-		if isCNIFile(entry.Name()) {
-			configFilename := path.Join(hostCNIConfig(), entry.Name())
-			err = i.reconfigureCNI(configFilename)
-			if err != nil {
-				return err
-			}
-			log.WithField("config-filename", configFilename).
-				Debug("reconfigured cni")
-		}
-	}
-	if len(entries) < 1 {
-		log.Warn("reconfigured 0 cni config files")
-	}
 	watchOperations := []fsnotify.Op{
 		fsnotify.Create,
 		fsnotify.Rename,
@@ -101,6 +77,30 @@ func (i *installer) Run(ctx context.Context) error {
 	log.WithFields(log.Fields{
 		"watches": watches,
 	}).Debug("watching filesystem changes")
+	err = i.reconfigureK8s(kubeConfigFilename(), i.serviceAccountTokenFilename)
+	if err != nil {
+		return err
+	}
+	log.WithField("kube-config-filename", kubeConfigFilename()).
+		Debug("reconfigured k8s")
+	entries, err := os.ReadDir(hostCNIConfig())
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if isCNIFile(entry.Name()) {
+			configFilename := path.Join(hostCNIConfig(), entry.Name())
+			err = i.reconfigureCNI(configFilename)
+			if err != nil {
+				return err
+			}
+			log.WithField("config-filename", configFilename).
+				Debug("reconfigured cni")
+		}
+	}
+	if len(entries) < 1 {
+		log.Warn("reconfigured 0 cni config files")
+	}
 	select {
 	case err := <-errs:
 		return err
