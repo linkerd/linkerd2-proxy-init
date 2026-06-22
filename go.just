@@ -14,6 +14,7 @@ go-fmt-check:
 go-lint *flags: \
     (go-lint-pkg "cni-install" flags) \
     (go-lint-pkg "cni-plugin" flags) \
+    (go-lint-pkg "internal" flags) \
     (go-lint-pkg "pkg" flags) \
     (go-lint-pkg "proxy-init" flags)
 
@@ -22,6 +23,7 @@ go-lint *flags: \
 # cni-plugin is not tested here as it only include integration tests
 go-test: \
     (go-test-pkg "cni-install") \
+    (go-test-pkg "internal") \
     (go-test-pkg "pkg") \
     (go-test-pkg "proxy-init")
 

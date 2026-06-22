@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/linkerd/linkerd2-proxy-init/pkg/cni"
+	"github.com/linkerd/linkerd2-proxy-init/internal/cni"
 	"github.com/sirupsen/logrus"
 )
 
