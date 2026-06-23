@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         cni: [flannel, calico, cilium]
-        iptables-mode: [legacy, nft]
+        iptables-mode: [legacy, nft, plain]
     timeout-minutes: 15
     runs-on: ubuntu-24.04
     steps:
