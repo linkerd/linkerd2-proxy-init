@@ -67,7 +67,7 @@ func (f cniFile) revert() error {
 	if linkerdAt >= 0 {
 		plugins = append(plugins[:linkerdAt], plugins[linkerdAt+1:]...)
 		val[cniKeyPlugins] = plugins
-		data, err = json.Marshal(val)
+		data, err = json.MarshalIndent(val, "", "  ")
 		if err != nil {
 			return err
 		}
