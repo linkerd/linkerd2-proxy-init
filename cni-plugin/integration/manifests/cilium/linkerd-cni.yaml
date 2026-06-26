@@ -163,6 +163,11 @@ spec:
           name: cni-net-dir
         - mountPath: /tmp
           name: linkerd-tmp-dir
+        # adding the service account mount path allows for setting the expiry
+        # time to a floor value of 10m (below as part of the volume definition)
+        #
+        # this allows for manual testing of the installer and observing the
+        # kubernetes config file re-write
         - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           name: service-account-token
           readOnly: true
