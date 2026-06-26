@@ -14,7 +14,7 @@ func TestNewInstaller(t *testing.T) {
 		if len(mgr.sources) != len(expSources) {
 			t.Fatalf("default sources list is incorrect %d<>%d", len(expSources), len(mgr.sources))
 		}
-		for i := 0; i < len(expSources); i++ {
+		for i := range expSources {
 			if mgr.sources[i].name() != expSources[i] {
 				t.Fatalf("default source is incorrect '%s'<>'%s'",
 					expSources[i], mgr.sources[i].name())
