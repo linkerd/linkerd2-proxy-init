@@ -140,7 +140,6 @@ func TestReconfigureK8s(t *testing.T) {
 				self.mgr = newTestInstaller(t)
 				t.Setenv(svcHost.key, "localhost")
 				t.Setenv(svcPort.key, "8080")
-				t.Setenv(svcProtocol.key, "https")
 			},
 		},
 		{
@@ -153,7 +152,6 @@ func TestReconfigureK8s(t *testing.T) {
 				t.Helper()
 				self.mgr = newTestInstaller(t)
 				t.Setenv(svcPort.key, "8080")
-				t.Setenv(svcProtocol.key, "https")
 			},
 		},
 		{
@@ -166,7 +164,6 @@ func TestReconfigureK8s(t *testing.T) {
 				t.Helper()
 				self.mgr = newTestInstaller(t)
 				t.Setenv(svcHost.key, "localhost")
-				t.Setenv(svcProtocol.key, "https")
 			},
 		},
 		{

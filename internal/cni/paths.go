@@ -13,10 +13,8 @@ var (
 	containerMountPrefix  = envVar{key: "CONTAINER_MOUNT_PREFIX", defaultVal: "/host"}
 	kubeCAFile            = envVar{key: "KUBE_CA_FILE", defaultVal: ""}
 	kubeConfigFilenameVar = envVar{key: "KUBECONFIG_FILE_NAME", defaultVal: "ZZZ-linkerd-cni-kubeconfig"}
-	skipTLSVerify         = envVar{key: "SKIP_TLS_VERIFY", defaultVal: "false"}
 	svcHost               = envVar{key: "KUBERNETES_SERVICE_HOST", defaultVal: ""}
 	svcPort               = envVar{key: "KUBERNETES_SERVICE_PORT", defaultVal: ""}
-	svcProtocol           = envVar{key: "KUBERNETES_SERVICE_PROTOCOL", defaultVal: "https"}
 )
 
 // hostCNIBin returns the host directory into which the linkerd cni plugin (binary)

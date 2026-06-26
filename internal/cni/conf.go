@@ -22,8 +22,7 @@ kind: Config
 clusters:
 - name: local
   cluster:
-    server: {{ .ServiceProtocol }}://{{ .ServiceHost }}:{{ .ServicePort }}
-{{- if .SkipTLSVerify }}    insecure-skip-tls-verify: true{{ end }}
+    server: https://{{ .ServiceHost }}:{{ .ServicePort }}
 {{ if .CertificateAuthorityData }}    certificate-authority-data: {{ .CertificateAuthorityData }}{{ end }}
 users:
 - name: linkerd-cni
@@ -97,14 +96,10 @@ type k8sConfigData struct {
 	// CertificateAuthorityData is a base64 encoding of certificate authority
 	// data.
 	CertificateAuthorityData string
-	// SkipTLSVerify sets tls config to be insecure.
-	SkipTLSVerify bool
 	// ServiceHost is part of the cluster server URL.
 	ServiceHost string
 	// ServicePort is part of the cluster server URL.
 	ServicePort string
-	// ServiceProtocol is part of the cluster server URL.
-	ServiceProtocol string
 }
 
 // reconfigureK8s populates k8sConfigData with values from the environment and
@@ -127,11 +122,9 @@ func (i *installer) reconfigureK8s(dstConfigFilename string,
 	}
 	tokenData = bytes.TrimSpace(tokenData)
 	configData := &k8sConfigData{
-		AuthToken:       string(tokenData),
-		SkipTLSVerify:   skipTLSVerify.get() == "true",
-		ServiceHost:     svcHost.get(),
-		ServicePort:     svcPort.get(),
-		ServiceProtocol: svcProtocol.get(),
+		AuthToken:   string(tokenData),
+		ServiceHost: svcHost.get(),
+		ServicePort: svcPort.get(),
 	}
 	var certFilename string
 	if kubeCAFile.get() == "" {
@@ -153,9 +146,6 @@ func (i *installer) reconfigureK8s(dstConfigFilename string,
 	}
 	if len(configData.ServicePort) < 1 {
 		return fmt.Errorf("service-port is zero length")
-	}
-	if len(configData.ServiceProtocol) < 1 {
-		return fmt.Errorf("service-protocol is zero length")
 	}
 	t, err := template.New("k8sConfigTemplate").Parse(k8sConfigTemplate)
 	if err != nil {
