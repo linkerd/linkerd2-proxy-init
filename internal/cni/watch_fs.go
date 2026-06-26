@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -20,12 +21,7 @@ type watch struct {
 // applies returns true if the operation is included in the set the watch is
 // looking for.
 func (fsw watch) applies(op fsnotify.Op) bool {
-	for _, wo := range fsw.operations {
-		if op.Has(wo) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(fsw.operations, op.Has)
 }
 
 func (fsw watch) String() string {
