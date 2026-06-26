@@ -38,6 +38,22 @@ func (i *installer) Run(ctx context.Context) error {
 	}
 	watches := []watch{
 		{
+			// this watch monitors the parent directory of the service account
+			// token file (/var/run/secrets/kubernetes.io/serviceaccount)
+			//
+			// it further filters on '..data' events specifically
+			//
+			// kubernetes will make atomic changes to the set of files (token,
+			// ca.crt and namespace) by:
+			//   * writing the files into a timestamped directory (..2026_06_26_17_28_56.1664091420)
+			//	 * symlinking a '..data_tmp' to the timestamped directory
+			//	 * renaming '..data_tmp' to '..data'
+			//	 * creating root directory symlinks to '..data/${file}'
+			// see https://github.com/kubernetes/kubernetes/blob/release-1.32/pkg/volume/util/atomic_writer.go#L86-L138
+			//
+			// by watching the parent for changes to '..data' no new watches
+			// need to be added when the underlying files are changed
+			// see https://github.com/fsnotify/fsnotify/blob/v1.10.1/fsnotify.go#L215
 			eventFN: func(event fsnotify.Event) error {
 				if strings.HasSuffix(event.Name, "..data") {
 					log.WithField("event", fmtEvent(event)).
