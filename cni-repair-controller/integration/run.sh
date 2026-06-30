@@ -59,7 +59,13 @@ linkerd check
 
 step 'Installing pause DaemonSet'
 kubectl apply -f pause-ds.yml
-kubectl wait --for=condition=ready --timeout=300s -l app=pause-app po
+until kubectl wait \
+  --for=condition=ready \
+  -l app=pause-app \
+  pod; do
+  echo "Waiting for pause pod to become available..."
+  sleep 5
+done
 
 step 'Adding a node'
 cluster=$(just-k3d --evaluate K3D_CLUSTER_NAME)
@@ -77,9 +83,11 @@ until kubectl wait \
 done
 
 step 'Checking new DS replica gets replaced'
-for _ in {1..5}; do
-  if kubectl wait --for=condition=ready --timeout=10s -l app=pause-app po; then
-    break
-  fi
+until kubectl wait \
+  --for=condition=ready \
+  --timeout=10s \
+  -l app=pause-app \
+  pod; do
+  echo "Waiting for DS replica to get replaced..."
+  sleep 5
 done
-kubectl wait --for=condition=ready --timeout=10s -l app=pause-app po;
