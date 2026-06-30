@@ -14,7 +14,7 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-24.04
-    container: ghcr.io/linkerd/dev:v49-go
+    container: ghcr.io/linkerd/dev:v50-go
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - run: git config --global --add safe.directory "$PWD" # actions/runner#2033
@@ -25,7 +25,7 @@ jobs:
 
   fmt:
     runs-on: ubuntu-24.04
-    container: ghcr.io/linkerd/dev:v49-go
+    container: ghcr.io/linkerd/dev:v50-go
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - run: git config --global --add safe.directory "$PWD" # actions/runner#2033
@@ -36,7 +36,7 @@ jobs:
 
   unit-test:
     runs-on: ubuntu-24.04
-    container: ghcr.io/linkerd/dev:v49-go
+    container: ghcr.io/linkerd/dev:v50-go
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - run: git config --global --add safe.directory "$PWD" # actions/runner#2033
