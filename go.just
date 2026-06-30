@@ -1,6 +1,7 @@
 
 # go-build all packages into target binaries
 go-build: \
+    (go-build-pkg "linkerd2-cni-install" "cni-install") \
     (go-build-pkg "linkerd2-cni-plugin" "cni-plugin") \
     (go-build-pkg "linkerd2-proxy-init" "proxy-init")
 
@@ -11,7 +12,9 @@ go-fmt-check:
 
 # go-lint all packages
 go-lint *flags: \
+    (go-lint-pkg "cni-install" flags) \
     (go-lint-pkg "cni-plugin" flags) \
+    (go-lint-pkg "internal" flags) \
     (go-lint-pkg "pkg" flags) \
     (go-lint-pkg "proxy-init" flags)
 
@@ -19,10 +22,12 @@ go-lint *flags: \
 #
 # cni-plugin is not tested here as it only include integration tests
 go-test: \
+    (go-test-pkg "cni-install") \
+    (go-test-pkg "internal") \
     (go-test-pkg "pkg") \
     (go-test-pkg "proxy-init")
 
-# go-build runs go build against a specific package outputting to a specific
+# go-build-pkg runs go build against a specific package outputting to a specific
 # target binary (no optional flags)
 go-build-pkg out pkg:
     go build -o target/{{ out }} ./{{ pkg }}

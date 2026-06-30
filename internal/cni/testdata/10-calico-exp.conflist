@@ -1,0 +1,63 @@
+{
+  "cniVersion": "0.3.1",
+  "name": "k8s-pod-network",
+  "plugins": [
+    {
+      "container_settings": {
+        "allow_ip_forwarding": false
+      },
+      "datastore_type": "kubernetes",
+      "endpoint_status_dir": "/var/run/calico/endpoint-status",
+      "ipam": {
+        "assign_ipv4": "true",
+        "assign_ipv6": "false",
+        "type": "calico-ipam"
+      },
+      "kubernetes": {
+        "k8s_api_root": "https://10.247.0.1:443",
+        "kubeconfig": "/etc/cni/net.d/calico-kubeconfig"
+      },
+      "log_file_max_age": 30,
+      "log_file_max_count": 10,
+      "log_file_max_size": 100,
+      "log_file_path": "/var/log/calico/cni/cni.log",
+      "log_level": "Info",
+      "mtu": 0,
+      "nodename_file_optional": false,
+      "policy": {
+        "type": "k8s"
+      },
+      "policy_setup_timeout_seconds": 0,
+      "type": "calico"
+    },
+    {
+      "capabilities": {
+        "portMappings": true
+      },
+      "snat": true,
+      "type": "portmap"
+    },
+    {
+      "name": "linkerd-cni",
+      "type": "linkerd-cni",
+      "log_level": "debug",
+      "kubernetes": {
+        "kubeconfig": "{{ .KubeConfigFilename }}"
+      },
+      "linkerd": {
+        "incoming-proxy-port": 4143,
+        "outgoing-proxy-port": 4140,
+        "proxy-uid": 2102,
+        "ports-to-redirect": [],
+        "inbound-ports-to-ignore": [
+          "4191",
+          "4190"
+        ],
+        "simulate": false,
+        "use-wait-flag": false,
+        "iptables-mode": "legacy",
+        "ipv6": false
+      }
+    }
+  ]
+}
