@@ -5,7 +5,7 @@
 ##
 
 # Cross compile from native platform to target arch
-FROM --platform=$BUILDPLATFORM golang:1.25.11-alpine as go
+FROM --platform=$BUILDPLATFORM golang:1.26.4-alpine as go
 WORKDIR /build
 COPY --link go.mod go.sum .
 COPY --link ./proxy-init ./proxy-init
@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
 ## Runtime
 ##
 
-FROM --platform=$TARGETPLATFORM alpine:3.24.0 as runtime
+FROM --platform=$TARGETPLATFORM alpine:3.24.1 as runtime
 RUN apk add iptables-legacy iptables libcap && \
     touch /run/xtables.lock && \
     chmod 0666 /run/xtables.lock
