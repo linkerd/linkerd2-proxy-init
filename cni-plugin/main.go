@@ -99,8 +99,9 @@ func main() {
 	)
 }
 
-func configureLoggingLevel(logLevel string) {
-	switch strings.ToLower(logLevel) {
+// configureLogging sets log level and configures outputs to stderr.
+func configureLogging(conf *PluginConf) {
+	switch strings.ToLower(conf.LogLevel) {
 	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
 	case "info":
@@ -108,6 +109,7 @@ func configureLoggingLevel(logLevel string) {
 	default:
 		logrus.SetLevel(logrus.WarnLevel)
 	}
+	logrus.SetOutput(os.Stderr)
 }
 
 // parseConfig parses the supplied configuration (and prevResult) from stdin.
@@ -147,7 +149,8 @@ func cmdAdd(args *skel.CmdArgs) error {
 		logrus.Errorf("error parsing config: %e", err)
 		return err
 	}
-	configureLoggingLevel(conf.LogLevel)
+	// Configure logging level and outputs with rotation
+	configureLogging(conf)
 
 	if conf.PrevResult != nil {
 		logrus.WithFields(logrus.Fields{
