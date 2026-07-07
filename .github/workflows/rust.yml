@@ -14,9 +14,9 @@ jobs:
   check:
     timeout-minutes: 5
     runs-on: ubuntu-24.04
-    container: ghcr.io/linkerd/dev:v49-rust
+    container: ghcr.io/linkerd/dev:v50-rust
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - run: just rs-fetch
       - run: just rs-fmt-check
       - run: just rs-clippy
