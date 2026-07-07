@@ -99,9 +99,7 @@ func main() {
 	)
 }
 
-// configureLogging sets log level and configures outputs to both stderr and a file with rotation.
-// If logFilePath is empty, a sensible default is used.
-// maxSizeMB, maxAgeDays, and maxCount configure the log rotation behavior.
+// configureLogging sets log level and configures outputs to stderr.
 func configureLogging(conf *PluginConf) {
 	switch strings.ToLower(conf.LogLevel) {
 	case "debug":
