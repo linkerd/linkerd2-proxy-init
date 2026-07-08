@@ -46,11 +46,6 @@ RUN --mount=type=cache,target=target \
 
 FROM --platform=$TARGETPLATFORM alpine:3.24.1 as runtime
 WORKDIR /linkerd
-RUN apk add \
-    # For pgrep
-    procps \
-    bash
-
 COPY --from=go /go/bin/linkerd-cni /opt/cni/bin/
 COPY --from=go /go/bin/linkerd2-cni-install /usr/bin/
 COPY --from=cni-repair-controller /build/linkerd-cni-repair-controller /usr/lib/linkerd/
