@@ -18,7 +18,7 @@ runs:
         set -eu
         shopt -s extglob
         ref="${{ github.ref }}"
-        if [[ "$ref" == refs/tags/${{ inputs.package }}/v+([0-9]).+([0-9]).+([0-9])?(-+([a-z0-9-])) ]]; then
+        if [[ "$ref" == refs/tags/${{ inputs.package }}/v+([0-9]).+([0-9]).+([0-9])?(-+([a-z0-9-.])) ]]; then
           ( echo version="${ref##refs/tags/${{ inputs.package }}/}"
             echo mode=release
           ) >> "$GITHUB_OUTPUT"
