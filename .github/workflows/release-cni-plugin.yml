@@ -82,6 +82,6 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - if: needs.meta.outputs.mode == 'release'
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228
         with:
           name: cni-plugin ${{ needs.meta.outputs.version }}
