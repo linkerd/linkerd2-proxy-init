@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     container: ghcr.io/linkerd/dev:v50-rust
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: ./.github/actions/version-mode
         id: meta
         with:
@@ -43,7 +43,7 @@ jobs:
       - name: Install MinGW
         if: matrix.os == 'windows'
         run: apt-get update && apt-get install mingw-w64 -y
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - run: just validator arch=${{ matrix.arch }} os=${{ matrix.os }} profile=release version=${{ needs.meta.outputs.version }} package
         env:
           CARGO: "cargo auditable"
@@ -63,7 +63,7 @@ jobs:
         with:
           path: ${{ runner.temp }}/artifacts
       - run: find "$RUNNER_TEMP"/artifacts -type f -ls
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - if: needs.meta.outputs.mode == 'release'
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228
         with:
