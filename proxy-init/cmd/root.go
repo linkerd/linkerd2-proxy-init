@@ -195,9 +195,14 @@ func BuildFirewallConfiguration(options *RootOptions) (*iptables.FirewallConfigu
 	sanitizedSubnets := []string{}
 	for _, subnet := range options.SubnetsToIgnore {
 		subnet := strings.TrimSpace(subnet)
-		_, _, err := net.ParseCIDR(subnet)
+		_, cidr, err := net.ParseCIDR(subnet)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid CIDR address", subnet)
+		}
+
+		isIPv6Subnet := cidr.IP.To4() == nil
+		if isIPv6Subnet != options.IPv6 {
+			continue
 		}
 
 		sanitizedSubnets = append(sanitizedSubnets, subnet)
