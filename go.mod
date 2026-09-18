@@ -3,7 +3,7 @@ module github.com/linkerd/linkerd2-proxy-init
 go 1.26.0
 
 require (
-	github.com/containernetworking/cni v1.3.0
+	github.com/containernetworking/cni v1.3.1
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sirupsen/logrus v1.10.2
