@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on \
     go build -o /go/bin/linkerd2-cni-install -mod=readonly -ldflags "-s -w" -v ./cni-install/
 
 
-FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v50-rust-musl as cni-repair-controller
+FROM --platform=$BUILDPLATFORM ghcr.io/linkerd/dev:v51-rust-musl as cni-repair-controller
 WORKDIR /build
 COPY --link justfile justfile-rust go.just .
 COPY --link Cargo.toml Cargo.lock .
