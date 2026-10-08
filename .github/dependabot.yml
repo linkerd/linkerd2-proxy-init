@@ -4,7 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
       # client-go, api and apimachinery are released in lockstep and must
       # move together
@@ -24,7 +24,7 @@ updates:
       - "cni-repair-controller"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     allow:
       - dependency-type: "direct"
     groups:
