@@ -4,11 +4,60 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    open-pull-requests-limit: 10
+    groups:
+      # client-go, api and apimachinery are released in lockstep and must
+      # move together
+      kubernetes:
+        patterns:
+          - "k8s.io/*"
+          - "sigs.k8s.io/*"
+      tls:
+        patterns:
+          - "golang.org/x/crypto"
+          - "golang.org/x/net"
 
-  - package-ecosystem: cargo
+  - package-ecosystem: "cargo"
     directory: "/"
     schedule:
-      interval: daily
+      interval: "daily"
+    open-pull-requests-limit: 10
+    allow:
+      - dependency-type: "direct"
+    groups:
+      # kube, kubert and k8s-openapi must move together or the build breaks
+      kube:
+        patterns:
+          - "kube"
+          - "kube-*"
+          - "kubert"
+          - "k8s-openapi"
+      # Listed before tokio so tokio-rustls lands here: a dependency
+      # joins the first group whose patterns it matches
+      tls:
+        patterns:
+          - "rustls"
+          - "rustls-*"
+          - "*-rustls"
+          - "webpki-roots"
+          - "ring"
+          - "aws-lc-rs"
+          - "openssl"
+          - "openssl-*"
+          - "native-tls"
+          - "*-native-tls"
+      tokio:
+        patterns:
+          - "tokio"
+          - "tokio-*"
+      cargo-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    labels:
+      - "dependencies"
+      - "rust"
+
 
   - package-ecosystem: "github-actions"
     directories:
@@ -18,11 +67,13 @@ updates:
       interval: "daily"
 
   - package-ecosystem: "docker"
-    directory: "/"
+    directories:
+      - "/"
+      - "/cni-plugin/integration"
+      - "/proxy-init/integration/iptables"
     schedule:
       interval: "daily"
-
-  - package-ecosystem: "docker"
-    directory: "/proxy-init/integration/iptables"
-    schedule:
-      interval: "daily"
+    groups:
+      docker:
+        patterns:
+          - "*"
