@@ -18,7 +18,10 @@ updates:
           - "golang.org/x/net"
 
   - package-ecosystem: "cargo"
-    directory: "/"
+    directories:
+      - "/"
+      - "validator"
+      - "cni-repair-controller"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
