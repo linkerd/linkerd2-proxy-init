@@ -14,19 +14,21 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 		expectedProxyUserID := 33
 		expectedProxyGroupID := 33
 		expectedConfig := &iptables.FirewallConfiguration{
-			Mode:                   iptables.RedirectAllMode,
-			PortsToRedirectInbound: make([]int, 0),
-			InboundPortsToIgnore:   make([]string, 0),
-			OutboundPortsToIgnore:  make([]string, 0),
-			SubnetsToIgnore:        make([]string, 0),
-			ProxyInboundPort:       expectedIncomingProxyPort,
-			ProxyOutgoingPort:      expectedOutgoingProxyPort,
-			ProxyUID:               expectedProxyUserID,
-			ProxyGID:               expectedProxyGroupID,
-			SimulateOnly:           false,
-			UseWaitFlag:            false,
-			BinPath:                "iptables-legacy",
-			SaveBinPath:            "iptables-legacy-save",
+			Mode:                    iptables.RedirectAllMode,
+			PortsToRedirectInbound:  make([]int, 0),
+			InboundPortsToIgnore:    make([]string, 0),
+			OutboundPortsToIgnore:   make([]string, 0),
+			SubnetsToIgnore:         make([]string, 0),
+			InboundSubnetsToIgnore:  make([]string, 0),
+			OutboundSubnetsToIgnore: make([]string, 0),
+			ProxyInboundPort:        expectedIncomingProxyPort,
+			ProxyOutgoingPort:       expectedOutgoingProxyPort,
+			ProxyUID:                expectedProxyUserID,
+			ProxyGID:                expectedProxyGroupID,
+			SimulateOnly:            false,
+			UseWaitFlag:             false,
+			BinPath:                 "iptables-legacy",
+			SaveBinPath:             "iptables-legacy-save",
 		}
 
 		options := newRootOptions()
