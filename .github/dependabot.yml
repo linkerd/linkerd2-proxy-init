@@ -56,10 +56,10 @@ updates:
   - package-ecosystem: "github-actions"
     directories:
     - "/"
-    - ".github/actions/version-mode"
+    - ".github/actions/*"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 10
 
   - package-ecosystem: "docker"
     directories:
