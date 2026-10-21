@@ -192,17 +192,23 @@ _cni-plugin-setup-cilium:
     docker exec k3d-l5d-cilium-test-server-0 mount --make-shared /run/cilium/cgroupv2/
     echo "Mounted /sys/fs/bpf to cilium-test-server cluster"
     helm repo add cilium https://helm.cilium.io/
-    helm install cilium cilium/cilium --version 1.13.0 \
+    helm install cilium cilium/cilium --version 1.20.3 \
         --kube-context k3d-l5d-cilium-test \
         --namespace kube-system \
-        --set kubeProxyReplacement=partial \
-        --set hostServices.enabled=false \
-        --set externalIPs.enabled=true \
-        --set nodePort.enabled=true \
-        --set hostPort.enabled=true \
+        --set kubeProxyReplacement=false \
+        --set cni.exclusive=false \
         --set bpf.masquerade=false \
         --set image.pullPolicy=IfNotPresent \
         --set ipam.mode=kubernetes
+    # Wait for cilium to be ready so that a broken install fails here, with
+    # logs, rather than as an opaque network-validator timeout later on.
+    for r in ds/cilium deploy/cilium-operator; do
+        if ! kubectl --context k3d-l5d-cilium-test -n kube-system rollout status "$r" --timeout=5m; then
+            kubectl --context k3d-l5d-cilium-test -n kube-system describe "$r" || true
+            kubectl --context k3d-l5d-cilium-test -n kube-system logs "$r" --all-containers --tail=200 || true
+            exit 1
+        fi
+    done
     echo "cilium has been installed"
 
 # Run cni-plugin integration tests using flannel, in a dedicated k3d
