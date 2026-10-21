@@ -214,7 +214,7 @@ cni-plugin-test-integration-flannel:
 
 # TODO(stevej): add a k3d-create-debug
 export K3D_CLUSTER_NAME := env_var_or_default("K3D_CLUSTER_NAME", "l5d")
-export K3S_DISABLE := "local-storage,traefik,servicelb,metrics-server@server:*"
+export K3S_DISABLE := "gateway-api-crd,local-storage,traefik,servicelb,metrics-server@server:*"
 export K3D_CREATE_FLAGS := '--no-lb --k3s-arg "--debug@server:*"'
 
 # Scenario to use for integration tests
