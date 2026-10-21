@@ -199,7 +199,8 @@ _cni-plugin-setup-cilium:
         --set cni.exclusive=false \
         --set bpf.masquerade=false \
         --set image.pullPolicy=IfNotPresent \
-        --set ipam.mode=kubernetes
+        --set ipam.mode=kubernetes \
+        --set operator.replicas=1
     # Wait for cilium to be ready so that a broken install fails here, with
     # logs, rather than as an opaque network-validator timeout later on.
     for r in ds/cilium deploy/cilium-operator; do
