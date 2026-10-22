@@ -21,10 +21,11 @@ cni_image_version=${BASH_REMATCH[2]}
 cd "${BASH_SOURCE[0]%/*}"
 
 step 'Installing Calico'
+calico_ver=v3.33.0
 # Install calico per instructions from https://k3d.io/v5.8.3/usage/advanced/calico/#1-create-the-cluster-without-flannel
-kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.0/manifests/tigera-operator.yaml
+kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${calico_ver}/manifests/tigera-operator.yaml"
 kubectl --namespace tigera-operator rollout status --timeout=5m deploy/tigera-operator
-until kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.0/manifests/custom-resources.yaml; do
+until kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${calico_ver}/manifests/custom-resources.yaml"; do
   echo "retrying calico custom resources installation..."
   sleep 5
 done
