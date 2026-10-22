@@ -60,13 +60,9 @@ fi
 printf '\n# Trigger calico; k8s should now schedule the pod...\n'
 kubectl label node "k3d-$NODE_NAME-0" allow-calico=true
 kubectl rollout status daemonset -n calico-system
-sleep 10s
-status=$(kubectl get po nginx -ojson | jq -c .status.containerStatuses[0])
-if [[ "$status" == "null" ]]; then
-		echo "Pod not scheduled unexpectedly"
-    exit1
-elif [[ $(echo "$status" | jq .state.running) == "null" ]]; then
-		echo "Unexpected pod container status: $status"
-		exit 1
+if ! kubectl wait pod/nginx --for=condition=Ready --timeout=2m; then
+    echo "Pod did not become ready after calico was scheduled on the node"
+    kubectl describe pod nginx
+    exit 1
 fi
 echo 'Pod scheduled as expected.'
