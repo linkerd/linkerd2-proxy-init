@@ -21,6 +21,6 @@ func TestMain(m *testing.M) {
 
 func TestLinkerdIsLastCNIPlugin(t *testing.T) {
 	if err := runner.CheckCNIPluginIsLast(); err != nil {
-		t.Fatalf("Unexpected error: %e", err)
+		t.Fatalf("Unexpected error: %s", err)
 	}
 }
