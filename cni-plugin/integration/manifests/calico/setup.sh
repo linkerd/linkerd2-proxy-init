@@ -17,10 +17,11 @@ then
     exit 1
 fi
 
-kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.0/manifests/tigera-operator.yaml
+calico_ver=v3.33.0
+kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${calico_ver}/manifests/tigera-operator.yaml"
 kubectl --namespace tigera-operator rollout status --timeout=5m deploy/tigera-operator
 
-until kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.31.0/manifests/custom-resources.yaml 1>/dev/null 2>&1; do
+until kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${calico_ver}/manifests/custom-resources.yaml" 1>/dev/null 2>&1; do
     echo "retrying calico custom resources installation..."
     sleep 2
 done
