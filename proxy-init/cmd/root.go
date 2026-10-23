@@ -3,7 +3,8 @@ package cmd
 import (
 	"fmt"
 	"net"
-	"os/exec"
+	"os"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -14,6 +15,10 @@ import (
 )
 
 const (
+	// closeWaitTimeoutPath is the procfs entry behind the
+	// net.netfilter.nf_conntrack_tcp_timeout_close_wait sysctl.
+	closeWaitTimeoutPath = "/proc/sys/net/netfilter/nf_conntrack_tcp_timeout_close_wait"
+
 	// IPTablesModeLegacy signals the usage of the iptables-legacy commands
 	IPTablesModeLegacy = "legacy"
 	// IPTablesModeNFT signals the usage of the iptables-nft commands
@@ -93,15 +98,12 @@ func NewRootCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, _ []string) error {
 
 			if options.TimeoutCloseWaitSecs != 0 {
-				sysctl := exec.Command("sysctl", "-w",
-					fmt.Sprintf("net.netfilter.nf_conntrack_tcp_timeout_close_wait=%d", options.TimeoutCloseWaitSecs),
-				)
-				out, err := sysctl.CombinedOutput()
+				err := setTimeoutCloseWait(closeWaitTimeoutPath, options.TimeoutCloseWaitSecs)
 				if err != nil {
-					log.Error(string(out))
+					log.Error(err)
 					return err
 				}
-				log.Info(string(out))
+				log.Infof("net.netfilter.nf_conntrack_tcp_timeout_close_wait = %d", options.TimeoutCloseWaitSecs)
 			}
 
 			log.SetFormatter(getFormatter(options.LogFormat))
@@ -263,5 +265,15 @@ func setLogLevel(logLevel string) error {
 		return err
 	}
 	log.SetLevel(level)
+	return nil
+}
+
+// setTimeoutCloseWait writes secs to the conntrack close-wait timeout at path.
+// Writing procfs directly avoids depending on a sysctl binary in the image;
+// path is a parameter so tests can target a regular file.
+func setTimeoutCloseWait(path string, secs int) error {
+	if err := os.WriteFile(path, []byte(strconv.Itoa(secs)), 0o644); err != nil {
+		return fmt.Errorf("failed to set nf_conntrack_tcp_timeout_close_wait: %w", err)
+	}
 	return nil
 }
