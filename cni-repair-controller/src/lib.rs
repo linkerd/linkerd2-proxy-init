@@ -275,11 +275,11 @@ impl Metrics {
 #[cfg(test)]
 mod test {
     use super::*;
-    use chrono::Utc;
     use k8s_openapi::api::core::v1::{
         ContainerState, ContainerStateTerminated, ContainerStatus, PodStatus,
     };
     use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, Time};
+    use k8s_openapi::jiff::Timestamp;
     use tokio::{
         sync::mpsc::error::TryRecvError,
         time::{self, Duration},
@@ -330,7 +330,7 @@ mod test {
             metadata: ObjectMeta {
                 name: Some("pod2".to_string()),
                 namespace: Some("default".to_string()),
-                deletion_timestamp: Some(Time(Utc::now())),
+                deletion_timestamp: Some(Time(Timestamp::now())),
                 ..Default::default()
             },
             ..pod2.clone()

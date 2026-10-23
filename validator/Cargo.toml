@@ -9,7 +9,7 @@ publish = false
 [dependencies]
 anyhow = "1"
 bytes = "1"
-kubert = { version = "0.25", default-features = false, features = ["log"] }
+kubert = { workspace = true, features = ["log"] }
 rand = "0.9"
 tracing = "0.1"
 
