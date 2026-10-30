@@ -16,6 +16,7 @@ on:
 jobs:
   cni-test:
     strategy:
+      fail-fast: false
       matrix:
         cni: [flannel, calico, cilium]
         iptables-mode: [legacy, nft, plain]
