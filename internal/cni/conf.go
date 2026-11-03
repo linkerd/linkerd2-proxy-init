@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path"
 	"strings"
@@ -22,7 +23,7 @@ kind: Config
 clusters:
 - name: local
   cluster:
-    server: https://{{ .ServiceHost }}:{{ .ServicePort }}
+    server: https://{{ .ServiceAddr }}
 {{ if .CertificateAuthorityData }}    certificate-authority-data: {{ .CertificateAuthorityData }}{{ end }}
 users:
 - name: linkerd-cni
@@ -100,6 +101,12 @@ type k8sConfigData struct {
 	ServiceHost string
 	// ServicePort is part of the cluster server URL.
 	ServicePort string
+}
+
+// ServiceAddr joins ServiceHost and ServicePort into the host:port part of the
+// cluster server URL. IPv6 hosts are enclosed in square brackets.
+func (d *k8sConfigData) ServiceAddr() string {
+	return net.JoinHostPort(d.ServiceHost, d.ServicePort)
 }
 
 // reconfigureK8s populates k8sConfigData with values from the environment and
