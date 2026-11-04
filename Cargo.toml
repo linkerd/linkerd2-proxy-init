@@ -1,5 +1,11 @@
 [workspace]
 members = ["cni-repair-controller", "validator"]
 
+[workspace.dependencies.kubert]
+version = "0.27"
+default-features = false
+git = "https://github.com/linkerd/linkerd-kubert.git"
+tag = "kubert/v0.27.0"
+
 [profile.release]
 lto = true
