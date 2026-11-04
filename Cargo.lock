@@ -410,7 +410,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -985,7 +985,7 @@ dependencies = [
  "kubert-prometheus-process",
  "kubert-prometheus-tokio",
  "pin-project-lite",
- "prometheus-client",
+ "prometheus-client 0.24.1",
  "rustls-pki-types",
  "serde",
  "thiserror 2.0.17",
@@ -1004,7 +1004,7 @@ source = "git+https://github.com/linkerd/linkerd-kubert.git?tag=kubert%2Fv0.27.0
 dependencies = [
  "libc",
  "procfs",
- "prometheus-client",
+ "prometheus-client 0.24.1",
  "tracing",
 ]
 
@@ -1013,7 +1013,7 @@ name = "kubert-prometheus-tokio"
 version = "0.2.1"
 source = "git+https://github.com/linkerd/linkerd-kubert.git?tag=kubert%2Fv0.27.0#04f6ac3543e84e814e50724dec11a5309fd9b8df"
 dependencies = [
- "prometheus-client",
+ "prometheus-client 0.24.1",
  "tokio",
  "tokio-metrics",
  "tracing",
@@ -1041,7 +1041,7 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "kubert",
- "prometheus-client",
+ "prometheus-client 0.25.2",
  "rustls",
  "tokio",
  "tracing",
@@ -1328,6 +1328,18 @@ name = "prometheus-client"
 version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cca3d75b4566b9a29fe1ed623587fb058e826eb329a0be4b7c4da1ebb2d7a6ca"
+dependencies = [
+ "dtoa",
+ "itoa",
+ "parking_lot",
+ "prometheus-client-derive-encode",
+]
+
+[[package]]
+name = "prometheus-client"
+version = "0.25.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d150ad7bf80e60f45769d18a0a8c01028ab8f56355f33ed7bfce3a31f82e696"
 dependencies = [
  "dtoa",
  "itoa",
