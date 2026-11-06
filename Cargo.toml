@@ -5,7 +5,7 @@ members = ["cni-repair-controller", "validator"]
 version = "0.27"
 default-features = false
 git = "https://github.com/linkerd/linkerd-kubert.git"
-tag = "kubert/v0.27.0"
+tag = "kubert/v0.27.1"
 
 [profile.release]
 lto = true
