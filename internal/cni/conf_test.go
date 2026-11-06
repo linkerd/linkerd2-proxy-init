@@ -202,6 +202,23 @@ func TestReconfigureK8s(t *testing.T) {
 			},
 		},
 		{
+			name:              "ReconfigureK8sIPv6Host",
+			dstConfigFilename: "",
+			srcTokenFilename:  "testdata/auth-token",
+			expErr:            "",
+			expConfig:         nil,
+			setup: func(t *testing.T, self *test) {
+				t.Helper()
+				root := t.TempDir()
+				self.dstConfigFilename = path.Join(root, "config.yml")
+				self.expConfig = mustReadUnmarshal(t, "testdata/kubeconfig-exp-ipv6.yaml", yaml.Unmarshal)
+				self.mgr = newTestInstaller(t)
+
+				t.Setenv(svcHost.key, "fd00:10:96::1")
+				t.Setenv(svcPort.key, "443")
+			},
+		},
+		{
 			name:              "ReconfigureK8sEnvZeroAuthorityData",
 			dstConfigFilename: "",
 			srcTokenFilename:  "testdata/auth-token",
