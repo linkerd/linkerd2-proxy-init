@@ -122,4 +122,62 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("It filters subnets by address family for dual-stack", func(t *testing.T) {
+		mixedSubnets := []string{"172.16.0.0/12", "fd00::/8", "10.0.0.0/8", "2001:db8::/32"}
+
+		// IPv4 pass (IPv6=false) should only include IPv4 subnets
+		optIPv4 := &RootOptions{
+			IncomingProxyPort: 1234,
+			OutgoingProxyPort: 2345,
+			SubnetsToIgnore:   mixedSubnets,
+			IPTablesMode:      IPTablesModeLegacy,
+			IPv6:              false,
+		}
+		config, err := BuildFirewallConfiguration(optIPv4)
+		if err != nil {
+			t.Fatalf("Unexpected error: %s", err)
+		}
+		expectedIPv4 := []string{"172.16.0.0/12", "10.0.0.0/8"}
+		if !reflect.DeepEqual(config.SubnetsToIgnore, expectedIPv4) {
+			t.Fatalf("Expected IPv4 subnets %v but got %v", expectedIPv4, config.SubnetsToIgnore)
+		}
+
+		// IPv6 pass (IPv6=true) should only include IPv6 subnets
+		optIPv6 := &RootOptions{
+			IncomingProxyPort: 1234,
+			OutgoingProxyPort: 2345,
+			SubnetsToIgnore:   mixedSubnets,
+			IPTablesMode:      IPTablesModeLegacy,
+			IPv6:              true,
+		}
+		config, err = BuildFirewallConfiguration(optIPv6)
+		if err != nil {
+			t.Fatalf("Unexpected error: %s", err)
+		}
+		expectedIPv6 := []string{"fd00::/8", "2001:db8::/32"}
+		if !reflect.DeepEqual(config.SubnetsToIgnore, expectedIPv6) {
+			t.Fatalf("Expected IPv6 subnets %v but got %v", expectedIPv6, config.SubnetsToIgnore)
+		}
+	})
+
+	t.Run("It handles IPv4-only subnets with dual-stack enabled", func(t *testing.T) {
+		ipv4Only := []string{"172.16.0.0/12"}
+
+		// IPv6 pass should produce empty subnets, not error
+		opt := &RootOptions{
+			IncomingProxyPort: 1234,
+			OutgoingProxyPort: 2345,
+			SubnetsToIgnore:   ipv4Only,
+			IPTablesMode:      IPTablesModeLegacy,
+			IPv6:              true,
+		}
+		config, err := BuildFirewallConfiguration(opt)
+		if err != nil {
+			t.Fatalf("Unexpected error: %s", err)
+		}
+		if len(config.SubnetsToIgnore) != 0 {
+			t.Fatalf("Expected empty subnets for IPv6 pass with IPv4-only input, got %v", config.SubnetsToIgnore)
+		}
+	})
 }
