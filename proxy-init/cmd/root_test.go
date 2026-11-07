@@ -122,4 +122,103 @@ func TestBuildFirewallConfiguration(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("It filters subnets by address family for dual-stack", func(t *testing.T) {
+		mixedSubnets := []string{"172.16.0.0/12", "fd00::/8", "10.0.0.0/8", "2001:db8::/32"}
+
+		// IPv4 pass (IPv6=false) should only include IPv4 subnets
+		optIPv4 := &RootOptions{
+			IncomingProxyPort: 1234,
+			OutgoingProxyPort: 2345,
+			SubnetsToIgnore:   mixedSubnets,
+			IPTablesMode:      IPTablesModeLegacy,
+			IPv6:              false,
+		}
+		config, err := BuildFirewallConfiguration(optIPv4)
+		if err != nil {
+			t.Fatalf("Unexpected error: %s", err)
+		}
+		expectedIPv4 := []string{"172.16.0.0/12", "10.0.0.0/8"}
+		if !reflect.DeepEqual(config.SubnetsToIgnore, expectedIPv4) {
+			t.Fatalf("Expected IPv4 subnets %v but got %v", expectedIPv4, config.SubnetsToIgnore)
+		}
+
+		// IPv6 pass (IPv6=true) should only include IPv6 subnets
+		optIPv6 := &RootOptions{
+			IncomingProxyPort: 1234,
+			OutgoingProxyPort: 2345,
+			SubnetsToIgnore:   mixedSubnets,
+			IPTablesMode:      IPTablesModeLegacy,
+			IPv6:              true,
+		}
+		config, err = BuildFirewallConfiguration(optIPv6)
+		if err != nil {
+			t.Fatalf("Unexpected error: %s", err)
+		}
+		expectedIPv6 := []string{"fd00::/8", "2001:db8::/32"}
+		if !reflect.DeepEqual(config.SubnetsToIgnore, expectedIPv6) {
+			t.Fatalf("Expected IPv6 subnets %v but got %v", expectedIPv6, config.SubnetsToIgnore)
+		}
+	})
+
+	t.Run("It handles IPv4-only subnets with dual-stack enabled", func(t *testing.T) {
+		ipv4Only := []string{"192.168.0.0/16"}
+
+		// IPv6 pass should produce empty subnets, not error
+		opt := &RootOptions{
+			IncomingProxyPort: 1234,
+			OutgoingProxyPort: 2345,
+			SubnetsToIgnore:   ipv4Only,
+			IPTablesMode:      IPTablesModeLegacy,
+			IPv6:              true,
+		}
+		config, err := BuildFirewallConfiguration(opt)
+		if err != nil {
+			t.Fatalf("Unexpected error: %s", err)
+		}
+		if len(config.SubnetsToIgnore) != 0 {
+			t.Fatalf("Expected empty subnets for IPv6 pass with IPv4-only input, got %v", config.SubnetsToIgnore)
+		}
+	})
+
+	t.Run("It handles IPv6-only subnets with single-stack IPv4", func(t *testing.T) {
+		opt := &RootOptions{
+			IncomingProxyPort: 1234,
+			OutgoingProxyPort: 2345,
+			SubnetsToIgnore:   []string{"fd12:3456::/32"},
+			IPTablesMode:      IPTablesModeLegacy,
+			IPv6:              false,
+		}
+		config, err := BuildFirewallConfiguration(opt)
+		if err != nil {
+			t.Fatalf("Unexpected error: %s", err)
+		}
+		if len(config.SubnetsToIgnore) != 0 {
+			t.Fatalf("Expected empty subnets for IPv4 pass with IPv6-only input, got %v", config.SubnetsToIgnore)
+		}
+	})
+
+	t.Run("It keeps IPv4-mapped IPv6 subnets in the IPv6 pass", func(t *testing.T) {
+		mapped := []string{"::ffff:10.0.0.0/104"}
+		for _, ipv6 := range []bool{false, true} {
+			opt := &RootOptions{
+				IncomingProxyPort: 1234,
+				OutgoingProxyPort: 2345,
+				SubnetsToIgnore:   mapped,
+				IPTablesMode:      IPTablesModeLegacy,
+				IPv6:              ipv6,
+			}
+			config, err := BuildFirewallConfiguration(opt)
+			if err != nil {
+				t.Fatalf("Unexpected error: %s", err)
+			}
+			var expected []string
+			if ipv6 {
+				expected = mapped
+			}
+			if len(config.SubnetsToIgnore) != len(expected) || (len(expected) > 0 && !reflect.DeepEqual(config.SubnetsToIgnore, expected)) {
+				t.Fatalf("ipv6=%v: expected subnets %v but got %v", ipv6, expected, config.SubnetsToIgnore)
+			}
+		}
+	})
 }
