@@ -117,7 +117,7 @@ func checkLinkerdCniConf(plugin map[string]any) error {
 
 	proxyGID := proxyInit.ProxyGID
 	if proxyGID != 2102 {
-		return fmt.Errorf("proxy-gid has wrong value, expected: %v, found: %v", 2102, proxyUID)
+		return fmt.Errorf("proxy-gid has wrong value, expected: %v, found: %v", 2102, proxyGID)
 	}
 
 	simulate := proxyInit.Simulate
