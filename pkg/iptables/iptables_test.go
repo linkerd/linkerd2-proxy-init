@@ -113,6 +113,23 @@ func TestAddOutgoingTrafficRules(t *testing.T) {
 
 }
 
+func TestAddIgnoredSubnetsUseTrafficDirection(t *testing.T) {
+	incoming := (&FirewallConfiguration{
+		BinPath:                "<iptables>",
+		InboundPortsToIgnore:   []string{"1234"},
+		InboundSubnetsToIgnore: []string{"10.0.0.0/8"},
+	}).addIncomingTrafficRules(nil, nil)
+	assertEqual(t, incoming[1], exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_REDIRECT", "-p", "tcp", "--match", "multiport", "--dports", "1234", "-j", "RETURN", "-m", "comment", "--comment", "proxy-init/ignore-port-1234"))
+	assertEqual(t, incoming[2], exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_REDIRECT", "-p", "all", "-j", "RETURN", "-s", "10.0.0.0/8", "-m", "comment", "--comment", "proxy-init/ignore-subnet-10.0.0.0/8"))
+
+	outgoing := (&FirewallConfiguration{
+		BinPath:                 "<iptables>",
+		ProxyOutgoingPort:       1234,
+		OutboundSubnetsToIgnore: []string{"10.0.0.0/8"},
+	}).addOutgoingTrafficRules(nil, nil)
+	assertEqual(t, outgoing[2], exec.Command("<iptables>", "-t", "nat", "-A", "PROXY_INIT_OUTPUT", "-p", "all", "-j", "RETURN", "-d", "10.0.0.0/8", "-m", "comment", "--comment", "proxy-init/ignore-subnet-10.0.0.0/8"))
+}
+
 func TestCleanupFirewallConfig(t *testing.T) {
 	wantCommands := []*exec.Cmd{
 		exec.Command("<iptables>", "-t", "nat", "-D", "PREROUTING", "-j", "PROXY_INIT_REDIRECT", "-m", "comment", "--comment", "proxy-init/install-proxy-init-prerouting"),
