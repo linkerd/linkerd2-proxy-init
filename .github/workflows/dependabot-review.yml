@@ -1,0 +1,253 @@
+name: Dependabot review
+
+# Reviews pull requests opened by Dependabot and nothing else.
+#
+# Two stages. Sonnet reviews every pull request. Opus reviews again only when
+# the first pass says it is needed. A final job picks the verdict and sets one
+# label: review/green, review/yellow, or review/red. Nothing here relies on
+# SemVer: the reviewer classifies the content of the change.
+#
+# `pull_request_target` is used because Dependabot-triggered `pull_request`
+# runs get a read-only token and cannot comment or label. That event runs the
+# workflow from the base branch, so this file and the prompt are not controlled
+# by the pull request. Nothing from the pull request head is checked out or
+# executed; the reviewer reads the change through `gh pr diff`.
+#
+# ANTHROPIC_API_KEY must be stored as a *Dependabot* secret (Settings >
+# Secrets and variables > Dependabot). Runs triggered by Dependabot cannot read
+# ordinary Actions secrets.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  # Shape of the result each reviewer returns. Read by the gate and decide
+  # steps, so keep the field names in sync with them.
+  REVIEW_SCHEMA: >-
+    {"type":"object","required":["verdict","change_kind","reason"],"properties":{
+    "verdict":{"enum":["green","yellow","red"]},
+    "change_kind":{"enum":["fix_only","new_behavior","breaking"]},
+    "reason":{"type":"string"},
+    "agent_instructions":{"type":"string"},
+    "critical_path":{"type":"boolean"},
+    "security":{"type":"boolean"},
+    "needs_deeper_review":{"type":"boolean"}}}
+  REVIEW_TOOLS: >-
+    Read,Grep,Glob,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh release view:*),Bash(gh release list:*)
+
+jobs:
+  # Runs on every push. Drops the previous verdict, then decides whether the
+  # pull request is still Dependabot's alone. A commit counts as Dependabot's
+  # when it is authored by dependabot[bot], committed by it or by GitHub on its
+  # behalf, and carries a verified signature.
+  eligible:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+    steps:
+      - name: Clear the previous verdict
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" \
+            --remove-label review/green --remove-label review/yellow \
+            --remove-label review/red || true
+          gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --disable-auto || true
+      - id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          others=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/commits" \
+            | jq -s 'add | [.[] | select(
+                (.author.login != "dependabot[bot]")
+                or ((.committer.login // "") | IN("dependabot[bot]", "web-flow") | not)
+                or (.commit.verification.verified != true))] | length')
+          if [ "$others" = 0 ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$others commit(s) not made by Dependabot; skipping review."
+          fi
+
+  triage:
+    needs: eligible
+    if: needs.eligible.outputs.ok == 'true'
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      verdict: ${{ steps.gate.outputs.verdict }}
+      escalate: ${{ steps.gate.outputs.escalate }}
+      prompt: ${{ steps.prompt.outputs.text }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # The prompt is PROMPT.md, followed by PROMPT_EXT.md when the repository
+      # has one. Both are read from this checkout, which is the base branch.
+      - id: prompt
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          dir=.github/dependabot-review
+          delim="PROMPT_$(openssl rand -hex 8)"
+          {
+            echo "text<<$delim"
+            echo "Review pull request #$PR in $GITHUB_REPOSITORY at head commit $SHA."
+            echo "If the pull request head is no longer that commit, stop."
+            echo
+            cat "$dir/PROMPT.md"
+            if [ -f "$dir/PROMPT_EXT.md" ]; then
+              printf '\n## Repository extension (supplied)\n\n'
+              cat "$dir/PROMPT_EXT.md"
+            fi
+            echo "$delim"
+          } >> "$GITHUB_OUTPUT"
+      # Optional. Set the ANTHROPIC_BASE_URL Dependabot secret to send requests
+      # to another endpoint. When it is unset, the default endpoint is used.
+      - env:
+          BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+        run: |
+          if [ -n "$BASE_URL" ]; then
+            printf 'ANTHROPIC_BASE_URL=%s\n' "$BASE_URL" >> "$GITHUB_ENV"
+          fi
+      - id: review
+        uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe # v1.0.269
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          allowed_bots: dependabot[bot]
+          use_sticky_comment: true
+          prompt: ${{ steps.prompt.outputs.text }}
+          claude_args: >-
+            --model claude-sonnet-5-5
+            --allowed-tools "${{ env.REVIEW_TOOLS }}"
+            --json-schema '${{ env.REVIEW_SCHEMA }}'
+      # Escalate to the deeper review unless the first pass found a green,
+      # fix-only change that is not on a critical path. A missing or malformed
+      # result escalates.
+      - id: gate
+        env:
+          OUT: ${{ steps.review.outputs.structured_output }}
+        run: |
+          field() { jq -r ".$1 // empty" <<<"${OUT:-null}" 2>/dev/null || true; }
+          verdict=$(field verdict)
+          case "$verdict" in green|yellow|red) ;; *) verdict=yellow ;; esac
+          escalate=true
+          if [ "$verdict" = green ] && [ "$(field change_kind)" = fix_only ] \
+            && [ "$(field critical_path)" != true ] \
+            && [ "$(field security)" != true ] \
+            && [ "$(field needs_deeper_review)" != true ]; then
+            escalate=false
+          fi
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+          echo "escalate=$escalate" >> "$GITHUB_OUTPUT"
+
+  deep:
+    needs: triage
+    if: needs.triage.outputs.escalate == 'true'
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      verdict: ${{ steps.gate.outputs.verdict }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      # Optional. Set the ANTHROPIC_BASE_URL Dependabot secret to send requests
+      # to another endpoint. When it is unset, the default endpoint is used.
+      - env:
+          BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+        run: |
+          if [ -n "$BASE_URL" ]; then
+            printf 'ANTHROPIC_BASE_URL=%s\n' "$BASE_URL" >> "$GITHUB_ENV"
+          fi
+      - id: review
+        uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe # v1.0.269
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          allowed_bots: dependabot[bot]
+          use_sticky_comment: true
+          prompt: |
+            ${{ needs.triage.outputs.prompt }}
+
+            A first, lighter review said: ${{ needs.triage.outputs.verdict }}.
+            Do a full-depth review. Do not defer to that verdict.
+          claude_args: >-
+            --model claude-opus-5-5
+            --allowed-tools "${{ env.REVIEW_TOOLS }}"
+            --json-schema '${{ env.REVIEW_SCHEMA }}'
+      - id: gate
+        env:
+          OUT: ${{ steps.review.outputs.structured_output }}
+        run: |
+          verdict=$(jq -r '.verdict // empty' <<<"${OUT:-null}" 2>/dev/null || true)
+          case "$verdict" in green|yellow|red) ;; *) verdict=yellow ;; esac
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+
+  decide:
+    needs: [triage, deep]
+    if: ${{ !cancelled() && needs.triage.result == 'success' }}
+    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      # Without escalation the first review decides. With it, the deeper review
+      # decides, except that a red first review caps a green deeper one at
+      # yellow. A deeper review that did not finish counts as yellow.
+      - id: final
+        env:
+          TRIAGE: ${{ needs.triage.outputs.verdict }}
+          ESCALATED: ${{ needs.triage.outputs.escalate }}
+          DEEP: ${{ needs.deep.outputs.verdict }}
+        run: |
+          final=$TRIAGE
+          if [ "$ESCALATED" = true ]; then
+            final=${DEEP:-yellow}
+            [ "$TRIAGE" = red ] && [ "$final" = green ] && final=yellow
+          fi
+          echo "verdict=$final" >> "$GITHUB_OUTPUT"
+      - name: Label the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          VERDICT: ${{ steps.final.outputs.verdict }}
+        run: |
+          current=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json headRefOid --jq .headRefOid)
+          if [ "$current" != "$SHA" ]; then
+            echo "::notice::Head moved from $SHA to $current; not labeling."
+            exit 0
+          fi
+          gh label create review/green  --repo "$GITHUB_REPOSITORY" --color 0e8a16 --force \
+            --description "Dependabot review: safe"
+          gh label create review/yellow --repo "$GITHUB_REPOSITORY" --color fbca04 --force \
+            --description "Dependabot review: needs a human"
+          gh label create review/red    --repo "$GITHUB_REPOSITORY" --color d93f0b --force \
+            --description "Dependabot review: breaking or incompatible"
+          gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label "review/$VERDICT"
