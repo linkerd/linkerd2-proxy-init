@@ -105,7 +105,7 @@ Behavior this repo does not use does not matter. Say that you checked.
   subtle behavior change that this repo relies on. Do not use red for
   uncertainty. Use yellow.
 
-Do not say that tests pass. CI is checked by another step.
+Do not say that tests pass. CI passed before this review started.
 
 ## Output
 
@@ -113,7 +113,10 @@ Return only the structured output, with these fields:
 
 - `verdict`: `green`, `yellow`, or `red`.
 - `change_kind`: `fix_only`, `new_behavior`, or `breaking`.
-- `reason`: one sentence on why this verdict. For green, say why it is safe.
+- `summary`: 3 to 5 plain sentences. It is posted on the PR as is. Say what
+  the update changes and why the verdict follows. For green, say why the change
+  is safe for this repository. For yellow or red, say what a human must check
+  and why. No headings, lists, links, code blocks, or @-mentions.
 - `agent_instructions`: the agent instruction files found in this repository,
   or `none found`.
 - `critical_path`: true if the dependency is on a critical path above.
