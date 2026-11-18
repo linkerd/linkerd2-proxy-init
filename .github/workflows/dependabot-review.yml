@@ -502,13 +502,18 @@ jobs:
             printf '%s\n' "$line"
           } | .github/dependabot-review/comment.sh
 
-  # Approves a green PR whose CI passed. It does not merge. `if` has no status
-  # function, so the job runs only if both `ci` and `decide` succeeded. The
+  # Approves a green PR whose CI passed. It does not merge. `!cancelled()`
+  # replaces the implicit `success()`, which would skip this job whenever
+  # `deep` is skipped (an unescalated review), since `decide` needs `deep`. The
+  # result checks keep the requirement that `ci` and `decide` succeeded. The
   # steps then read the PR's state from GitHub again instead of trusting the
   # earlier jobs.
   approve:
     needs: [ci, decide]
-    if: needs.ci.outputs.green == 'true' && needs.decide.outputs.verdict == 'green'
+    if: >-
+      ${{ !cancelled()
+      && needs.ci.result == 'success' && needs.ci.outputs.green == 'true'
+      && needs.decide.result == 'success' && needs.decide.outputs.verdict == 'green' }}
     timeout-minutes: 5
     runs-on: ubuntu-24.04
     permissions:
