@@ -2,6 +2,7 @@ name: Dependabot review
 
 # Reviews Dependabot PRs after CI passes: Sonnet first, Opus if escalated, then a
 # review/{green,yellow,red} label and one appended PR comment (comment.sh).
+# A green verdict on a PR with passing CI also gets a bot approval.
 #
 # pull_request_target gives Dependabot runs a write token and Actions secrets
 # (store ANTHROPIC_API_KEY there); PR code is never checked out.
@@ -82,6 +83,14 @@ jobs:
             --remove-label review/green --remove-label review/yellow \
             --remove-label review/red || true
           gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --disable-auto || true
+      - name: Dismiss earlier approvals by this workflow
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and .state == "APPROVED") | .id' \
+            | while read -r id; do
+                gh api -X PUT "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews/$id/dismissals" \
+                  -f message="The PR changed, so it is reviewed again." >/dev/null
+              done
       - name: Start this run's section of the comment
         run: |
           url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT"
@@ -147,7 +156,7 @@ jobs:
           delay: 60
           interval: 30
           timeout: 6000
-          ignore: eligible,triage,deep,decide,CodeQL
+          ignore: eligible,triage,deep,decide,approve,CodeQL
       - name: Post a CI failure
         if: steps.wait.outcome != 'success'
         run: |
@@ -400,6 +409,8 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
+    outputs:
+      verdict: ${{ steps.final.outputs.verdict }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -490,3 +501,51 @@ jobs:
             fi
             printf '%s\n' "$line"
           } | .github/dependabot-review/comment.sh
+
+  # Approves a green PR whose CI passed. It does not merge. `if` has no status
+  # function, so the job runs only if both `ci` and `decide` succeeded. The
+  # steps then read the PR's state from GitHub again instead of trusting the
+  # earlier jobs.
+  approve:
+    needs: [ci, decide]
+    if: needs.ci.outputs.green == 'true' && needs.decide.outputs.verdict == 'green'
+    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Approve the reviewed commit
+        run: |
+          pr=$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json headRefOid,labels)
+
+          # 1. The head is still the commit that was reviewed.
+          if [ "$(jq -r .headRefOid <<<"$pr")" != "$SHA" ]; then
+            echo "::notice::The PR head moved after the review. Not approving."
+            exit 0
+          fi
+
+          # 2. The review labeled the PR green.
+          if ! jq -e 'any(.labels[]; .name == "review/green")' <<<"$pr" >/dev/null; then
+            echo "::error::The PR does not have the review/green label."
+            exit 1
+          fi
+
+          # 3. The other workflows' checks on this head are all passing. At
+          # least one must exist.
+          checks=$(gh pr checks "$PR" --repo "$GITHUB_REPOSITORY" --json name,bucket,workflow \
+            --jq "[.[] | select(.workflow != \"$GITHUB_WORKFLOW\")]") || true
+          if ! jq -e 'length > 0 and all(.[]; .bucket == "pass" or .bucket == "skipping")' \
+            <<<"$checks" >/dev/null; then
+            echo "::error::CI is not green."
+            exit 1
+          fi
+
+          # The approval is tied to the reviewed commit.
+          gh api -X POST "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" \
+            -f event=APPROVE -f commit_id="$SHA" \
+            -f body="Approved by the Dependabot review workflow. CI passed and the AI review is green. This is not a human review." >/dev/null
