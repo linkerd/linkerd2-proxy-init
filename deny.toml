@@ -45,8 +45,9 @@ skip-tree = [
     { name = "indexmap" },
     # thiserror v2 is still making its way through the ecosystem
     { name = "thiserror", version = "1" },
-    # getrandom v0.3 is still making its way through the ecosystem
-    { name = "getrandom", version = "0.2" },
+    # rand v0.10 uses getrandom v0.4, while ahash v0.8 (via kube-runtime and
+    # kubert) still depends on getrandom v0.3.
+    { name = "getrandom", version = "0.3" },
 ]
 
 [sources]
