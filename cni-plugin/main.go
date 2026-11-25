@@ -146,7 +146,7 @@ func parseConfig(stdin []byte) (*PluginConf, error) {
 func cmdAdd(args *skel.CmdArgs) error {
 	conf, err := parseConfig(args.StdinData)
 	if err != nil {
-		logrus.Errorf("error parsing config: %e", err)
+		logrus.WithError(err).Error("error parsing config")
 		return err
 	}
 	// Configure logging level and outputs with rotation
@@ -168,7 +168,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 	args.Args = strings.Replace(args.Args, "K8S_POD_NAMESPACE", "K8sPodNamespace", 1)
 	args.Args = strings.Replace(args.Args, "K8S_POD_NAME", "K8sPodName", 1)
 	if err := types.LoadArgs(args.Args, &k8sArgs); err != nil {
-		logrus.Errorf("error loading args %e", err)
+		logrus.WithError(err).Error("error loading args")
 		return err
 	}
 
@@ -188,19 +188,19 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 		config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(configLoadingRules, configOverrides).ClientConfig()
 		if err != nil {
-			logrus.Errorf("linkerd-cni client err with NewNonInteractiveDeferredLoadingClientConfig: %e", err)
+			logrus.WithError(err).Error("linkerd-cni client err with NewNonInteractiveDeferredLoadingClientConfig")
 			return err
 		}
 
 		client, err := kubernetes.NewForConfig(config)
 		if err != nil {
-			logrus.Errorf("linkerd-cni client err with NewForConfig: %e", err)
+			logrus.WithError(err).Error("linkerd-cni client err with NewForConfig")
 			return err
 		}
 
 		pod, err := client.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
-			logrus.Errorf("linkerd-cni client err in client.Pods().Get(): %e", err)
+			logrus.WithError(err).Error("linkerd-cni client err in client.Pods().Get()")
 			return err
 		}
 
