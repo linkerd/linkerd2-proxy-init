@@ -47,6 +47,8 @@ skip-tree = [
     { name = "thiserror", version = "1" },
     # getrandom v0.3 is still making its way through the ecosystem
     { name = "getrandom", version = "0.2" },
+    # tower-http v0.7 still making its way through the ecosystem
+    { name = "tower-http", version = "0.6" }
 ]
 
 [sources]
